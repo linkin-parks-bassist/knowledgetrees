@@ -44,3 +44,6 @@ tuning and live OpenCode restart check.
 ## Root access policies
 
 The registry/privacy CLI and shared handler are installed and tested. Keep wider roots private until user approval. Users can register a shared tree and grant project-scoped or open access in their own terminal. Refine usability from ordinary use; default subdirectory inheritance remains off.
+
+Standalone kt amend is validated and installed; keep long-term scope/sharing
+and heuristic usability tuning. No Git dependency is introduced.

@@ -2,6 +2,8 @@
 """Dependency-free knowledge-tree lookup and capture. Search is lexical."""
 
 import argparse
+import difflib
+import fcntl
 from datetime import datetime
 import json
 import hashlib
@@ -22,6 +24,10 @@ ACCESS_VALUES = {"allow", "ask", "deny"}
 
 
 class AccessRequired(ValueError):
+    pass
+
+
+class RevisionConflict(ValueError):
     pass
 
 
@@ -432,9 +438,11 @@ def question(arguments):
     return 1
 
 
-def open_leaf(value):
+def resolve_leaf(value, writable=False):
     available = roots()
     path = Path(value).expanduser()
+    if writable and path.is_absolute() and any(p.is_symlink() for p in (path, *path.parents)):
+        raise ValueError("cannot amend through a symlink")
     if path.is_absolute():
         resolved = path.resolve()
         owners = [(name, root) for name, root in discovered_roots() if resolved.is_relative_to(root)]
@@ -455,7 +463,10 @@ def open_leaf(value):
         candidates = []
         for _, root in available:
             for suffix in ("", ".md"):
-                candidate = (root / (relative + suffix)).resolve()
+                raw = root / (relative + suffix)
+                if writable and any(p.is_symlink() for p in (raw, *raw.parents)):
+                    raise ValueError("cannot amend through a symlink")
+                candidate = raw.resolve()
                 if candidate.is_relative_to(root) and candidate.suffix == ".md":
                     candidates.append(candidate)
     path = next((p for p in candidates if p.is_file()), None)
@@ -463,8 +474,163 @@ def open_leaf(value):
         raise ValueError(f"no such leaf: {value}")
     if not leaf_allowed(path):
         raise AccessRequired("kt: leaf is inside a restricted registered root")
-    sys.stdout.write(path.read_text())
+    return path
+
+
+def open_leaf(value, with_revision=False):
+    data = resolve_leaf(value).read_bytes()
+    if with_revision:
+        print(f"Revision: {revision(data)}", file=sys.stderr)
+    sys.stdout.write(data.decode("utf-8"))
     return 0
+
+
+def revision(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def proof_records(text):
+    """Identify assertion-paragraph + fenced predicate, outside other fences."""
+    lines = text.splitlines(keepends=True)
+    records = []
+    index = 0
+    while index < len(lines):
+        line = lines[index].rstrip("\r\n")
+        if line.startswith("```"):
+            index += 1
+            while index < len(lines) and lines[index].strip() != "```":
+                index += 1
+        elif re.fullmatch(r"Proof:(?: \((?:verified|falsified) at [^)]+\))?", line):
+            marker_index = index
+            previous = index - 1
+            while previous >= 0 and not lines[previous].strip():
+                previous -= 1
+            start = previous
+            while start > 0 and lines[start - 1].strip():
+                start -= 1
+            opening = index + 1
+            while opening < len(lines) and not lines[opening].strip():
+                opening += 1
+            if previous >= 0 and opening < len(lines) and lines[opening].strip() in ("```bash", "```sh", "```python", "```python3"):
+                closing = opening + 1
+                while closing < len(lines) and lines[closing].strip() != "```":
+                    closing += 1
+                if closing < len(lines):
+                    identity = ("".join(lines[start:previous + 1]), "".join(lines[opening:closing + 1]))
+                    records.append((index, identity, line))
+                    index = closing
+            if not records or records[-1][0] != marker_index:
+                records.append((marker_index, None, line))
+        index += 1
+    return lines, records
+
+
+def invalidate_review(text, original, source=None):
+    match = re.match(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|$)", text, re.S)
+    if text.startswith("---") and match is None:
+        raise ValueError("unclosed front matter")
+    header = match[1] if match else ""
+    body = text[match.end():] if match else text
+    nested = re.search(r"(?m)^metadata:\s*$", header) is not None
+    indent = "  " if nested else ""
+    # Remove old whole-leaf review fields, including indented block continuations.
+    lines = header.splitlines()
+    cleaned = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        field = re.match(r"^( *)(verified_at|verified_by|verification):", line)
+        if field:
+            width = len(field[1])
+            index += 1
+            while index < len(lines) and (not lines[index].strip() or len(lines[index]) - len(lines[index].lstrip()) > width):
+                index += 1
+            continue
+        cleaned.append(line)
+        index += 1
+    header = "\n".join(cleaned)
+
+    def set_field(key, value):
+        nonlocal header
+        entry = f"{indent}{key}: {json.dumps(value)}"
+        pattern = rf"(?m)^{indent}{key}:.*$"
+        if re.search(pattern, header):
+            fields = header.splitlines()
+            first = next(i for i, line in enumerate(fields) if re.match(pattern.removeprefix("(?m)"), line))
+            end = first + 1
+            while end < len(fields) and (not fields[end].strip() or len(fields[end])-len(fields[end].lstrip()) > len(indent)):
+                end += 1
+            fields[first:end] = [entry]
+            header = "\n".join(fields)
+        elif nested:
+            header = re.sub(r"(?m)^metadata:\s*$", lambda _: "metadata:\n" + entry, header, count=1)
+        else:
+            header = header.rstrip() + ("\n" if header.strip() else "") + entry
+
+    status, _ = leaf_parts(text)
+    set_field("status", "unresolved" if status.get("status") == "unresolved" else "unverified")
+    set_field("updated_at", datetime.now().astimezone().isoformat(timespec="seconds"))
+    if source:
+        set_field("source", source)
+    # Do not let a submitted replacement silently clear sticky falsification.
+    previous, _ = leaf_parts(original)
+    if previous.get("falsified_at"):
+        set_field("falsified_at", previous["falsified_at"])
+    return "---\n" + header + "\n---\n\n" + body.lstrip("\r\n")
+
+
+def amend(args):
+    path = resolve_leaf(args.path, writable=True)
+    if not re.fullmatch(r"[a-f0-9]{64}", args.expect):
+        raise ValueError("--expect must be the SHA-256 revision from kt open --revision")
+    if args.body_file == "-":
+        if sys.stdin.isatty():
+            raise ValueError("pipe the replacement text or use --body-file")
+        replacement = sys.stdin.read(1048577)
+    else:
+        with Path(args.body_file).expanduser().open(encoding="utf-8") as stream:
+            replacement = stream.read(1048577)
+    if not replacement.strip() or "\x00" in replacement or len(replacement.encode()) > 1048576:
+        raise ValueError("replacement must be nonempty UTF-8 text without NUL, at most 1 MiB")
+    descriptor = os.open(path, os.O_RDWR | os.O_NOFOLLOW)
+    with os.fdopen(descriptor, "r+b") as stream:
+        fcntl.flock(stream, fcntl.LOCK_EX)
+        original_bytes = stream.read()
+        if revision(original_bytes) != args.expect:
+            raise RevisionConflict("kt: leaf changed; reread with kt open --revision and merge before amending")
+        original = original_bytes.decode("utf-8")
+        if replacement == original and not args.source:
+            print(f"Unchanged. Revision: {args.expect}")
+            return 0
+        _, old_records = proof_records(original)
+        previous = {identity: marker for _, identity, marker in old_records if identity is not None}
+        new_lines, new_records = proof_records(replacement)
+        invalidated = 0
+        for index, identity, _ in new_records:
+            saved = previous.get(identity)
+            ending = "\n" if new_lines[index].endswith("\n") else ""
+            new_lines[index] = (saved or "Proof: (verified at _)") + ending
+            if saved is None:
+                invalidated += 1
+        updated = invalidate_review("".join(new_lines), original, args.source)
+        if args.dry_run:
+            sys.stdout.writelines(difflib.unified_diff(original.splitlines(keepends=True), updated.splitlines(keepends=True), fromfile=str(path), tofile=str(path) + " (amended)"))
+            print(f"Whole-leaf review invalidated; {invalidated} new/changed proofs need checking.", file=sys.stderr)
+            return 0
+        # Never replace the inode: installer-created SKILL.md hardlinks stay intact.
+        # Recheck after preparing output to detect ordinary non-locking intervening edits.
+        stream.seek(0)
+        if stream.read() != original_bytes or path.stat().st_ino != os.fstat(stream.fileno()).st_ino:
+            raise RevisionConflict("kt: leaf changed during amendment; reread and merge")
+        stream.seek(0)
+        stream.write(updated.encode("utf-8"))
+        stream.truncate()
+        stream.flush()
+        os.fsync(stream.fileno())
+    print(f"Amended {args.path}. Revision: {revision(updated.encode('utf-8'))}")
+    print(f"Whole-leaf review invalidated; {invalidated} new/changed proofs need checking.")
+    return 0
+
 
 
 def proof(arguments):
@@ -584,6 +750,13 @@ def main():
     search.add_argument("--min-coverage", type=float, default=0.6)
     opening = commands.add_parser("open", help="print a leaf verbatim, including metadata")
     opening.add_argument("path", help="relative path, project:path, global:path, or absolute .md path")
+    opening.add_argument("--revision", action="store_true", help="print SHA-256 revision on stderr; stdout stays verbatim")
+    amending = commands.add_parser("amend", help="replace an existing leaf with revision conflict protection")
+    amending.add_argument("path")
+    amending.add_argument("--expect", required=True, help="SHA-256 revision returned by open --revision")
+    amending.add_argument("--body-file", default="-", help="complete replacement Markdown file, or - for stdin")
+    amending.add_argument("--source", help="actual evidence for the revised answer")
+    amending.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
     adding = commands.add_parser("capture", aliases=["add"], help="create a question-derived leaf in one call")
     adding.add_argument("question", help="quoted full question; preserve multi-word components with hyphens")
     adding.add_argument("answer", help="Markdown answer, or - to read stdin")
@@ -615,7 +788,9 @@ def main():
             parser.error("--min-coverage must be greater than zero and at most one")
         return find(args)
     if args.command == "open":
-        return open_leaf(args.path)
+        return open_leaf(args.path, args.revision)
+    if args.command == "amend":
+        return amend(args)
     if args.command in ("capture", "add"):
         return capture(args)
     if args.command == "register":
@@ -648,6 +823,9 @@ if __name__ == "__main__":
         sys.exit(main())
     except BrokenPipeError:
         sys.exit(0)
+    except RevisionConflict as error:
+        print(error, file=sys.stderr)
+        sys.exit(4)
     except AccessRequired as error:
         print(error, file=sys.stderr)
         sys.exit(3)

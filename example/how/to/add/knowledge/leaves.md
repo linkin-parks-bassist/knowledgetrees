@@ -112,3 +112,6 @@ refreshes only its `Proof: (verified at …)` marker. A failing run changes it t
 `Proof: (falsified at …)` and sets sticky leaf `falsified_at`. The verifier cannot
 decide semantic eligibility, faithful coverage, or whether all prose is proved;
 the agent remains responsible. Read maintenance before repairing a falsified leaf.
+
+For an existing owner, use the revision-checked read/revise/submit loop in
+`how/to/amend/a/knowledge/leaf.md`; creation still refuses overwriting existing leaves.

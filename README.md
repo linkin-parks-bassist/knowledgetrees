@@ -617,3 +617,24 @@ A wider capture still needs approval before a leaf is written. Access-required
 operations exit with code 3; this is not a knowledge miss. Retrieved content may
 reach the configured model provider. These controls cover `kt` and startup hooks;
 they are not a substitute for filesystem permissions against direct reads.
+
+### Amending an existing answer
+
+Read the current leaf and its revision:
+
+```bash
+kt open project:how/to/build.md --revision
+```
+
+The text stays verbatim on stdout; stderr prints its SHA-256 revision. Submit a
+complete revised Markdown file (including its existing metadata):
+
+```bash
+kt amend project:how/to/build.md --expect <revision> --body-file /tmp/revised.md
+```
+
+You can pipe the replacement through stdin instead, or add `--dry-run` to inspect
+the diff. Stale revisions exit 4 without writing; reread and merge. Amendment
+preserves hardlinks, invalidates whole-leaf review, and resets new/changed proof
+stamps. It does not execute proofs or clear sticky falsification. Git is optional
+history, not a requirement. See `how/to/amend/a/knowledge/leaf.md` for details.

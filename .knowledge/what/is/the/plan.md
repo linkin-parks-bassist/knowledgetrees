@@ -52,3 +52,6 @@ is implemented in this update.
 ## Root access policies
 
 Completed registry, access policies, persistent/session grants, private capture registration, and shared startup enforcement. Validation and local deployment pass; no automatic approval of personal/global knowledge.
+
+Completed standalone revision-checked amendment and validation; optional Git
+history remains external to the CLI. Both harnesses use the installed shared CLI.

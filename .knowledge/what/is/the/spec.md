@@ -72,3 +72,7 @@ weak suggestions; heuristic success never certifies knowledge correctness.
 ## Root access policies
 
 User-global registry; private-by-default wider roots; persistent pairwise approvals and open-access overrides; no automatic parent discovery. Exact project directory approvals by default, optional explicit descendant inheritance. Enforce access on search/read/capture/proof and startup injection.
+
+Amendment must accept a complete replacement through a file or stdin, require an
+expected content revision, preserve hardlinks and root access policies, invalidate
+stale whole-leaf/proof verification, and work without Git or an interactive editor.
