@@ -1,6 +1,6 @@
 // Mock harness + real shared handler: no agent/model invocation.
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, copyFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, copyFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,8 @@ try {
   await mkdir(join(process.env.KT_GLOBAL_ROOT, "how/to/use"), { recursive: true });
   await copyFile(fileURLToPath(new URL("../example/how/to/use/knowledgetrees.md", import.meta.url)),
     join(process.env.KT_GLOBAL_ROOT, "how/to/use/knowledgetrees.md"));
+  await mkdir(join(temporary, ".knowledge/where/am"), { recursive: true });
+  await writeFile(join(temporary, ".knowledge/where/am/i.md"), "Project orientation fixture");
   const prompts = [];
   const plugin = await KnowledgeTreesPlugin({ directory: temporary,
     client: { session: { promptAsync: async (value) => { prompts.push(value); return {}; } } } });
@@ -25,6 +27,7 @@ try {
   assert.equal(startup.system[0], "existing harness instructions");
   assert.match(startup.system[1], /already loaded/);
   assert.match(startup.system[1], /kt roots/);
+  assert.match(startup.system[1], /Project orientation fixture/);
   assert.doesNotMatch(startup.system[1], /verified_by:/);
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);
   assert.equal(startup.system.length, 2, "no duplicate bootstrap blocks in assembled context");
@@ -64,6 +67,20 @@ try {
   assert.equal(prompts.length, 2);
   await plugin.event({ event: { type: "session.idle", properties: { sessionID: "other" } } });
   assert.equal(prompts.length, 2);
+  // Heuristics and structured-status precedence are mirrored through both paths.
+  const heuristic = { output: "fatal: not a git repository", metadata: {} };
+  await plugin["tool.execute.after"]({ sessionID: "heuristic", callID: "h", tool: "bash" }, heuristic);
+  assert.match(heuristic.output, /check kt/);
+  const expectedError = { output: "ERROR: expected negative test", metadata: { exit: 0 } };
+  await plugin["tool.execute.after"]({ sessionID: "success", callID: "s", tool: "bash" }, expectedError);
+  assert.doesNotMatch(expectedError.output, /check kt/);
+  await plugin.event({ event: { type: "message.part.updated", properties: { part: {
+    type: "tool", sessionID: "event-heuristic", callID: "eh",
+    state: { status: "completed", metadata: {}, output: "make: *** [all] Error 2" },
+  } } } });
+  const eventContext = { system: [] };
+  await plugin["experimental.chat.system.transform"]({ sessionID: "event-heuristic" }, eventContext);
+  assert.match(eventContext.system.at(-1), /check kt/);
   console.log("OpenCode adapter integration checks passed");
 } finally {
   await rm(temporary, { recursive: true, force: true });

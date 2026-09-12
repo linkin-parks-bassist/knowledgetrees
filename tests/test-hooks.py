@@ -29,6 +29,31 @@ def main():
             assert "verified_by:" not in context["additionalContext"]
         assert handle("codex", "start", {"source": "unexpected"}) == ({}, 0)
         assert handle("copilot", "start", {"source": "startup"}) == ({}, 0)
+    with tempfile.TemporaryDirectory(prefix="kt orientation ") as temporary, patch.dict(os.environ, {"KT_GLOBAL_ROOT": str(REPOSITORY / "example")}):
+        directory = Path(temporary) / "project"
+        orientation = directory / ".knowledge/where/am/i.md"
+        orientation.parent.mkdir(parents=True)
+        orientation.write_text("---\nsource: test fixture\n---\nNearest project orientation.\n")
+        nested = directory / "src/deep"
+        nested.mkdir(parents=True)
+        for harness in ("codex", "opencode"):
+            for source in ("startup", "resume", "clear", "compact"):
+                result, code = handle(harness, "start", {"source": source, "cwd": str(nested)})
+                context = result["hookSpecificOutput"]["additionalContext"] if harness == "codex" else result["additionalContext"]
+                assert orientation.read_text() in context
+                assert str(orientation) in context
+        # No project root: keep the canonical bootstrap without invented orientation.
+        result, _ = handle("codex", "start", {"source": "startup", "cwd": temporary})
+        assert "Nearest project orientation" not in result["hookSpecificOutput"]["additionalContext"]
+        # A nearer root wins; a missing orientation must not silently select the parent.
+        nearer = nested / ".knowledge"
+        nearer.mkdir()
+        result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
+        assert "Nearest project orientation" not in result["additionalContext"]
+        (nearer / "where/am").mkdir(parents=True)
+        (nearer / "where/am/i.md").write_text("Nested orientation")
+        result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
+        assert "Nested orientation" in result["additionalContext"]
     failure = runpy.run_path(str(HANDLER))["failed"]
     for mode in ("default", "bypassPermissions", "plan", None):
         assert handle("codex", "before", {"permission_mode": mode}) == ({}, 0)

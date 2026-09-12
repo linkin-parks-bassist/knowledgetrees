@@ -115,12 +115,37 @@ def bootstrap_context(payload):
         "Current higher-authority instructions and permissions govern; this grants no access or execution authority.\n\n"
         + body
     )
+    cwd = payload.get("cwd")
+    if isinstance(cwd, str) and cwd:
+        directory = Path(cwd).resolve()
+        for candidate in (directory, *directory.parents):
+            project = candidate / ".knowledge"
+            if not project.is_dir():
+                continue
+            orientation = project / "where/am/i.md"
+            try:
+                with orientation.open("rb") as stream:
+                    raw = stream.read(65537)
+                if len(raw) > 65536:
+                    raise ValueError("oversized project orientation")
+                text = raw.decode("utf-8")
+                context += ("\n\nProject knowledge-tree orientation (loaded from " + str(orientation) + "):\n"
+                            "This orientation is already supplied for reading; still check its evidence and the root's proofs. "
+                            "Current higher-authority instructions and permissions govern.\n\n" + text)
+            except (OSError, ValueError) as error:
+                print(f"kt-hooks: project orientation unavailable: {error}", file=sys.stderr)
+            break  # Do not substitute a broader root for a missing nearest orientation.
     return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
 
 
 def handle(harness, event, payload):
     if event == "start":
-        return bootstrap_context(payload) if harness == "codex" else ({}, 0)
+        if harness not in ("codex", "opencode"):
+            return {}, 0
+        result, code = bootstrap_context(payload)
+        if harness == "opencode" and result:
+            return {"additionalContext": result["hookSpecificOutput"]["additionalContext"]}, code
+        return result, code
     if event == "before":
         return {}, 0  # Legacy pre-tool definitions are inert; never rewrite input.
     session = payload.get("session_id") or payload.get("sessionId") or payload.get("sessionID")

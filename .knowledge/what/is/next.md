@@ -33,3 +33,7 @@ installer tests or skill discovery.
 ## Unwrapped failure detection
 
 Unwrapped detection is installed: a live SYNTH_BUILD_FAIL diagnostic triggered the failure reminder and preserved exit 1. Review heuristic false positives during ordinary work; Stop bookkeeping remains tested and active. The owner authorized committing and pushing this update. After publication, refine heuristics based on ordinary use and consider uncertainty reminders only after validating available transcript content.
+
+## Shared startup orientation
+
+The shared orientation loader and OpenCode adapter are installed and integration-tested. Restart OpenCode to load the new plugin and check actual startup context; new Codex startup/resume/compact events load orientation automatically.

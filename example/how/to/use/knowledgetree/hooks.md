@@ -138,3 +138,23 @@ positive/negative diagnostics, success precedence, failure deduplication, stop
 arming, silent-output limits, and preservation/removal during installer migration.
 Source: tools/kt-hooks, install, tests/test-hooks.py, tests/test-install.py;
 current Codex live stdout-only payload shape and the documented heuristic tradeoff.
+
+## Project orientation at startup
+
+Codex SessionStart and OpenCode system-context bootstrap share the Python startup
+loader. It resolves the supplied cwd and chooses the nearest ancestor containing
+.knowledge. It appends where/am/i.md verbatim after the canonical procedure,
+labeling the source and retaining the obligation to verify evidence/proofs.
+It never substitutes a broader root when the nearest orientation is missing;
+missing or oversized (over 64 KiB) orientation reports a diagnostic and retains
+the canonical bootstrap. No root means no injected project orientation.
+Codex startup/resume/clear/compact events use the same loader; OpenCode loads it
+at plugin startup and retains a single block in rebuilt system context.
+OpenCode still requires restart after installed plugin/context changes.
+
+Both harnesses share diagnostic failure detection and Stop/idle bookkeeping.
+OpenCode tests cover metadata-free diagnostics through tool.execute.after and
+terminal tool-part events, explicit exit-zero precedence, and existing one-shot
+review/session isolation. No command wrapping or uncertainty scanner is added.
+Source: tools/kt-hooks; tools/kt-opencode.mjs; tests/test-hooks.py;
+tests/test-opencode-hooks.mjs. Relevant integration checks passed.
