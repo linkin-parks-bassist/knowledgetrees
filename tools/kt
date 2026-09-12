@@ -92,6 +92,7 @@ def find(args):
     if not results:
         print(paint("No matches", "33") + f" for {' '.join(args.terms)!r}.")
         print("This is keyword search; a miss does not establish that the answer is absent.")
+        print("Check alternate terms and scoped paths. If no leaf exists, investigate and add it before resuming work.")
         return 1
     shown = results[:args.limit]
     print(paint(f"{len(shown)} of {len(results)} matches", "1") + f" · {' '.join(args.terms)}\n")

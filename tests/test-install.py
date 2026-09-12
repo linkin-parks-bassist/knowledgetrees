@@ -111,8 +111,9 @@ def main() -> None:
         assert canonical.stat().st_ino == shared_skill.stat().st_ino == codex_skill.stat().st_ino
         assert "fresh agent session" in canonical.read_text()
         assert "first move of every task" not in canonical.read_text()
-        assert "Observable lookup gates" in canonical.read_text()
-        assert "permission-denied" in canonical.read_text()
+        assert "Default action: new question -> kt first" in canonical.read_text()
+        assert "MUST determine whether a leaf" in canonical.read_text()
+        assert "before the next unrelated tool call" in canonical.read_text()
         for name in ("how/to/add/knowledge/leaves.md", "how/to/maintain/a/knowledge/tree.md",
                      "how/should/an/agent/traverse/a/knowledge/tree.md"):
             assert (knowledge / name).is_file()
@@ -123,6 +124,8 @@ def main() -> None:
         assert "Existing user instructions" in agents
         assert agents.count("BEGIN KNOWLEDGETREES BOOTSTRAP") == 1
         assert "fresh agent session" in agents
+        assert "New question -> `kt` first" in agents
+        assert "determine whether a leaf exists" in agents
         assert "first move of every task" not in agents
         config = codex_config.read_text()
         assert 'model = "example-model"' in config
@@ -135,6 +138,8 @@ def main() -> None:
             assert "metadata:\n" in owner.read_text()
             assert "  ---" not in owner.read_text(), "frontmatter delimiter must not be nested"
             assert owner.read_text().count("\n---\n") == 1
+            assert "kt" in owner.read_text()
+            assert "unrelated tool call" in owner.read_text()
             for harness in (".agents", ".codex"):
                 entry = target_home / harness / "skills" / name / "SKILL.md"
                 assert not entry.is_symlink()

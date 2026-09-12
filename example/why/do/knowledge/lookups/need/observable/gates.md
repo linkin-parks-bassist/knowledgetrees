@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T16:50:03+10:00'
+verified_at: '2026-09-12T20:16:19+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: sanitized operational recommendations and the canonical knowledge-tree contract
-verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
+verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
 review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
@@ -21,7 +21,11 @@ will consult stored answers; familiar shell probes can bypass an introspective
 
 Failed probes, privilege or installation steps, host changes, environment-specific
 paths/tools/devices, out-of-repository writes, and host/project-specific assumptions
-are concrete lookup events. Keep this small gate list inline in the loaded bootstrap.
+are concrete lookup events, but do not exhaust when agents should retrieve knowledge.
+They now serve as reminders of the broader default: new question -> kt first,
+unless adequately checked knowledge is already loaded. Keep that default and its
+miss-resolution/capture obligation inline in the bootstrap rather than treating
+the reminder list as the only condition for retrieval.
 A trigger hidden only in a leaf the agent must first choose to read cannot reliably
 start the behavior it is meant to enforce.
 
@@ -30,6 +34,9 @@ guessing into continuation from a known starting point. Detail belongs in direct
 lookup, capture, maintenance, and ingestion answers. Gate plus checked hit means
 proceed without duplication; gate plus miss means capture after safe discovery and
 verification, before continuing.
+A failed `kt` lookup must first be classified as existing-but-unretrieved knowledge
+or an absent leaf. Only the latter requires a new leaf; existing owners are read
+or amended. Necessary verification/capture calls may precede resuming unrelated work.
 
 Treat this as an operating design, not a claim that a model's future behavior is
 mechanically proved. Evaluate fresh-session transcripts for actual descent before

@@ -1,12 +1,12 @@
 ---
 name: knowledgetrees-maintenance
-description: 'Use when establishing or entering knowledge roots, checking proofs, reviewing stale or falsified leaves, repairing knowledge, or completing repository work and refreshing its spine.'
+description: 'Use for kt proof checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed.'
 metadata:
-  verified_at: '2026-09-12T18:20:19+10:00'
+  verified_at: '2026-09-12T20:16:19+10:00'
   verified_by: codex /root
   scope: public knowledge-tree example
   source: sanitized operational recommendations and the canonical knowledge-tree contract
-  verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
+  verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
@@ -51,6 +51,8 @@ infrastructure directory `.tools/`; scripts otherwise belong outside the tree.
 ## Proof checks and falsification
 
 Call the single installed `~/.knowledge/.tools/verify-knowledgetree-proofs`.
+The `kt proof` wrapper invokes that same copy. Prefer `kt proof --root ROOT TOKEN`
+for scoped checks, or `kt proof --root ROOT --no-stamp` for a read-only sweep.
 Use `--root ROOT` for an explicit root. Check every active root during bootstrap
 and on entry into a new scope. Before consequential use, after proof changes, when
 focus narrows, and before completing materially affected work, check relevant exact
@@ -72,8 +74,10 @@ The verifier neither judges proof eligibility nor performs agentic repair.
 
 ## Growth, freshness, and retirement
 
-Capture reusable answers immediately after a lookup miss is resolved. Tree hits
-create no duplicate leaf. Unresolved questions record blocker and next check;
+Resolve every `kt` miss by determining whether the leaf exists, using alternate
+keywords and scoped semantic inspection. Retrieve/amend existing owners; add absent
+leaves. Capture established answers before the next unrelated tool call or completion.
+Tree hits create no duplicate leaf. Unresolved questions record blocker and next check;
 forbidden writes require a scoped handoff. Read `how/to/add/knowledge/leaves.md`
 before capture or proof creation. Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
@@ -90,6 +94,8 @@ after verified answer coverage and authorization. Broad enumeration is a last-re
 retrieval diagnostic, or a bounded authorized migration audit, not routine orientation.
 
 Before finishing, check that reusable discoveries were captured, relevant predicates
-passed, scope and provenance are truthful, roots are canonical, payloads are leaves,
+passed, every encountered `kt` miss was classified as existing or absent knowledge,
+and missing leaves were added (or left with truthful unresolved records/scoped handoffs).
+Also check that scope and provenance are truthful, roots are canonical, payloads are leaves,
 and a representative sentence-derived route works. Do not turn gardening judgments,
 atomicity, cohesion, or leaf length into automatic rewrite rules.

@@ -1,36 +1,37 @@
 ---
 name: knowledgetrees-lookup
-description: 'Use before host- or project-specific probes, after failed probes, and whenever retrieving facts or procedures from knowledge trees; perform semantic descent and check evidence before reliance.'
+description: 'Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and capture missing knowledge before continuing.'
 metadata:
-  verified_at: '2026-09-12T18:20:19+10:00'
+  verified_at: '2026-09-12T20:16:19+10:00'
   verified_by: codex /root
   scope: public knowledge-tree example
   source: sanitized operational recommendations and the canonical knowledge-tree contract
-  verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
+  verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
-Consult the applicable tree before environment-specific shell probes or actions.
-The bootstrap's observable gates cover failed probes, installation or privilege
-steps, host changes, environment-specific paths/tools/devices, out-of-repository
-writes, and host/project-specific assumptions drawn from training data. A failed
-probe triggers lookup before another probe or workaround, not after it.
+For every new question, use `kt` before external search or host probes, unless the
+answer is already present in adequately checked loaded knowledge. A known path
+can be read directly with `kt open`; otherwise start with `kt find "question"`
+or concise keywords. No need to reload the skill or orientation for each query.
 
-## Descend from known routes
+## Query, read, and resolve misses
 
-1. State the question. Read the nearest applicable orientation's branch descriptions
-   and concrete exemplar routes; consult broader orientation for shared host facts.
-   Prefer project answers for project questions and the global tree for host tooling.
-2. Try plausible complete sentence paths within those routes. A guessed path is
-   not evidence. Read a predictable leaf directly; if absent, list only the nearest
-   existing parent, choose one semantic continuation, and descend incrementally.
-   Start under `how/`, `what/`, `where/`, or `why/`; use `when/` when present.
+1. State the question and query `kt find`. Use words or a quoted question; search
+   is lexical, not semantic, and scores are rankings, not confidence.
+2. Read likely matches with `kt open project:PATH` or `kt open global:PATH`.
+   Prefer project answers for project questions and global answers for host tooling.
+   Results and orientation previews are not substitutes for the full answer.
 3. Check `scope`, `source`, `verification`, `verified_at`, and `review_when`.
    Freshness depends on volatility and evidence, not timestamp recency alone. Read
    the assertion and predicate behind every proof before relying on the claim.
-   Run relevant semantic-token checks and stop on failed proofs or `falsified_at`.
-4. If descent misses, backtrack through adjacent concepts or synonyms. Only then
-   perform bounded listing or content search in the relevant branch. Recursive
+   Run `kt proof --root ROOT TOKEN` and stop on failed proofs or `falsified_at`.
+4. If `kt` does not find the information, you MUST determine whether a leaf exists.
+   Retry distinctive keywords and synonyms, then try plausible sentence paths
+   from known orientation routes with `kt open`. List only the nearest existing
+   parent and descend or backtrack incrementally; a guessed path is not evidence.
+   Start under `how/`, `what/`, `where/`, or `why/`; use `when/` when present.
+   Only after this, use bounded listing/content search in the relevant branch. Recursive
    whole-tree/whole-repository enumeration is a last-resort diagnostic after
    semantic descent and bounded search fail, never the orientation mechanism.
 5. Stop when a sufficiently checked answer and necessary qualifications are known.
@@ -41,15 +42,25 @@ now. A leaf may coexist with a same-stem directory of refinements. Narrower root
 refine broader knowledge but cannot weaken governing instructions. Do not inspect
 unrelated projects merely because a search reveals them.
 
-## Close the gate loop
+## Close the question before resuming work
 
-A gate firing is observable, even if the agent believes it already knows the answer.
-If the tree has the answer, check it and proceed; a passing check creates no duplicate
-leaf. If the tree lacks a reusable answer, investigate safely, verify from primary
-evidence, and capture it immediately before continuing. Capture even small answers;
+An existing checked answer needs no duplicate leaf. A miss must be classified:
+existing leaf (retrieve or amend it), or absent leaf (add it at the correct scope).
+If no leaf exists, investigate safely, verify from primary evidence, and capture
+the answer before the next unrelated tool call or completion. Necessary verification
+and capture calls are allowed while resolving the question. Capture even small answers;
 do not postpone them to a documentation phase or suppress them to keep leaf count low.
 If unresolved, record `status: unresolved`, `checked_at`, the blocker, and next check
 without inventing a verified conclusion. If writes are forbidden, give a scoped handoff.
+
+Do not treat a zero-result query, an unreadable root, or a broken/missing `kt`
+executable as evidence of absent knowledge. If `kt` is off PATH, use the installed
+`~/.knowledge/.tools/kt`; report access/tool defects and use authorized semantic
+retrieval rather than bypassing permissions.
+
+Failed probes, installation/privilege steps, host changes, environment-specific
+paths/tools/devices, and outside-repository writes are explicit reminders to apply
+the same lookup rule, not exceptions or permission to improvise.
 
 Knowledge of paths, privilege procedures, and policy does not authorize access,
 installation, escalation, or other host changes. A permission denial is also a

@@ -365,6 +365,13 @@ leaf verbatim, and `kt proof --no-stamp leaves` to check relevant proofs.
 `kt roots` shows the active scopes. Search is lexical, not a semantic model;
 scores rank matches, and a miss does not prove knowledge is absent.
 
+The agent default is **new question → `kt` first**, unless adequately checked
+knowledge is already loaded. If `kt` does not find the information, the agent must
+determine whether a leaf exists using alternate terms and scoped semantic inspection.
+Existing leaves are read or amended; absent leaves must be added after investigation,
+or recorded as unresolved when blocked. Capture an established answer before the
+next unrelated tool call or completion—not in a later documentation pass.
+
 ### Why did skills appear after installation?
 
 After installation, Codex and other harnesses may appear to contain a
@@ -380,8 +387,9 @@ The installer also exposes four focused skills in both harness directories:
 `knowledgetrees-lookup`, `knowledgetrees-capture`, `knowledgetrees-maintenance`,
 and `knowledgetrees-ingestion`. Each `SKILL.md` hardlinks to its corresponding
 canonical procedure leaf in the global KT. Their descriptions advertise when to
-use them, while the bootstrap keeps its lookup gates inline and remains once per
-fresh session. Detailed knowledge is still stored and maintained in the tree.
+use them, while the bootstrap keeps its kt-first and miss-resolution rule inline
+and remains once per fresh session. Detailed knowledge is still stored and
+maintained in the tree.
 
 Quit and restart OpenCode and Codex after installation or an upgrade so their
 startup-loaded skill catalogs refresh; an already-running conversation may retain

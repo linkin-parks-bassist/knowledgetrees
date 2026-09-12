@@ -1,20 +1,25 @@
 ---
 name: knowledgetrees-capture
-description: 'Use immediately after discovering a reusable answer or a knowledge-tree lookup miss, and before creating or updating leaves, provenance, unresolved records, or executable proofs.'
+description: 'Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs.'
 metadata:
-  verified_at: '2026-09-12T18:20:19+10:00'
+  verified_at: '2026-09-12T20:16:19+10:00'
   verified_by: codex /root
   scope: public knowledge-tree example
   source: sanitized operational recommendations and the canonical knowledge-tree contract
-  verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
+  verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
-Capture a reusable answer immediately after discovering and verifying it, before
-using it to continue surrounding work. Observable lookup gates make misses explicit:
-a checked tree hit needs no duplicate capture; a miss followed by discovery needs
-an updated semantic owner or a new leaf. The agent's own uncertainty remains an
-additional capture signal, not the only trigger.
+Capture an established reusable answer before the next unrelated tool call or
+completion; necessary verification and capture calls are part of resolving it.
+Use `kt find` and `kt open` to check for an existing owner before writing.
+If `kt` fails to find information, determine whether the leaf exists through
+alternate keywords and scoped semantic inspection. If it exists, use or amend it;
+if it does not, add it at the correct scope. A lexical miss never establishes absence.
+A checked hit needs no duplicate capture. If unresolved, add `status: unresolved`,
+`checked_at`, blocker, and next check rather than inventing a verified answer.
+Do not resume surrounding work with an outstanding capture obligation. The agent's
+own uncertainty remains an additional capture signal, not the only trigger.
 
 ## Choose the owner and path
 
@@ -22,6 +27,8 @@ Put host/personal tooling in `~/.knowledge` and project/subsystem facts in the
 nearest applicable local root. Never promote professional, customer, partner, or
 restricted material into the global tree; sanitize anything intended for publication.
 Reread an existing owner before editing to preserve concurrent changes.
+Use `kt open ROOT:PATH` for that read and `kt proof --root ROOT TOKEN` after
+changing eligible proofs; `kt` does not currently provide a capture/write command.
 
 Write the full natural-language question first. Lowercase it, remove only punctuation
 not belonging to a literal identifier, replace spaces with `/`, and add `.md` to

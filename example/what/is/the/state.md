@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T18:20:19+10:00'
+verified_at: '2026-09-12T20:16:19+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: direct inspection of the example corpus
@@ -18,9 +18,15 @@ Dedekind-complete ordered fields there are.
 The compatibility skill is invoked once when a fresh agent session bootstraps. It
 is not reinvoked for each message, turn, or task after the procedure is loaded.
 
-Observable lookup gates remain inline in the compact bootstrap. Retrieval, capture,
+The kt-first rule and mandatory miss resolution remain inline in the compact bootstrap. Retrieval, capture,
 maintenance, and ingestion detail have direct semantic owners. Installation exposes
 those owners as four focused, enabled, hardlinked skills alongside the bootstrap,
 so their task triggers are advertised directly in the harness. Installation seeds
 navigation for new global roots and requests informed consent for scoped OpenCode
 access before making changes; this visible example's orientation stays empty.
+
+Every procedure uses kt for lookup or proof checks. An unanswered query must be
+classified as an existing leaf to retrieve/amend or an absent leaf to add; capture
+precedes the next unrelated tool call or completion. Checked answers already loaded
+need no redundant retrieval. This operating policy is not mechanically proved by
+installer or discovery checks.

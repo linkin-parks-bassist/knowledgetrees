@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T18:20:19+10:00'
+verified_at: '2026-09-12T20:16:19+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request and knowledgetrees operating procedure
@@ -34,3 +34,5 @@ The approved publication plan is complete.
     installer behavior, and all three proof sweeps.
 15. [x] Expose lookup, capture, maintenance, and ingestion as installer-created
     hardlinked skills; install and enable them locally and verify discovery.
+16. [x] Integrate kt-first retrieval, mandatory miss classification, and transition-
+    anchored capture into all five skills and compact bootstrap instructions.

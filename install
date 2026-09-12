@@ -102,19 +102,12 @@ def agents_text(current: str) -> str:
 # Mandatory knowledge-tree bootstrap
 
 As the first bootstrap action of a fresh agent session, invoke the `knowledgetrees`
-skill before substantive task reasoning, discovery, planning, or other tool use.
-Once loaded, follow its root bootstrap, orientation, semantic retrieval, narrowly
-eligible `Proof:` checks, maintenance, and continuous-growth procedures throughout
-the session. Do not reinvoke the skill merely because a new user message, turn, or
-task arrives. Rebootstrap only for a new session or after a context reset that
-genuinely lost the procedure. Use the nearest applicable project `.knowledge` root
-and the global `~/.knowledge` root.
-
-Run `~/.knowledge/.tools/verify-knowledgetree-proofs` across the working directory's
-knowledge tree during bootstrap and when entering a different project scope. Use
-semantic path-component tokens for relevant branch checks at important junctions.
-Hyphenate genuinely multi-word path components; never use underscores in
-knowledge-tree paths.
+skill and follow its procedures throughout the session without reinvoking per task.
+New question -> `kt` first unless adequately checked knowledge is already loaded;
+miss -> determine whether a leaf exists; absent -> investigate and add it (or an
+unresolved record) before the next unrelated tool call or completion. Use nearest
+project and global roots; the skills own proof checks, scope, paths, and maintenance.
+Current higher-authority instructions and permissions always govern.
 {AGENTS_END}"""
     return replace_managed_block(current, block)
 

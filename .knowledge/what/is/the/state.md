@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T20:06:26+10:00'
+verified_at: '2026-09-12T20:16:19+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
@@ -42,7 +42,7 @@ integration coverage in `tests/test-proof-stamps.py`.
 The README opens with the requested tongue-in-cheek categorical-limit and skeptical
 intuitionistic sub-verification tagline.
 
-The bootstrap now carries observable pre-shell lookup gates inline, with detailed
+The bootstrap now carries the kt-first default and miss-resolution obligation inline, with detailed
 retrieval, capture, maintenance, and ingestion in direct-answer leaves. The installer
 also exposes each procedure as its own hardlinked skill in shared and Codex roots,
 enables all five skills, and preserves unrelated permissions. Global and
@@ -58,3 +58,11 @@ prints leaves verbatim, and forwards proof roots/options correctly. The installe
 now distributes it alongside the single verifier. `tests/test-kt.py` checks isolated
 roots with spaces, phrase ranking, metadata, missing results, open scoping, and
 proof forwarding without executing real predicates.
+
+All five procedures integrate `kt`. A search/content miss must be resolved as an
+existing leaf to retrieve/amend or an absent leaf to investigate/add. Established
+answers must be captured before the next unrelated tool call or completion;
+verification/capture calls remain allowed. Repository and installed user-wide
+bootstrap instructions use the compact rule, while skills retain root, proof,
+scope, path, privacy, and maintenance details. Checked loaded answers need no
+redundant lookup. Structural checks do not establish behavioral compliance.

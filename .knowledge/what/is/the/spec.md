@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T18:20:19+10:00'
+verified_at: '2026-09-12T20:16:19+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request in the active Codex session
@@ -28,9 +28,12 @@ one verifier under the global knowledge root, asserts the bootstrap in the user'
 links to the installed `how/to/use/knowledgetrees.md`. The compatibility skill is a
 bootstrap created by the installer for current harnesses, not a parallel knowledge
 authority.
-The compact bootstrap must carry observable lookup gates inline and link detailed
+The compact bootstrap must carry the kt-first and miss-resolution mandate inline and link detailed
 retrieval, capture, maintenance, and ingestion procedures. The installer must create hardlinked skills for those four
-procedures, enabled in both Codex and OpenCode. The bootstrap remains once per
+procedures, enabled in both Codex and OpenCode. A kt miss requires determining
+whether a leaf exists; existing owners are read or amended, absent leaves are
+investigated and added (or recorded unresolved). Established answers are captured
+before the next unrelated tool call or completion. The bootstrap remains once per
 fresh session; procedure skills are used when their task triggers apply. Real root orientations
 must name branch purposes and actual entry routes. Installer OpenCode grants require
 an informed `[n/Y]` gate before any writes, disclose reads and knowledge-tree writes,

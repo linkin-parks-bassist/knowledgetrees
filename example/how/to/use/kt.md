@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T20:06:26+10:00'
+verified_at: '2026-09-12T20:16:19+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: Python kt implementation and isolated CLI integration tests
-verification: Checked phrase ranking, root precedence, metadata, verbatim reads, and verifier argument forwarding.
+verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
 review_when: Recheck after changes to the kt CLI or root discovery.
 ---
 
@@ -12,6 +12,12 @@ Use `kt find leaves` for quick ranked keyword lookup, or pass a quoted question:
 question-shaped paths receive higher scores than body matches. This is lexical
 retrieval, not a semantic model, and scores are not probabilities of correctness.
 A no-match result exits 1 but does not establish that knowledge is absent.
+When `kt` fails to find needed information, you MUST determine whether a leaf
+exists: retry distinctive terms/synonyms and inspect plausible paths in the applicable
+roots. If it exists, read or amend it; if absent, investigate and add the scoped
+leaf. Preserve the established answer before the next unrelated tool call or
+completion. Add a truthful unresolved record if blocked; forbidden writes require
+a scoped handoff. Do not silently move on or create a duplicate from a lexical miss.
 
 `kt roots` lists the nearest project root followed by the global root without
 duplicates. `KT_GLOBAL_ROOT` can override the global root. Root discovery walks
