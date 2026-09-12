@@ -161,11 +161,6 @@ become maintained knowledge—with provenance, scope, and executable proofs wher
 the facts are mechanically verifiable. The code shows what happens; the tree
 explains why.
 
-Keep a short inline warning where missing it could cause immediate damage. Let the
-tree own the substantive explanation instead of maintaining competing versions in
-comments and documents. This is not another place to put text. It is a bid to make
-the text compose.
-
 ## What makes it different
 
 This is not a search system bolted onto documentation. The tree itself is the
