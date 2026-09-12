@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T20:16:19+10:00'
+verified_at: '2026-09-12T20:29:52+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: completed publication plan and current repository state
@@ -7,7 +7,7 @@ verification: Checked kt-first mandates, local bootstrap synchronization, hardli
 review_when: Update whenever the next actionable step changes.
 ---
 
-The kt integration and mandate changes are complete. For the next approved change, update the
+The kt question-prefix navigation and mandate changes are complete. For the next approved change, update the
 semantic owner, run the installer integration and both proof sweeps, scan public
 content for private identifiers, and publish the reviewed commit.
 

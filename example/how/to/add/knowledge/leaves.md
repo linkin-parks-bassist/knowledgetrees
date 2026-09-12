@@ -2,7 +2,7 @@
 name: knowledgetrees-capture
 description: 'Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs.'
 metadata:
-  verified_at: '2026-09-12T20:16:19+10:00'
+  verified_at: '2026-09-12T20:29:52+10:00'
   verified_by: codex /root
   scope: public knowledge-tree example
   source: sanitized operational recommendations and the canonical knowledge-tree contract
@@ -13,6 +13,10 @@ metadata:
 Capture an established reusable answer before the next unrelated tool call or
 completion; necessary verification and capture calls are part of resolving it.
 Use `kt find` and `kt open` to check for an existing owner before writing.
+Prefer a question-prefix query when the answer category is known: `where is`
+for locations, `how to` for procedures, `when to` for triggers, `what is` for
+definitions/state, and `why does` or `why is` for rationale. Place the full
+sentence-derived leaf under that branch so queries exclude unrelated answer kinds.
 If `kt` fails to find information, determine whether the leaf exists through
 alternate keywords and scoped semantic inspection. If it exists, use or amend it;
 if it does not, add it at the correct scope. A lexical miss never establishes absence.

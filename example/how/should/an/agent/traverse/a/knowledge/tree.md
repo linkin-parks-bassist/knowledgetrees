@@ -2,7 +2,7 @@
 name: knowledgetrees-lookup
 description: 'Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and capture missing knowledge before continuing.'
 metadata:
-  verified_at: '2026-09-12T20:16:19+10:00'
+  verified_at: '2026-09-12T20:29:52+10:00'
   verified_by: codex /root
   scope: public knowledge-tree example
   source: sanitized operational recommendations and the canonical knowledge-tree contract
@@ -12,13 +12,21 @@ metadata:
 
 For every new question, use `kt` before external search or host probes, unless the
 answer is already present in adequately checked loaded knowledge. A known path
-can be read directly with `kt open`; otherwise start with `kt find "question"`
-or concise keywords. No need to reload the skill or orientation for each query.
+can be read directly with `kt open`; otherwise use a question-prefix call such
+as `kt where is vivado` or `kt how to make a plan`. Use `kt find` when a broad
+keyword search is intended. No need to reload the skill or orientation per query.
 
 ## Query, read, and resolve misses
 
-1. State the question and query `kt find`. Use words or a quoted question; search
-   is lexical, not semantic, and scores are rankings, not confidence.
+1. State the question and use its prefix: `where is` -> `where/is/`,
+   `how to` -> `how/to/`, `when to` -> `when/to/`, `what is` -> `what/is/`,
+   `why does` or `why is` -> rationale. Full grammatical paths remain the convention.
+   kt consumes matching directory words; at the first mismatch it searches only
+   that branch using the remaining words. If best keyword coverage is below its
+   threshold it climbs one parent and retries; it does not start with whole-tree search.
+   An exact leaf hit returns the full leaf, not a ranked excerpt. `kt how to _`
+   lists the prefix branch. Matching is lexical/content-based, not a semantic model;
+   scores and widening thresholds are heuristics, not evidence of correctness.
 2. Read likely matches with `kt open project:PATH` or `kt open global:PATH`.
    Prefer project answers for project questions and global answers for host tooling.
    Results and orientation previews are not substitutes for the full answer.

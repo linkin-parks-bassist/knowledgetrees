@@ -2,7 +2,7 @@
 name: knowledgetrees
 description: 'Bootstrap once per fresh session; use kt first for new questions, resolve lookup misses, check proofs, and capture missing knowledge before continuing.'
 metadata:
-  verified_at: '2026-09-12T20:16:19+10:00'
+  verified_at: '2026-09-12T20:29:52+10:00'
   verified_by: codex /root
   scope: public knowledge-tree example and distributable skill
   source: sanitized operational recommendations and the canonical knowledge-tree contract
@@ -34,10 +34,18 @@ Use `kt` from PATH, or `~/.knowledge/.tools/kt` if PATH has not been configured.
 ## Default action: new question -> kt first
 
 For a new question not already answered by adequately checked loaded knowledge,
-the first lookup action is `kt find "question or useful keywords"`, or `kt open`
-for a known leaf path. Read matching leaves verbatim with `kt open project:PATH`
+the first lookup action is a question-prefix call such as `kt where is vivado`
+or `kt how to make a plan`, or `kt open` for a known leaf path. Use `kt find`
+for deliberately broad keyword searches. Read listed matches with `kt open project:PATH`
 or `kt open global:PATH`; check evidence and relevant proofs before reliance.
 Do not start with external grep, host probes, or training-data assumptions.
+
+Question conventions: `where/is/` for locations, `how/to/` for procedures,
+`when/to/` for decision triggers, `what/is/` for definitions/current state,
+and `why/does/` or `why/is/` for rationale. Longer sentence prefixes also work.
+kt walks matching words into directories; at the first mismatch it ranks the
+remaining words only inside that branch. Weak keyword coverage widens one parent
+at a time; exact leaf hits return full content. `kt how to _` lists that branch.
 
 Failure to find information via `kt` means you MUST determine whether a leaf
 exists: retry useful keywords/synonyms, then inspect plausible semantic paths in

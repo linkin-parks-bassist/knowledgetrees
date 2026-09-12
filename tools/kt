@@ -60,14 +60,15 @@ def leaves(root):
                     yield path
 
 
-def find(args):
+def find(args, branches=None, browse=False):
     terms = words(" ".join(args.terms))
-    if not terms:
+    if not terms and not browse:
         print("kt: supply at least one word to search", file=sys.stderr)
         return 2
     results = []
-    for precedence, (label, root) in enumerate(roots()):
-        for path in leaves(root):
+    for precedence, (label, root, branch) in enumerate(
+            branches if branches is not None else [(label, root, root) for label, root in roots()]):
+        for path in leaves(branch):
             try:
                 text = path.read_text()
             except (OSError, UnicodeError) as error:
@@ -79,11 +80,11 @@ def find(args):
             lower = body.casefold()
             head = "\n".join(body.splitlines()[:20]).casefold()
             score = sum(4 if t in route else 2 if t in head else 1 if t in lower else 0 for t in terms)
-            if not score:
+            if not score and not browse:
                 continue
-            if all(t in route for t in terms):
+            if terms and all(t in route for t in terms):
                 score += 8
-            if words(route) == terms:
+            if terms and words(route) == terms:
                 score += 20
             lines = [line.strip() for line in body.splitlines() if line.strip()]
             excerpt = max(lines, key=lambda line: sum(t in line.casefold() for t in terms), default="")
@@ -95,7 +96,9 @@ def find(args):
         print("Check alternate terms and scoped paths. If no leaf exists, investigate and add it before resuming work.")
         return 1
     shown = results[:args.limit]
-    print(paint(f"{len(shown)} of {len(results)} matches", "1") + f" · {' '.join(args.terms)}\n")
+    title = "leaves" if browse else "matches"
+    query = f" · {' '.join(args.terms)}" if args.terms else ""
+    print(paint(f"{len(shown)} of {len(results)} {title}", "1") + query + "\n")
     width = max(30, min(shutil.get_terminal_size((100, 24)).columns - 4, 116))
     for index, (negative_score, _, relative, label, path, metadata, excerpt) in enumerate(shown, 1):
         print(f"{paint(str(index) + '.', '1')} {paint(label + ':' + relative, '36')}  {paint('score ' + str(-negative_score), '2')}")
@@ -108,6 +111,77 @@ def find(args):
     print("Read verbatim: kt open project:<path> or kt open global:<path>")
     print("Check relevant proofs before relying on claims; search scores are not confidence.")
     return 0
+
+
+QUESTION_STARTS = {"how", "where", "when", "what", "why", "who", "which"}
+
+
+def question(arguments):
+    parser = argparse.ArgumentParser(prog="kt", description="Walk question words, then search the nearest relevant branch.")
+    parser.add_argument("question", nargs="+")
+    parser.add_argument("--limit", type=int, default=10)
+    args = parser.parse_args(arguments)
+    if args.limit < 1:
+        parser.error("--limit must be positive")
+    components = re.findall(r"[^\W_]+(?:-[^\W_]+)*|_", " ".join(args.question).casefold())
+    if "_" in components[:-1]:
+        parser.error("_ is a terminal branch-listing placeholder")
+    browse = bool(components and components[-1] == "_")
+    if browse:
+        components.pop()
+    available = roots()
+    # Try the full sentence path without scanning any directory contents.
+    if components and not browse:
+        for label, root in available:
+            candidate = root.joinpath(*components).with_suffix(".md")
+            if candidate.is_file() and not candidate.is_symlink() and candidate.resolve().is_relative_to(root):
+                print(f"kt: exact {label}:{candidate.relative_to(root)}; check relevant proofs before reliance", file=sys.stderr)
+                sys.stdout.write(candidate.read_text())
+                return 0
+    # Consume directories word by word. Stop at the first unmatched component.
+    walked = []
+    for label, root in available:
+        branch = root
+        consumed = 0
+        for component in components:
+            child = branch / component
+            if not child.is_dir() or child.is_symlink():
+                break
+            branch = child
+            consumed += 1
+        walked.append((label, root, branch, consumed))
+    depth = max((entry[3] for entry in walked), default=0)
+    terms = words(" ".join(components[depth:]))
+    # Exact branch listing needs no keyword hit; keyword searches widen only if
+    # no candidate covers enough of the unmatched query to be worth presenting.
+    while depth >= 0:
+        branches = []
+        for label, root, _, consumed in walked:
+            if consumed >= depth:
+                branches.append((label, root, root.joinpath(*components[:depth])))
+        relevant = browse or not terms
+        if not relevant:
+            for _, _, branch in branches:
+                for path in leaves(branch):
+                    try:
+                        _, body = leaf_parts(path.read_text())
+                    except (OSError, UnicodeError):
+                        continue
+                    haystack = path.relative_to(branch).as_posix().casefold() + "\n" + body.casefold()
+                    # Transparent lexical coverage, not model confidence.
+                    if sum(t in haystack for t in terms) / len(terms) >= 0.5:
+                        relevant = True
+                        break
+                if relevant:
+                    break
+        if relevant or depth == 0:
+            prefix = "/".join(components[:depth]) or "(whole roots)"
+            print(paint("Search branch", "1") + f": {prefix}\n")
+            args.terms = terms
+            return find(args, branches=branches, browse=browse or not terms)
+        depth -= 1
+        print(f"kt: weak keyword coverage; widening to {'/'.join(components[:depth]) or 'whole roots'}", file=sys.stderr)
+    return 1
 
 
 def open_leaf(value):
@@ -156,7 +230,9 @@ def main():
     # Forward verifier options unchanged instead of trying to reproduce its parser.
     if len(sys.argv) > 1 and sys.argv[1] == "proof":
         return proof(sys.argv[2:])
-    parser = argparse.ArgumentParser(description=__doc__)
+    if len(sys.argv) > 1 and sys.argv[1].split() and sys.argv[1].split()[0].casefold() in QUESTION_STARTS:
+        return question(sys.argv[1:])
+    parser = argparse.ArgumentParser(description=__doc__, epilog="Questions: kt where is vivado; kt how to _ (list a branch).")
     commands = parser.add_subparsers(dest="command")
     search = commands.add_parser("find", help="rank keyword matches across project and global roots")
     search.add_argument("terms", nargs="+", help="words or a quoted question")
@@ -181,6 +257,8 @@ def main():
             print("\n" + paint("Orientation", "1"))
             print(textwrap.shorten(" ".join(body.split()), width=600, placeholder=" …"))
         print("\nkt find leaves                     ranked keyword lookup")
+        print("kt where is vivado                 exact answer or nearby matches")
+        print("kt how to _                        list a question branch")
         print('kt find "how to add knowledge leaves"')
         print("kt open global:how/to/add/knowledge/leaves.md")
         print("kt proof [directory] [tokens] [--no-stamp]")

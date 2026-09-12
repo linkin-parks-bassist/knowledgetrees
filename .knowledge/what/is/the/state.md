@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T20:16:19+10:00'
+verified_at: '2026-09-12T20:29:52+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
@@ -54,8 +54,13 @@ sweeps of repository, example, and installed global trees pass.
 `tools/kt` is the dependency-free Python lookup CLI, deployed locally under the
 global root's `.tools/` and exposed through `~/.local/bin/kt`. It ranks keyword
 and quoted-question matches, labels project/global roots, reads leaf metadata,
-prints leaves verbatim, and forwards proof roots/options correctly. The installer
-now distributes it alongside the single verifier. `tests/test-kt.py` checks isolated
+prints leaves verbatim, and forwards proof roots/options correctly. Question-prefix
+navigation consumes directory words, returns exact
+leaf hits verbatim, then rank unmatched words only inside the selected branch.
+If best lexical keyword coverage is below one half, widen one parent and retry.
+Terminal `_` lists the selected branch. Prefix scoping, exclusion of sibling
+branches, exact reads, and incremental widening have isolated CLI test coverage.
+The installer distributes it alongside the single verifier. `tests/test-kt.py` checks isolated
 roots with spaces, phrase ranking, metadata, missing results, open scoping, and
 proof forwarding without executing real predicates.
 

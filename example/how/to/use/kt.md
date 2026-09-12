@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T20:16:19+10:00'
+verified_at: '2026-09-12T20:29:52+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: Python kt implementation and isolated CLI integration tests
@@ -7,7 +7,20 @@ verification: Reviewed kt-first lookup, mandatory miss classification, capture t
 review_when: Recheck after changes to the kt CLI or root discovery.
 ---
 
-Use `kt find leaves` for quick ranked keyword lookup, or pass a quoted question:
+Use `kt where is vivado` or `kt how to make a plan` for branch-directed lookup.
+Words are consumed as directories one at a time. At the first unmatched word,
+the remaining words are ranked only among leaves beneath the matched prefix.
+If no candidate covers at least half of those keywords, search widens to the parent,
+one level at a time. This transparent lexical-coverage heuristic is not confidence
+or semantic similarity. `kt where is _` lists location leaves without a query.
+Exact question-path hits return full contents, frontmatter included; they do not
+run proofs or establish correctness. Use `kt open` to read fallback list results.
+
+Conventions: `where/is/` answers locations, `how/to/` procedures, `when/to/`
+decision triggers, `what/is/` definitions/state, and `why/does/` or `why/is/`
+rationale. Other complete question prefixes can be navigated under these starters.
+
+Use `kt find leaves` for deliberately broad lookup, or pass a quoted question:
 `kt find "how to add knowledge leaves"`. Words are matched case-insensitively;
 question-shaped paths receive higher scores than body matches. This is lexical
 retrieval, not a semantic model, and scores are not probabilities of correctness.

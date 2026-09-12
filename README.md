@@ -365,6 +365,15 @@ leaf verbatim, and `kt proof --no-stamp leaves` to check relevant proofs.
 `kt roots` shows the active scopes. Search is lexical, not a semantic model;
 scores rank matches, and a miss does not prove knowledge is absent.
 
+Question prefixes make the directories active search boundaries:
+`kt where is vivado` walks `where/is/` and returns the exact leaf if present.
+Otherwise, it walks matching directory words until the first mismatch and ranks
+the remaining keywords only among that branch's descendants. Weak matches cause
+it to climb one parent and search wider. `kt how to _` lists a procedure branch.
+Use `where/is/` for locations, `how/to/` for procedures, `when/to/` for triggers,
+`what/is/` for definitions/state, and `why/does/` or `why/is/` for rationale.
+`kt find` remains the deliberately broad search interface.
+
 The agent default is **new question → `kt` first**, unless adequately checked
 knowledge is already loaded. If `kt` does not find the information, the agent must
 determine whether a leaf exists using alternate terms and scoped semantic inspection.

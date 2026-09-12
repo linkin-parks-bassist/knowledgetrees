@@ -25,6 +25,14 @@ def main():
         (global_root / leaf).write_text(content)
         (local / leaf).write_text(content.replace("Capture", "Project: capture"))
         (global_root / "bad.md").write_text("---\nfalsified_at: yesterday\n---\n\nLeaves are bad.\n")
+        (global_root / "where/is").mkdir(parents=True)
+        (global_root / "where/is/compiler.md").write_text("---\nscope: test\n---\n\nThe compiler is installed here.\n")
+        (global_root / "where/is/gpu.md").write_text("GPU location: violet accelerator.\n")
+        (global_root / "how/to/explain").mkdir(parents=True)
+        (global_root / "how/to/explain/compiler.md").write_text("A compiler translates code.\n")
+        (global_root / "how/to/explain/violet.md").write_text("Unrelated procedure mentions violet accelerator.\n")
+        (global_root / "how/to/explain/empty-topic").mkdir()
+        (global_root / "how/to/recover.md").write_text("Recover with amber diagnostics.\n")
         (global_root / ".tools").mkdir()
         verifier = global_root / ".tools/verify-knowledgetree-proofs"
         verifier.write_text("#!/usr/bin/env python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n")
@@ -44,6 +52,18 @@ def main():
         assert result.index("project:" + leaf) < result.index("global:" + leaf)
         assert "2026-09-12T12:00:00+00:00" in result
         assert "FALSIFIED" in run("find", "leaves")
+        assert run("where", "is", "compiler") == (global_root / "where/is/compiler.md").read_text()
+        assert run("where is compiler") == (global_root / "where/is/compiler.md").read_text()
+        scoped = run("where", "is", "violet")
+        assert "Search branch: where/is" in scoped
+        assert "global:where/is/gpu.md" in scoped and "how/to/" not in scoped
+        listed = run("how", "to", "_", "--limit", "100")
+        assert "global:how/to/" in listed and "global:where/is/" not in listed
+        widened = run("how", "to", "explain", "empty-topic", "amber")
+        assert "Search branch: how/to" in widened and "global:how/to/recover.md" in widened
+        assert "where/is" not in widened
+        assert "No matches" in run("where", "is", "unfindablezzz", expected=1)
+        run("how", "_", "to", expected=2)
         assert "No matches" in run("find", "zzzzunfindable", expected=1)
         assert run("open", "global:" + leaf) == content
         assert run("open", leaf).startswith("---")
