@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T16:59:59+10:00'
+verified_at: '2026-09-12T18:20:19+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request and knowledgetrees operating procedure
@@ -32,3 +32,5 @@ The approved publication plan is complete.
     knowledge; preserve the empty example orientation.
 14. [x] Add consent-before-write OpenCode integration and validate scoped permissions,
     installer behavior, and all three proof sweeps.
+15. [x] Expose lookup, capture, maintenance, and ingestion as installer-created
+    hardlinked skills; install and enable them locally and verify discovery.

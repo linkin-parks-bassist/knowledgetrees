@@ -14,7 +14,8 @@ declining or noninteractive EOF cancels installation.
 OpenCode needs both `read` and `external_directory` permission for an outside
 workspace tree. Allow these for the absolute home-expanded `.knowledge/**` and
 `.agents/**` paths. Allow `edit` for `.knowledge/**`; keep `.agents/**` edits
-at `ask`. Enable only the `knowledgetrees` skill without changing other skills.
+at `ask`. Enable `knowledgetrees` and its `-lookup`, `-capture`, `-maintenance`,
+and `-ingestion` procedure skills without changing unrelated skills.
 Preserve unrelated settings and permission defaults. Last matching rules win,
 so append the scoped grants after existing broad rules.
 

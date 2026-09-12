@@ -23,6 +23,13 @@ EXCLUDED_EXAMPLE_LEAVES = {
 }
 AGENTS_BEGIN = "<!-- BEGIN KNOWLEDGETREES BOOTSTRAP -->"
 AGENTS_END = "<!-- END KNOWLEDGETREES BOOTSTRAP -->"
+SKILL_LEAVES = {
+    "knowledgetrees": Path("how/to/use/knowledgetrees.md"),
+    "knowledgetrees-lookup": Path("how/should/an/agent/traverse/a/knowledge/tree.md"),
+    "knowledgetrees-capture": Path("how/to/add/knowledge/leaves.md"),
+    "knowledgetrees-maintenance": Path("how/to/maintain/a/knowledge/tree.md"),
+    "knowledgetrees-ingestion": Path("how/should/legacy/documents/be/ingested/into/a/knowledge/tree.md"),
+}
 
 
 def path_exists(path: Path) -> bool:
@@ -52,6 +59,7 @@ def rendered_leaf(source: Path) -> bytes:
         "\nscope: personal global\n",
         1,
     )
+    text = text.replace("  scope: public knowledge-tree example\n", "  scope: personal global\n", 1)
     return text.encode()
 
 
@@ -164,7 +172,7 @@ def opencode_config_text(current: str, target_home: Path) -> str:
             raise ValueError(f"OpenCode {kind} permission must be an action or object")
         if kind == "read" and kind not in permission and "*" not in permission:
             rules.update({"*.env": "deny", "*.env.*": "deny", "*.env.example": "allow"})
-        additions = {"knowledgetrees": "allow"} if kind == "skill" else {
+        additions = {name: "allow" for name in SKILL_LEAVES} if kind == "skill" else {
             path: "ask" if kind == "edit" and path == paths[1] else "allow" for path in paths
         }
         for pattern, action in additions.items():
@@ -182,7 +190,7 @@ def permission_consent(target_home: Path) -> bool:
         print(f"  {target_home / name}/**")
     print("Folder contents may be sent to your configured model/provider.")
     print(f"Agents will also be allowed to WRITE to {target_home / '.knowledge'}/**.")
-    print("The knowledgetrees skill will be enabled; edits in .agents still require approval.")
+    print("The bootstrap and four knowledge-tree procedure skills will be enabled; edits in .agents still require approval.")
     while True:
         try:
             answer = input("Grant these permissions and continue installation? [n/Y] ").strip().lower()
@@ -259,14 +267,15 @@ def main(arguments: list[str] | None = None) -> int:
     target_home = args.home.expanduser().resolve()
     knowledge_root = target_home / ".knowledge"
     verifier_target = knowledge_root / ".tools" / "verify-knowledgetree-proofs"
-    canonical_skill = knowledge_root / "how" / "to" / "use" / "knowledgetrees.md"
-    skill_targets = (
-        target_home / ".agents" / "skills" / "knowledgetrees" / "SKILL.md",
-        target_home / ".codex" / "skills" / "knowledgetrees" / "SKILL.md",
-    )
+    skill_links = [
+        (knowledge_root / relative, target_home / harness / "skills" / name / "SKILL.md")
+        for name, relative in SKILL_LEAVES.items()
+        for harness in (".agents", ".codex")
+    ]
+    skill_targets = [destination for _canonical, destination in skill_links]
 
     link_devices = {
-        containing_device(destination) for destination in (canonical_skill, *skill_targets)
+        containing_device(path) for canonical, destination in skill_links for path in (canonical, destination)
     }
     if len(link_devices) != 1:
         print(
@@ -306,8 +315,8 @@ def main(arguments: list[str] | None = None) -> int:
             conflicts.append(destination)
     if path_exists(verifier_target) and not same_bytes(verifier_target, verifier_bytes):
         conflicts.append(verifier_target)
-    skill_bytes = rendered_leaf(example / "how" / "to" / "use" / "knowledgetrees.md")
-    for destination in skill_targets:
+    for canonical, destination in skill_links:
+        skill_bytes = rendered_leaf(example / canonical.relative_to(knowledge_root))
         if path_exists(destination) and not same_bytes(destination, skill_bytes):
             conflicts.append(destination)
 
@@ -323,7 +332,10 @@ def main(arguments: list[str] | None = None) -> int:
     codex_config = target_home / ".codex" / "config.toml"
     config_storage = writable_target(codex_config)
     config_current = config_storage.read_text() if config_storage.is_file() else ""
-    config_updated = codex_config_text(config_current, skill_targets[1])
+    config_updated = config_current
+    for _canonical, destination in skill_links:
+        if destination.is_relative_to(target_home / ".codex"):
+            config_updated = codex_config_text(config_updated, destination)
 
     if not path_exists(opencode_config) and path_exists(opencode_config.with_suffix(".jsonc")):
         print("error: OpenCode JSONC configuration exists; integrate its permissions manually before installation", file=sys.stderr)
@@ -346,8 +358,8 @@ def main(arguments: list[str] | None = None) -> int:
     if args.dry_run:
         print(f"Would install {len(leaf_installs)} reusable leaves into {knowledge_root}")
         print(f"Would install the verifier at {verifier_target}")
-        for destination in skill_targets:
-            print(f"Would hard-link {destination} to {canonical_skill}")
+        for canonical, destination in skill_links:
+            print(f"Would hard-link {destination} to {canonical}")
         print(f"Would assert the bootstrap in {agents_path}")
         print(f"Would enable the Codex skill in {codex_config}")
         if opencode_updated != opencode_current:
@@ -372,7 +384,7 @@ def main(arguments: list[str] | None = None) -> int:
     else:
         os.chmod(verifier_target, 0o755)
 
-    for destination in skill_targets:
+    for canonical_skill, destination in skill_links:
         destination.parent.mkdir(parents=True, exist_ok=True)
         try:
             already_linked = not destination.is_symlink() and destination.samefile(

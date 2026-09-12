@@ -1,10 +1,13 @@
 ---
-verified_at: '2026-09-12T16:50:03+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: sanitized operational recommendations and the canonical knowledge-tree contract
-verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
-review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
+name: knowledgetrees-lookup
+description: 'Use before host- or project-specific probes, after failed probes, and whenever retrieving facts or procedures from knowledge trees; perform semantic descent and check evidence before reliance.'
+metadata:
+  verified_at: '2026-09-12T18:20:19+10:00'
+  verified_by: codex /root
+  scope: public knowledge-tree example
+  source: sanitized operational recommendations and the canonical knowledge-tree contract
+  verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
+  review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
 Consult the applicable tree before environment-specific shell probes or actions.

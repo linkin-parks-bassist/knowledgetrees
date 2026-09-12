@@ -1,10 +1,13 @@
 ---
-verified_at: '2026-09-12T16:50:03+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: sanitized operational recommendations and the canonical knowledge-tree contract
-verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
-review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
+name: knowledgetrees-maintenance
+description: 'Use when establishing or entering knowledge roots, checking proofs, reviewing stale or falsified leaves, repairing knowledge, or completing repository work and refreshing its spine.'
+metadata:
+  verified_at: '2026-09-12T18:20:19+10:00'
+  verified_by: codex /root
+  scope: public knowledge-tree example
+  source: sanitized operational recommendations and the canonical knowledge-tree contract
+  verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
+  review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
 Maintain current truth in place within current authority. Knowledge records facts

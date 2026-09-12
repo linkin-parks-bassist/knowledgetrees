@@ -1,10 +1,13 @@
 ---
-verified_at: '2026-09-12T16:50:03+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: sanitized operational recommendations and the canonical knowledge-tree contract
-verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
-review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
+name: knowledgetrees-ingestion
+description: 'Use when migrating documents or other legacy knowledge into a knowledge tree, splitting procedural knowledge, auditing answer coverage, or retiring redundant sources.'
+metadata:
+  verified_at: '2026-09-12T18:20:19+10:00'
+  verified_by: codex /root
+  scope: public knowledge-tree example
+  source: sanitized operational recommendations and the canonical knowledge-tree contract
+  verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
+  review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
 Treat a legacy document as temporary ingestion material, not a parallel canonical

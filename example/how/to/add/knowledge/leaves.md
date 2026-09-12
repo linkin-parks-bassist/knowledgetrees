@@ -1,10 +1,13 @@
 ---
-verified_at: '2026-09-12T16:50:03+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: sanitized operational recommendations and the canonical knowledge-tree contract
-verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
-review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
+name: knowledgetrees-capture
+description: 'Use immediately after discovering a reusable answer or a knowledge-tree lookup miss, and before creating or updating leaves, provenance, unresolved records, or executable proofs.'
+metadata:
+  verified_at: '2026-09-12T18:20:19+10:00'
+  verified_by: codex /root
+  scope: public knowledge-tree example
+  source: sanitized operational recommendations and the canonical knowledge-tree contract
+  verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
+  review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
 Capture a reusable answer immediately after discovering and verifying it, before

@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T16:59:59+10:00'
+verified_at: '2026-09-12T18:20:19+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: repository installer and current agent-harness discovery behavior
@@ -32,6 +32,13 @@ both `~/.agents/skills/knowledgetrees/SKILL.md` and
 leaf at `~/.knowledge/how/to/use/knowledgetrees.md`. It also enables the Codex entry
 in `~/.codex/config.toml`. The three paths share one inode, so editing the canonical
 leaf cannot leave a wrapper or copied skill body stale.
+
+Four procedure skills are also installed in both roots:
+`knowledgetrees-lookup`, `knowledgetrees-capture`, `knowledgetrees-maintenance`,
+and `knowledgetrees-ingestion`. Each hardlinks to the respective retrieval,
+capture, maintenance, or ingestion leaf, with discovery metadata in that canonical
+leaf. All five skills are enabled in Codex configuration and OpenCode permissions.
+Quit and restart clients after installation or updates to refresh their catalogs.
 
 Installation is idempotent when installed content is unchanged. Differing existing
 leaves or bootstrap skill bodies cause a preflight failure; inspect the differences

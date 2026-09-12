@@ -125,6 +125,19 @@ def main() -> None:
         assert 'model = "example-model"' in config
         assert config.count(str(codex_skill)) == 1
         assert "enabled = true" in config
+        installed_skills = runpy.run_path(str(INSTALLER))["SKILL_LEAVES"]
+        for name, relative in installed_skills.items():
+            owner = knowledge / relative
+            assert f"name: {name}" in owner.read_text()
+            assert "metadata:\n" in owner.read_text()
+            assert "  ---" not in owner.read_text(), "frontmatter delimiter must not be nested"
+            assert owner.read_text().count("\n---\n") == 1
+            for harness in (".agents", ".codex"):
+                entry = target_home / harness / "skills" / name / "SKILL.md"
+                assert not entry.is_symlink()
+                assert entry.samefile(owner)
+                if harness == ".codex":
+                    assert config.count(str(entry)) == 1
         opencode = json.loads(opencode_config.read_text())
         assert opencode["model"] == "example/local-model"
         permissions = opencode["permission"]
@@ -132,6 +145,8 @@ def main() -> None:
         assert permissions["edit"]["*"] == "deny"
         assert permissions["skill"]["*"] == "deny"
         assert permissions["skill"]["knowledgetrees"] == "allow"
+        for name in installed_skills:
+            assert permissions["skill"][name] == "allow"
         for name in (".knowledge", ".agents"):
             pattern = str(target_home / name) + "/**"
             assert permissions["read"][pattern] == "allow"
@@ -147,6 +162,18 @@ def main() -> None:
             "BEGIN KNOWLEDGETREES BOOTSTRAP"
         ) == 1
         assert codex_config.read_text().count(str(codex_skill)) == 1
+        for name, relative in installed_skills.items():
+            assert (target_home / ".agents/skills" / name / "SKILL.md").samefile(knowledge / relative)
+
+        capture_owner = knowledge / installed_skills["knowledgetrees-capture"]
+        capture_owner.write_text(capture_owner.read_text() + "\nLocal customization.\n")
+        run(*home_arguments, expected=2)
+        assert "Local customization" in capture_owner.read_text()
+        run(*home_arguments, "--force")
+        assert "Local customization" not in capture_owner.read_text()
+        for name, relative in installed_skills.items():
+            for harness in (".agents", ".codex"):
+                assert (target_home / harness / "skills" / name / "SKILL.md").samefile(knowledge / relative)
 
         changed_leaf = knowledge / "what" / "is" / "a" / "knowledge" / "tree.md"
         changed_leaf.write_text("Customized content.\n")

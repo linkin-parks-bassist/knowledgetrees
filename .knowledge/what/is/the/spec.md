@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T16:59:59+10:00'
+verified_at: '2026-09-12T18:20:19+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request in the active Codex session
@@ -29,7 +29,9 @@ links to the installed `how/to/use/knowledgetrees.md`. The compatibility skill i
 bootstrap created by the installer for current harnesses, not a parallel knowledge
 authority.
 The compact bootstrap must carry observable lookup gates inline and link detailed
-retrieval, capture, maintenance, and ingestion procedures. Real root orientations
+retrieval, capture, maintenance, and ingestion procedures. The installer must create hardlinked skills for those four
+procedures, enabled in both Codex and OpenCode. The bootstrap remains once per
+fresh session; procedure skills are used when their task triggers apply. Real root orientations
 must name branch purposes and actual entry routes. Installer OpenCode grants require
 an informed `[n/Y]` gate before any writes, disclose reads and knowledge-tree writes,
 and preserve unrelated configuration and the empty example orientation.

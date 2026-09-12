@@ -2,7 +2,7 @@
 name: knowledgetrees
 description: 'Session bootstrap with mandatory observable lookup gates, semantic retrieval, proof checks, and continuous knowledge capture.'
 metadata:
-  verified_at: '2026-09-12T16:50:03+10:00'
+  verified_at: '2026-09-12T18:20:19+10:00'
   verified_by: codex /root
   scope: public knowledge-tree example and distributable skill
   source: sanitized operational recommendations and the canonical knowledge-tree contract
@@ -46,6 +46,8 @@ answer; no duplicate capture. Gate plus miss: capture the verified reusable answ
 before continuing, or record `status: unresolved` with blocker and next check.
 Resolve these paths from the installed global knowledge root, not the harness's
 `SKILL.md` directory; local orientation routes select project-specific answers.
+The installer also advertises these four procedures as focused skills hardlinked
+to their canonical leaves. Use them when their triggers apply; this is not another bootstrap.
 
 - Lookup: `how/should/an/agent/traverse/a/knowledge/tree.md` — read before gated descent.
 - Capture: `how/to/add/knowledge/leaves.md` — read before creating or changing knowledge.

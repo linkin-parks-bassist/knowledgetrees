@@ -369,6 +369,17 @@ plumbing—not as another knowledge store. After installing the canonical proced
 `~/.codex/skills/knowledgetrees/SKILL.md` as hard links to that same file. All three
 paths share one inode: there is no wrapper and no second body to drift.
 
+The installer also exposes four focused skills in both harness directories:
+`knowledgetrees-lookup`, `knowledgetrees-capture`, `knowledgetrees-maintenance`,
+and `knowledgetrees-ingestion`. Each `SKILL.md` hardlinks to its corresponding
+canonical procedure leaf in the global KT. Their descriptions advertise when to
+use them, while the bootstrap keeps its lookup gates inline and remains once per
+fresh session. Detailed knowledge is still stored and maintained in the tree.
+
+Quit and restart OpenCode and Codex after installation or an upgrade so their
+startup-loaded skill catalogs refresh; an already-running conversation may retain
+older descriptions or procedure content.
+
 ## A minimal adoption path
 
 1. Create `.knowledge/where/am/i.md` and the canonical `how/`, `what/`, `where/`,
