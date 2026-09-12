@@ -1,7 +1,5 @@
 # Semantic Knowledge Trees
 
-> Stop stuffing the whole world into the prompt.
-
 Semantic Knowledge Trees are a stateful, self-growing, self-healing filesystem for
 agent knowledge. They aim to replace the split between skills, documentation,
 project memory, plans, specifications, working policy, and operational notes with
@@ -23,34 +21,6 @@ This repository contains:
   verifier; and
 - selected planning and specification practices distilled into semantic leaves,
   without inheriting an inflexible skill-driven workflow.
-
-## Install
-
-Run the installer from a clone:
-
-```bash
-./install
-```
-
-The installer is knowledge-first. It safely merges the reusable leaves from
-`example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
-single verifier at `~/.knowledge/.tools/verify-knowledgetree-proofs`, and adds the
-mandatory bootstrap to `~/AGENTS.md`. It refuses to overwrite differing knowledge
-unless `--force` is supplied explicitly. Preview its work with `./install --dry-run`.
-
-### Why is there still a skill?
-
-Because current agent harnesses still require a skill-shaped entry point to start
-the procedure. The skill is compatibility plumbing, not another knowledge store.
-After installing the canonical procedure at
-`~/.knowledge/how/to/use/knowledgetrees.md`, the installer creates
-`~/.agents/skills/knowledgetrees/SKILL.md` and
-`~/.codex/skills/knowledgetrees/SKILL.md` as hard links to that same file. All three
-paths share one inode: there is no wrapper and no second body to drift.
-
-The repository keeps [`skills/knowledgetrees/SKILL.md`](skills/knowledgetrees/SKILL.md)
-as a relative link for browsability. Git cannot preserve hard-link identity, so the
-installer creates real hard links on the target system.
 
 ## Two roots, two jobs
 
@@ -123,14 +93,19 @@ agent retrieve the answer.
 
 If an agent needs to know how to make a plan, it can predict
 `how/to/make/a/plan.md`. If it needs to understand why a knowledge tree is not an
-index, it can descend through `why/is/a/knowledge/tree/not/an/index.md`.
+index, it can descend through `why/is/a/knowledge/tree/not/an/index.md`. LLMs are
+fundamentally language models. With knowledgetrees, if an agent has a question,
+*the question itself can point directly at the answer*. The path is already half
+the retrieval query. This is not merely documentation stored in folders: every
+branch narrows what the agent is asking, and the leaf directly answers the question.
 
-The path is already half the retrieval query. This is not merely documentation
-stored in folders: every branch narrows what the agent is asking, and the leaf
-directly answers the question.
+An agent does not need to word a question exactly like the answer's path. In early
+use, nearby semantic components give agents enough structure to choose a likely
+branch and narrow in quickly when the first guess is not exact.
 
-The context window starts with an index into knowledge, not all the knowledge
-itself.
+Further testing is required to see how this behaves at larger scales. As long as
+branches remain meaningfully discriminating, each path choice reduces the search
+space without loading the whole corpus.
 
 ## Why it matters
 
@@ -308,6 +283,34 @@ links, normal version control, and ordinary tooling.
 - How a mature tree should be reorganized as it grows.
 
 Rigor belongs in the obligations. Flexibility belongs in the organization.
+
+## Install
+
+Run the installer from a clone:
+
+```bash
+./install
+```
+
+The installer is knowledge-first. It safely merges the reusable leaves from
+`example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
+single verifier at `~/.knowledge/.tools/verify-knowledgetree-proofs`, and adds the
+mandatory bootstrap to `~/AGENTS.md`. It refuses to overwrite differing knowledge
+unless `--force` is supplied explicitly. Preview its work with `./install --dry-run`.
+
+### Why is there still a skill?
+
+Because current agent harnesses still require a skill-shaped entry point to start
+the procedure. The skill is compatibility plumbing, not another knowledge store.
+After installing the canonical procedure at
+`~/.knowledge/how/to/use/knowledgetrees.md`, the installer creates
+`~/.agents/skills/knowledgetrees/SKILL.md` and
+`~/.codex/skills/knowledgetrees/SKILL.md` as hard links to that same file. All three
+paths share one inode: there is no wrapper and no second body to drift.
+
+The repository keeps [`skills/knowledgetrees/SKILL.md`](skills/knowledgetrees/SKILL.md)
+as a relative link for browsability. Git cannot preserve hard-link identity, so the
+installer creates real hard links on the target system.
 
 ## A minimal adoption path
 
