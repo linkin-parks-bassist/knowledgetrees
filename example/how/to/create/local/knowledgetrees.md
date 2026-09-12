@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T13:51:10+10:00'
+verified_at: '2026-09-12T15:22:03+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: sanitized adaptation of the canonical global knowledge-tree methodology
-verification: Compared the procedure with the packaged skill and verifier behavior.
+verification: Compared root creation, nested-scope orientation, and verification guidance with the canonical procedure and installer behavior.
 review_when: Recheck when root creation or verifier conventions change.
 ---
 
@@ -12,6 +12,12 @@ belongs locally. Immediately create `how/`, `what/`, `where/`, `why/`, and
 `where/am/i.md`. Repository roots also require `what/is/the/spec.md`,
 `what/is/the/plan.md`, `what/is/the/state.md`, and `what/is/next.md`; use truthful
 minimal or explicitly unresolved content rather than inventing answers.
+
+The same convention applies in any directory, including repository subfolders.
+Create narrower roots when a subsystem has useful local context; consult that root
+before ancestor roots and verify it when entering the scope. Keep shared facts at
+their broader owner and subsystem-specific facts locally so directory scope filters
+irrelevant context before semantic retrieval begins.
 
 Before creating any other leaf, write the full natural-language question it answers,
 lowercase it, remove only non-semantic punctuation, replace every space with `/`,

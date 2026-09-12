@@ -168,6 +168,15 @@ A user-wide tree can carry reusable tooling and host knowledge; a project tree c
 carry local policy and architecture; a subsystem can carry narrower context. The
 nearest applicable knowledge is consulted before broader knowledge.
 
+Knowledge trees can live in **any directory**. A repository should have a repo-wide
+`.knowledge/`, and subfolders can—and should, when they have their own useful
+context—have narrower trees too: `frontend/.knowledge/`, `backend/.knowledge/`, or
+even `backend/payments/.knowledge/`. This is another dimension of compositionality:
+directory scope selects relevant knowledge before semantic paths narrow the question.
+An agent working on payments gets payment-specific answers at its fingertips,
+without polluting its context with unrelated frontend knowledge. Broader roots still
+supply shared facts; narrower roots own their local refinements.
+
 ### Growth is ordinary maintenance
 
 When an agent has to determine something, it asks whether a future agent would have
@@ -176,7 +185,8 @@ the work—not a documentation chore deferred until later.
 
 ### Concrete facts can reconnect themselves to reality
 
-A narrowly eligible factual claim can carry a small executable proof:
+Agents are encouraged to attach small executable proofs to factual claims that are
+immediately and mechanically verifiable:
 
 ````markdown
 The repository has a local orientation leaf.
@@ -191,6 +201,16 @@ test -f .knowledge/where/am/i.md
 The goal is not to turn every sentence into code. Proofs are for single, immediately
 checkable true-or-false assertions—not requirements, instructions, opinions, plans,
 or compound conclusions.
+
+**Agents run the verifier before relying on proof-backed knowledge.** They check the
+active root during bootstrap and when entering a new scope, then relevant semantic
+slices before consequential use. A broken proof is a stop-and-repair signal: inspect
+the evidence, correct or remove the stale assertion or faulty predicate, and rerun
+the check before using that knowledge.
+
+This gives the schema a layer of executable provability: eligible facts reconnect
+to reality instead of remaining unchecked prose. A passing verifier establishes
+that the marked predicates passed—not that every unproved statement is true.
 
 Run every marked proof in this repository with:
 

@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T15:16:38+10:00'
+verified_at: '2026-09-12T15:22:03+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
-verification: Reviewed OpenCode's Superpowers-derivation leaf, corrected its proof placement, checked the four source attributions, and retained the public-safety boundary.
+verification: Reviewed README directory-scope composition and proof-checking guidance against the canonical procedure and updated the corresponding example answers.
 review_when: Update after every material repository change.
 ---
 
@@ -28,3 +28,7 @@ Knowledge-tree skill invocation is a once-per-fresh-session bootstrap. A loaded
 session continues applying the procedure across messages, turns, and tasks without
 reinvocation. Entering another project scope triggers orientation and verification,
 not another skill bootstrap.
+
+The README explicitly explains roots in arbitrary directories and nested subsystem
+scope as a context-relevance mechanism. It emphasizes verification before reliance,
+repair of failing proofs, and executable provability limited to marked predicates.
