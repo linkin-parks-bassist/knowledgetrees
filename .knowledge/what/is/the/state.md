@@ -105,9 +105,13 @@ without altering stdout; live wrapped false delivered actual developer-context
 guidance and retained exit 1. Automatic wrapping requires trusting the new
 PreToolUse definition and is limited to already-bypassed sessions, avoiding approval
 bypass in other modes. The owner supplied a live OpenCode transcript confirming
-idle capture review after intentional false, without an invented capture. Failure
-reminder delivery in OpenCode and Copilot live behavior remain unconfirmed.
-This implementation is awaiting publication review.
+idle capture review after intentional false, without an invented capture. Scoped
+read-only OpenCode database inspection also confirmed metadata exit 1 and the full
+failure reminder appended to that stored tool output, although the terminal
+transcript hid it. Guidance generation/attachment is confirmed; model compliance
+and a separately inspected provider-wire payload are not. Copilot live behavior
+remains unconfirmed.
+The owner approved publication of this implementation and its diagnostic update.
 
 OpenCode now loads the canonical bootstrap procedure body into one block of each
 assembled model system context. It adds no conversation prompts or model turns;

@@ -9,13 +9,15 @@ verification: Checked adapter installation, OpenCode discovery, Codex hook-trust
 review_when: Update whenever the next actionable step changes.
 ---
 
-Review the hook implementation commit and approve publication. Locally, review
+The owner approved publication of the hook implementation and diagnostic update.
+Locally, review
 and trust the new Codex PreToolUse definition using `/hooks`, then test plain false
 to verify automatic wrapping. The post-tool reminder has been delivered live for
 wrapped false. Restart OpenCode to load its discovered
 plugin, and start a new Copilot CLI session. Failure reminders and one-shot task-end
 capture review are implemented; isolated adapter tests do not establish actual model
-adoption or guarantee that knowledge was captured. Do not publish before approval.
+adoption or guarantee that knowledge was captured. Publication approval is recorded;
+additional changes still require their own appropriate review.
 
 The owner confirmed OpenCode idle capture review with a live transcript. Restart
 OpenCode to load its new harness-owned bootstrap system context, then check
