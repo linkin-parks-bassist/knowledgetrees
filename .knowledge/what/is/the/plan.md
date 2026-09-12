@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T20:16:19+10:00'
+verified_at: '2026-09-12T12:06:21+00:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request and knowledgetrees operating procedure
-verification: Confirmed the publication plan and subsequent installer-only skill packaging amendment are complete.
+verification: Reviewed completed implementation steps against integration checks; hook publication approval remains pending.
 review_when: Recheck when a step completes or the requested workflow changes.
 ---
 
@@ -36,3 +36,8 @@ The approved publication plan is complete.
     hardlinked skills; install and enable them locally and verify discovery.
 16. [x] Integrate kt-first retrieval, mandatory miss classification, and transition-
     anchored capture into all five skills and compact bootstrap instructions.
+17. [x] Add shared failure/capture-review handling, Codex and Copilot CLI definitions,
+    and an OpenCode plugin; test protocols and one-shot isolation without model runs.
+18. [x] Make weak-only kt results fail; document and install targeted infrastructure
+    updates locally without replacing customized knowledge leaves.
+19. [ ] Review the local hook implementation commit and approve publication.

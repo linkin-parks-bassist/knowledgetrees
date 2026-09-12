@@ -1,18 +1,17 @@
 ---
-verified_at: '2026-09-12T11:50:55+00:00'
+verified_at: '2026-09-12T12:06:21+00:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: completed publication plan and current repository state
-verification: Checked kt-first mandates, local bootstrap synchronization, hardlink identity, integration tests, and proof sweeps; behavioral compliance remains unverified.
+verification: Checked adapter installation, OpenCode discovery, Codex hook-trust requirements, isolated tests, and the publication approval boundary; behavioral compliance remains unverified.
 review_when: Update whenever the next actionable step changes.
 ---
 
-Single-call kt capture is implemented alongside question-prefix lookup. Discuss
-harness hook boundaries next: observable lookup/capture events can support audits,
-but semantic answer establishment and whole-leaf validation still need agent review.
-Hooks are not yet implemented. For the next approved change, update the
-semantic owner, run the installer integration and both proof sweeps, scan public
-content for private identifiers, and publish the reviewed commit.
+Review the hook implementation commit and approve publication. Locally, review
+and trust Codex definitions using `/hooks`, restart OpenCode to load its discovered
+plugin, and start a new Copilot CLI session. Failure reminders and one-shot task-end
+capture review are implemented; isolated adapter tests do not establish actual model
+adoption or guarantee that knowledge was captured. Do not publish before approval.
 
 When model capacity is available, evaluate kt-first lookup and miss-resolution behavior with an ordinary
 task relying only on installed harness instructions, without prompting knowledge

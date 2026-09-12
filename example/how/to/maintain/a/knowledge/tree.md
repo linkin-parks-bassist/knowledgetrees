@@ -2,7 +2,7 @@
 name: knowledgetrees-maintenance
 description: 'Use for kt proof checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed.'
 metadata:
-  verified_at: '2026-09-12T20:16:19+10:00'
+  verified_at: '2026-09-12T12:06:21+00:00'
   verified_by: codex /root
   scope: public knowledge-tree example
   source: sanitized operational recommendations and the canonical knowledge-tree contract
@@ -79,7 +79,10 @@ keywords and scoped semantic inspection. Retrieve/amend existing owners; add abs
 leaves. Capture established answers before the next unrelated tool call or completion.
 Tree hits create no duplicate leaf. Unresolved questions record blocker and next check;
 forbidden writes require a scoped handoff. Read `how/to/add/knowledge/leaves.md`
-before capture or proof creation. Timestamp freshness is relative to source
+before capture or proof creation. Installed failure and task-end reminders are
+explained in `how/to/use/knowledgetree/hooks.md`; they do not certify capture or
+replace agent review. A review with no new knowledge needs no invented leaf.
+Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
 
 Reread before replacing a leaf, preserve concurrent edits, correct contradictions

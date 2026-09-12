@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T20:16:19+10:00'
+verified_at: '2026-09-12T12:06:21+00:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request in the active Codex session
-verification: Reconciled all requested deliverables, installer-only skill creation, session-boundary bootstrap constraint, public-safety boundary, and publication gate.
+verification: Reconciled requested deliverables and local hook scope, soft reminder semantics, trust and permissions, session-boundary bootstrap, public safety, and publication approval.
 review_when: Recheck when the requested contents or publication workflow changes.
 ---
 
@@ -59,3 +59,12 @@ and sanitized rather than copied mechanically.
 
 No first push may occur until the repository owner has reviewed the prepared contents and asks for
 the push.
+
+Provide failure-triggered kt lookup/capture reminders and one-shot substantial-work
+capture reviews for local Codex, OpenCode, and GitHub Copilot CLI. Preserve unrelated
+hooks and permissions, respect Codex hook trust, isolate sessions, avoid raw tool
+logs in machine state, and prevent self-triggering review loops. Default review
+threshold is 10 completed tool calls or an encountered failure. Installer-only hook
+updates must preserve existing leaves and hardlinked skills. Keyword retrieval must
+exit nonzero on empty or insufficiently relevant results while retaining useful
+weak suggestions; heuristic success never certifies knowledge correctness.

@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -67,6 +68,16 @@ def same_bytes(path: Path, expected: bytes) -> bool:
     try:
         return path.is_file() and path.read_bytes() == expected
     except OSError:
+        return False
+
+
+def same_leaf_bytes(path: Path, expected: bytes) -> bool:
+    """Successful proof refreshes are expected local state, not content conflicts."""
+    try:
+        normalize = lambda data: re.sub(r"(?m)^Proof: \(verified at [^)\n]+\)[ \t]*$",
+                                        "Proof: (verified at _)", data.decode())
+        return path.is_file() and normalize(path.read_bytes()) == normalize(expected)
+    except (OSError, UnicodeError):
         return False
 
 
@@ -184,6 +195,7 @@ def permission_consent(target_home: Path) -> bool:
     print("Folder contents may be sent to your configured model/provider.")
     print(f"Agents will also be allowed to WRITE to {target_home / '.knowledge'}/**.")
     print("The bootstrap and four knowledge-tree procedure skills will be enabled; edits in .agents still require approval.")
+    print("Default installation also adds failure/task-end reminders; capture reviews can request an extra model turn.")
     while True:
         try:
             answer = input("Grant these permissions and continue installation? [n/Y] ").strip().lower()
@@ -196,6 +208,38 @@ def permission_consent(target_home: Path) -> bool:
             print("Installation cancelled without changes.")
             return False
         print("Please answer n or Y.")
+
+
+def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes, int]]:
+    """Preflight adapters and merge Codex hooks without replacing unrelated hooks."""
+    handler = target_home / ".knowledge/.tools/kt-hooks"
+    codex_path = target_home / ".codex/hooks.json"
+    storage = writable_target(codex_path)
+    current = storage.read_text() if storage.is_file() else ""
+    config = json.loads(current) if current.strip() else {}
+    if not isinstance(config, dict) or not isinstance(config.get("hooks", {}), dict):
+        raise ValueError("Codex hooks configuration must contain a hooks object")
+    original = copy.deepcopy(config)
+    hooks = config.setdefault("hooks", {})
+    for name, event in (("UserPromptSubmit", "prompt"), ("PostToolUse", "after"), ("Stop", "stop")):
+        groups = hooks.setdefault(name, [])
+        if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
+            raise ValueError(f"malformed Codex {name} hooks")
+        command = f"python3 {shlex.quote(str(handler))} codex {event}"
+        if not any(isinstance(h, dict) and h.get("command") == command for g in groups for h in g.get("hooks", [])):
+            groups.append({"hooks": [{"type": "command", "command": command,
+                            "timeout": 5, "statusMessage": "Knowledge-tree reminders"}]})
+    codex_bytes = (current if config == original else json.dumps(config, indent=2) + "\n").encode()
+    copilot = {"version": 1, "hooks": {name: [{"type": "command", "exec": "python3",
+                  "args": [str(handler), "copilot", event], "timeoutSec": 5}]
+               for name, event in (("userPromptSubmitted", "prompt"), ("postToolUse", "after"),
+                                  ("postToolUseFailure", "failed"), ("agentStop", "stop"))}}
+    return [
+        (handler, (repository / "tools/kt-hooks").read_bytes(), 0o755),
+        (target_home / ".config/opencode/plugins/knowledgetrees.js", (repository / "tools/kt-opencode.mjs").read_bytes(), 0o644),
+        (codex_path, codex_bytes, 0o600),
+        (target_home / ".copilot/hooks/knowledgetrees.json", (json.dumps(copilot, indent=2) + "\n").encode(), 0o600),
+    ]
 
 
 def initial_orientation() -> bytes:
@@ -245,6 +289,8 @@ def parser_for_cli() -> argparse.ArgumentParser:
         action="store_true",
         help="replace differing managed leaves and bootstrap files; orientation is still preserved",
     )
+    parser.add_argument("--hooks-only", action="store_true", help="install/update CLI and hooks without replacing installed leaves or skills")
+    parser.add_argument("--no-hooks", action="store_true", help="skip hook installation (does not remove existing hooks)")
     return parser
 
 
@@ -260,6 +306,9 @@ def main(arguments: list[str] | None = None) -> int:
 
     target_home = args.home.expanduser().resolve()
     knowledge_root = target_home / ".knowledge"
+    if args.hooks_only and not (knowledge_root / "where/am/i.md").is_file():
+        print("error: --hooks-only requires an existing knowledge root; run the full installer first", file=sys.stderr)
+        return 2
     verifier_target = knowledge_root / ".tools" / "verify-knowledgetree-proofs"
     kt_target = knowledge_root / ".tools" / "kt"
     kt_command = target_home / ".local" / "bin" / "kt"
@@ -268,12 +317,14 @@ def main(arguments: list[str] | None = None) -> int:
         for name, relative in SKILL_LEAVES.items()
         for harness in (".agents", ".codex")
     ]
+    if args.hooks_only:
+        skill_links = []
     skill_targets = [destination for _canonical, destination in skill_links]
 
     link_devices = {
         containing_device(path) for canonical, destination in skill_links for path in (canonical, destination)
     }
-    if len(link_devices) != 1:
+    if skill_links and len(link_devices) != 1:
         print(
             "error: the knowledge root and skill destinations must share a filesystem",
             file=sys.stderr,
@@ -281,7 +332,7 @@ def main(arguments: list[str] | None = None) -> int:
         return 2
 
     leaf_installs: list[tuple[Path, Path, bytes]] = []
-    for source in sorted(example.rglob("*.md")):
+    for source in ([] if args.hooks_only else sorted(example.rglob("*.md"))):
         relative = source.relative_to(example)
         if relative in EXCLUDED_EXAMPLE_LEAVES:
             continue
@@ -292,11 +343,22 @@ def main(arguments: list[str] | None = None) -> int:
     conflicts: list[Path] = []
     file_targets = [destination for _source, destination, _content in leaf_installs]
     file_targets.extend((verifier_target, kt_target, kt_command, *skill_targets))
+    hook_files = []
+    if not args.no_hooks:
+        try:
+            hook_files = hook_installs(repository, target_home)
+        except (OSError, ValueError, TypeError) as error:
+            print(f"error: cannot safely prepare knowledge-tree hooks: {error}", file=sys.stderr)
+            return 2
+        file_targets.extend(path for path, _content, _mode in hook_files)
     invalid_targets = [
         destination
         for destination in file_targets
         if path_exists(destination) and not destination.is_file()
     ]
+    for destination in file_targets:
+        invalid_targets.extend(parent for parent in destination.parents
+                               if path_exists(parent) and not parent.is_dir())
     opencode_config = target_home / ".config" / "opencode" / "opencode.json"
     for destination in (target_home / "AGENTS.md", target_home / ".codex" / "config.toml", opencode_config):
         if path_exists(destination) and not destination.is_file():
@@ -308,16 +370,20 @@ def main(arguments: list[str] | None = None) -> int:
         return 2
 
     for _source, destination, content in leaf_installs:
-        if path_exists(destination) and not same_bytes(destination, content):
+        if path_exists(destination) and not same_leaf_bytes(destination, content):
             conflicts.append(destination)
     if path_exists(verifier_target) and not same_bytes(verifier_target, verifier_bytes):
         conflicts.append(verifier_target)
     for destination in (kt_target, kt_command):
         if path_exists(destination) and not same_bytes(destination, kt_bytes):
             conflicts.append(destination)
+    for destination, content, _mode in hook_files:
+        # Codex's hooks file is a safe merge target, not a managed source bundle.
+        if destination != target_home / ".codex/hooks.json" and path_exists(destination) and not same_bytes(destination, content):
+            conflicts.append(destination)
     for canonical, destination in skill_links:
         skill_bytes = rendered_leaf(example / canonical.relative_to(knowledge_root))
-        if path_exists(destination) and not same_bytes(destination, skill_bytes):
+        if path_exists(destination) and not same_leaf_bytes(destination, skill_bytes):
             conflicts.append(destination)
 
     agents_path = target_home / "AGENTS.md"
@@ -343,7 +409,7 @@ def main(arguments: list[str] | None = None) -> int:
     opencode_storage = writable_target(opencode_config)
     opencode_current = opencode_storage.read_text() if opencode_storage.is_file() else ""
     try:
-        opencode_updated = opencode_config_text(opencode_current, target_home)
+        opencode_updated = opencode_current if args.hooks_only else opencode_config_text(opencode_current, target_home)
     except (ValueError, TypeError) as error:
         print(f"error: cannot safely merge OpenCode configuration: {error}", file=sys.stderr)
         return 2
@@ -359,10 +425,13 @@ def main(arguments: list[str] | None = None) -> int:
         print(f"Would install {len(leaf_installs)} reusable leaves into {knowledge_root}")
         print(f"Would install the verifier at {verifier_target}")
         print(f"Would install kt at {kt_target} and link {kt_command}")
+        for destination, _content, _mode in hook_files:
+            print(f"Would install lookup/capture reminders at {destination}")
         for canonical, destination in skill_links:
             print(f"Would hard-link {destination} to {canonical}")
         print(f"Would assert the bootstrap in {agents_path}")
-        print(f"Would enable the Codex skill in {codex_config}")
+        if not args.hooks_only:
+            print(f"Would enable the Codex skill in {codex_config}")
         if opencode_updated != opencode_current:
             print(f"Would update {opencode_config} after a permission warning and [n/Y] consent.")
             print(f"Would allow reads of {knowledge_root}/** and {target_home / '.agents'}/**, plus writes to {knowledge_root}/**.")
@@ -378,7 +447,7 @@ def main(arguments: list[str] | None = None) -> int:
         atomic_write(orientation, initial_orientation(), 0o644)
 
     for _source, destination, content in leaf_installs:
-        if destination.is_symlink() or not same_bytes(destination, content):
+        if destination.is_symlink() or not same_leaf_bytes(destination, content):
             atomic_write(destination, content, 0o644)
     if verifier_target.is_symlink() or not same_bytes(verifier_target, verifier_bytes):
         atomic_write(verifier_target, verifier_bytes, 0o755)
@@ -424,6 +493,10 @@ def main(arguments: list[str] | None = None) -> int:
     if opencode_updated != opencode_current:
         mode = opencode_storage.stat().st_mode & 0o777 if opencode_storage.exists() else 0o600
         atomic_write(opencode_storage, opencode_updated.encode(), mode)
+    for destination, content, mode in hook_files:
+        storage = writable_target(destination)
+        if not same_bytes(storage, content):
+            atomic_write(storage, content, mode)
 
     verifier_environment = os.environ.copy()
     verifier_environment["HOME"] = str(target_home)
@@ -440,9 +513,14 @@ def main(arguments: list[str] | None = None) -> int:
     print(f"Installed {len(leaf_installs)} reusable leaves into {knowledge_root}")
     print(f"Installed one verifier at {verifier_target}")
     print(f"Installed kt at {kt_target}; command: {kt_command}")
-    print("Installed hard-linked compatibility skills for shared harnesses and Codex")
+    if hook_files:
+        print("Installed failure and task-end reminders for Codex, OpenCode, and Copilot CLI.")
+        print("Codex: review/trust the new definitions with /hooks. Restart OpenCode to load its plugin.")
+    if not args.hooks_only:
+        print("Installed hard-linked compatibility skills for shared harnesses and Codex")
     print(f"Bootstrap asserted in {agents_path}")
-    print(f"OpenCode scoped knowledge-tree permissions configured in {opencode_config}")
+    if not args.hooks_only:
+        print(f"OpenCode scoped knowledge-tree permissions configured in {opencode_config}")
     print(f"Next: describe the local environment in {orientation}")
     return 0
 

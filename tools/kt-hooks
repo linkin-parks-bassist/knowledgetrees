@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Small, session-isolated lookup/capture reminders for agent harness hooks."""
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import sqlite3
+import sys
+import time
+
+FAILURE = (
+    "Knowledge-tree failure reminder: check kt for a known explanation or fix before "
+    "another speculative probe. Use a question-prefix query, read relevant leaves, "
+    "and inspect/check eligible proofs before reliance. A kt miss is not proof of "
+    "absence: check alternate terms and scoped paths. After understanding what went "
+    "wrong, capture the reusable diagnosis/fix with kt add (or amend its existing "
+    "owner), before unrelated work or completion. If unresolved, record the blocker "
+    "and next check. Expected negative tests need no invented lesson or duplicate "
+    "leaf. Respect scope, privacy, and permissions; never capture passwords or raw logs."
+)
+REVIEW = (
+    "Knowledge-tree capture review: before finishing, review reusable discoveries "
+    "from this work, especially failed probes and kt misses. Check kt for existing "
+    "owners; amend them or use kt add to capture missing answers with actual source "
+    "evidence at the correct scope. Record unresolved questions with blocker and next "
+    "check. Inspect/check eligible proofs; creation or passing proofs does not verify "
+    "a whole leaf. Do not invent discoveries or duplicate checked knowledge. If there "
+    "is nothing new to retain, say so briefly and finish. This is a one-shot reminder, "
+    "not a grant of write permissions or a mechanical certification of capture."
+)
+
+
+def decode(value):
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except ValueError:
+            pass
+    return value
+
+
+def failed(value):
+    """Prefer structured results; inspect only harness exit-status text as fallback."""
+    value = decode(value)
+    if isinstance(value, dict):
+        for key in ("exit_code", "exitCode", "exit", "returncode"):
+            if key in value and isinstance(value[key], int) and not isinstance(value[key], bool):
+                return value[key] != 0
+        if any(value.get(k) is True for k in ("isError", "is_error", "timed_out", "timedOut", "timeout")) or value.get("status") in ("error", "failed", "failure", "denied", "timeout"):
+            return True
+        if value.get("resultType") in ("failure", "denied"):
+            return True
+        metadata = value.get("metadata")
+        if isinstance(metadata, dict) and any(isinstance(metadata.get(k), int) for k in ("exit_code", "exitCode", "exit", "returncode")):
+            return failed(metadata)
+        return any(failed(v) for k, v in value.items()
+                   if k in ("metadata", "result", "toolResult", "content", "text", "output", "textResultForLlm"))
+    if isinstance(value, list):
+        return any(failed(item) for item in value)
+    if isinstance(value, str):
+        codes = re.findall(r"(?im)^\s*(?:Process exited with code|Command exited with code|Exit code:|Command failed with exit code)\s+(-?\d+)\b", value)
+        return bool(codes and int(codes[-1]) != 0)
+    return False
+
+
+def handle(harness, event, payload):
+    session = payload.get("session_id") or payload.get("sessionId") or payload.get("sessionID")
+    if not isinstance(session, str) or not session:
+        raise ValueError("hook payload lacks a session id; refusing to mix sessions")
+    minimum = int(os.environ.get("KT_HOOK_MIN_CALLS", "10"))
+    if minimum < 1:
+        raise ValueError("KT_HOOK_MIN_CALLS must be positive")
+    key = hashlib.sha256(f"{harness}:{session}".encode()).hexdigest()
+    state = Path(os.environ.get("KT_HOOK_STATE_DIR",
+                 str(Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "knowledgetrees")))
+    state.mkdir(parents=True, exist_ok=True, mode=0o700)
+    database = state / "hooks.sqlite3"
+    # Private local machine state, never knowledge-tree payload or public logs.
+    descriptor = os.open(database, os.O_CREAT | os.O_WRONLY, 0o600)
+    os.close(descriptor)
+    os.chmod(database, 0o600)
+    now = time.time()
+    message = None
+    with sqlite3.connect(database, timeout=3) as connection:
+        connection.execute("CREATE TABLE IF NOT EXISTS sessions (key TEXT PRIMARY KEY, calls INTEGER, failures INTEGER, reviewing INTEGER, touched REAL)")
+        connection.execute("CREATE TABLE IF NOT EXISTS events (session TEXT, receipt TEXT, touched REAL, PRIMARY KEY(session, receipt))")
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute("DELETE FROM sessions WHERE touched < ?", (now - 7 * 86400,))
+        connection.execute("DELETE FROM events WHERE touched < ?", (now - 7 * 86400,))
+        connection.execute("INSERT OR IGNORE INTO sessions VALUES (?, 0, 0, 0, ?)", (key, now))
+        calls, failures, reviewing = connection.execute("SELECT calls, failures, reviewing FROM sessions WHERE key = ?", (key,)).fetchone()
+        if event == "prompt":
+            prompt = payload.get("prompt", "")
+            if not payload.get("synthetic") and not str(prompt).startswith("Knowledge-tree capture review:"):
+                reviewing = 0
+                calls = failures = 0
+        elif event in ("after", "failed"):
+            response = decode(payload.get("tool_response", payload.get("toolResult", payload.get("result", {}))))
+            running = isinstance(response, dict) and response.get("exit_code", "absent") is None and response.get("session_id") is not None
+            if not running:
+                call = payload.get("tool_use_id") or payload.get("toolCallId") or payload.get("callID")
+                # Hash fallback payloads; no commands, answers, errors, or secrets are stored.
+                receipt = hashlib.sha256(str(call).encode() if call else json.dumps(payload, sort_keys=True).encode()).hexdigest()
+                fresh = connection.execute("INSERT OR IGNORE INTO events VALUES (?, ?, ?)", (key, receipt, now)).rowcount
+                if fresh:
+                    calls += 1
+                    if event == "failed" or failed(response):
+                        failures += 1
+                        message = FAILURE
+        elif event == "stop":
+            if not reviewing and not payload.get("stop_hook_active") and (failures or calls >= minimum):
+                message = REVIEW
+                reviewing = 1
+                calls = failures = 0
+        connection.execute("UPDATE sessions SET calls = ?, failures = ?, reviewing = ?, touched = ? WHERE key = ?", (calls, failures, reviewing, now, key))
+    if not message:
+        return {}, 0
+    if event == "stop":
+        return {"decision": "block", "reason": message}, 0
+    if harness == "codex":
+        return {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": message}}, 0
+    if harness == "copilot" and event == "failed":
+        # Copilot command failure hooks deliver recovery context through exit 2.
+        return {"additionalContext": message}, 2
+    return {"additionalContext": message}, 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("harness", choices=("codex", "copilot", "opencode"))
+    parser.add_argument("event", choices=("prompt", "after", "failed", "stop"))
+    args = parser.parse_args()
+    try:
+        payload = json.load(sys.stdin)
+        if not isinstance(payload, dict):
+            raise ValueError("expected a JSON object")
+        output, code = handle(args.harness, args.event, payload)
+    except (OSError, ValueError, sqlite3.Error) as error:
+        # Never convert a broken reminder into permission bypass or an agent loop.
+        print(f"kt-hooks: reminder unavailable: {error}", file=sys.stderr)
+        output, code = {}, 0
+    print(json.dumps(output))
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -86,6 +86,12 @@ def main():
         assert result.index("project:" + leaf) < result.index("global:" + leaf)
         assert "2026-09-12T12:00:00+00:00" in result
         assert "FALSIFIED" in run("find", "leaves")
+        weak = run("find", "compiler", "unfindablezzz", expected=1)
+        assert "No sufficiently good matches" in weak and "weak suggestion" in weak
+        assert "compiler.md" in weak
+        assert "keyword coverage 50%" in run("find", "compiler", "unfindablezzz", "--min-coverage", "0.5")
+        run("find", "compiler", "--min-coverage", "0", expected=2)
+        assert "No sufficiently good matches" in run("where", "is", "compiler", "unfindablezzz", expected=1)
         assert run("where", "is", "compiler") == (global_root / "where/is/compiler.md").read_text()
         assert run("where is compiler") == (global_root / "where/is/compiler.md").read_text()
         scoped = run("where", "is", "violet")

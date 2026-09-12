@@ -2,7 +2,7 @@
 name: knowledgetrees
 description: 'Bootstrap once per fresh session; use kt first for new questions, resolve lookup misses, check proofs, and capture missing knowledge before continuing.'
 metadata:
-  verified_at: '2026-09-12T20:29:52+10:00'
+  verified_at: '2026-09-12T12:06:21+00:00'
   verified_by: codex /root
   scope: public knowledge-tree example and distributable skill
   source: sanitized operational recommendations and the canonical knowledge-tree contract
@@ -46,6 +46,10 @@ and `why/does/` or `why/is/` for rationale. Longer sentence prefixes also work.
 kt walks matching words into directories; at the first mismatch it ranks the
 remaining words only inside that branch. Weak keyword coverage widens one parent
 at a time; exact leaf hits return full content. `kt how to _` lists that branch.
+Empty or weak-only keyword matches exit nonzero even when suggestions are shown;
+passing a retrieval threshold does not establish semantic adequacy or truth.
+Installed failure/capture-review hooks reinforce the procedure without rebooting
+this skill; their contract lives in `how/to/use/knowledgetree/hooks.md`.
 
 Failure to find information via `kt` means you MUST determine whether a leaf
 exists: retry useful keywords/synonyms, then inspect plausible semantic paths in

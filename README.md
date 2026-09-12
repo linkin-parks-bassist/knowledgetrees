@@ -373,6 +373,10 @@ it to climb one parent and search wider. `kt how to _` lists a procedure branch.
 Use `where/is/` for locations, `how/to/` for procedures, `when/to/` for triggers,
 `what/is/` for definitions/state, and `why/does/` or `why/is/` for rationale.
 `kt find` remains the deliberately broad search interface.
+Keyword lookups exit `1` for empty or weak-only results, even when suggestions are
+shown; `0` means a candidate passed the heuristic, not that its answer was verified.
+The default threshold is 60% coverage of non-grammatical query keywords; tune it
+with `--min-coverage`. Exact-path reads and explicit branch listing remain distinct.
 
 Capture a new answer in one call:
 
@@ -397,6 +401,44 @@ determine whether a leaf exists using alternate terms and scoped semantic inspec
 Existing leaves are read or amended; absent leaves must be added after investigation,
 or recorded as unresolved when blocked. Capture an established answer before the
 next unrelated tool call or completion—not in a later documentation pass.
+
+### Failure and capture-review hooks
+
+The installer adds reminders for **Codex, OpenCode, and GitHub Copilot CLI**:
+
+- After a detected tool failure, check `kt` for a known explanation or fix. Once
+  the cause is understood, capture the reusable diagnosis or amend its owner.
+- At task end, a failure or 10 completed tool calls requests one capture-review
+  follow-up. The agent checks existing owners and records missing discoveries,
+  or reports that there is nothing new to retain.
+
+Codex uses `PostToolUse` and `Stop`; Copilot CLI uses `postToolUse`,
+`postToolUseFailure`, and `agentStop`; OpenCode uses a local plugin and
+`session.idle`. Existing unrelated hooks are preserved. In Codex, open `/hooks`
+and review/trust the installed definitions; new hooks are skipped until trusted.
+Restart OpenCode to load its plugin, and start a new Copilot CLI session.
+
+Set `KT_HOOK_MIN_CALLS` in the harness environment to change the activity threshold.
+Session-isolated counters and hashed event receipts live under
+`${XDG_STATE_HOME:-~/.local/state}/knowledgetrees`, not inside tree payloads.
+They store no raw commands, tool outputs, passwords, or knowledge contents.
+Reviews can consume an extra model turn. A one-shot guard prevents the review
+from recursively waking itself; the next ordinary user prompt starts a new cycle.
+These are reliability reminders, not semantic capture verification or a security
+boundary. Failures need detectable result status; arbitrary prose errors cannot
+always be recognized. They do not grant permissions or automatically write leaves.
+
+Existing installations can update the CLI and hooks without replacing their leaves:
+
+```sh
+./install --hooks-only --force
+```
+
+Preview with `--dry-run`. Use `--no-hooks` during installation to skip hook setup.
+The handler and OpenCode adapter need only Python 3 and the harness's existing JS
+runtime. See [the hook procedure](example/how/to/use/knowledgetree/hooks.md) for
+event contracts and limitations. This integration targets local Copilot CLI;
+Copilot cloud jobs and VS Code need their own environment/distribution setup.
 
 ### Why did skills appear after installation?
 

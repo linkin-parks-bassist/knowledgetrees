@@ -64,6 +64,14 @@ def main() -> None:
         assert malformed_config.read_text() == "{broken"
         assert not (malformed_home / ".knowledge").exists()
 
+        broken_hooks_home = Path(temporary) / "broken-hooks-user"
+        broken_hooks = broken_hooks_home / ".codex/hooks.json"
+        broken_hooks.parent.mkdir(parents=True)
+        broken_hooks.write_text('{"hooks": {"Stop": "not an array"}}')
+        run("--home", str(broken_hooks_home), expected=2)
+        assert not (broken_hooks_home / ".knowledge").exists()
+        assert "not an array" in broken_hooks.read_text()
+
         codex_skill = target_home / ".codex" / "skills" / "knowledgetrees" / "SKILL.md"
         codex_config = target_home / ".codex" / "config.toml"
         codex_config.parent.mkdir(parents=True)
@@ -73,6 +81,9 @@ def main() -> None:
             f'path = "{codex_skill}"\n'
             "enabled = false\n"
         )
+        codex_hooks = target_home / ".codex/hooks.json"
+        unrelated_hook = {"hooks": [{"type": "command", "command": "existing-review-command"}]}
+        codex_hooks.write_text(json.dumps({"description": "existing hooks", "hooks": {"Stop": [unrelated_hook]}}))
         instructions = target_home / "user-instructions.md"
         instructions.write_text("# Existing user instructions\n")
         agents_path = target_home / "AGENTS.md"
@@ -87,6 +98,15 @@ def main() -> None:
         installation = run(*home_arguments)
         assert "WARNING" in installation.stdout and "WRITE" in installation.stdout
         knowledge = target_home / ".knowledge"
+        hooks = json.loads(codex_hooks.read_text())
+        assert hooks["description"] == "existing hooks" and hooks["hooks"]["Stop"][0] == unrelated_hook
+        assert len(hooks["hooks"]["Stop"]) == 2
+        assert (knowledge / ".tools/kt-hooks").is_file()
+        assert os.access(knowledge / ".tools/kt-hooks", os.X_OK)
+        assert (target_home / ".config/opencode/plugins/knowledgetrees.js").read_bytes() == (REPOSITORY / "tools/kt-opencode.mjs").read_bytes()
+        copilot_hooks = json.loads((target_home / ".copilot/hooks/knowledgetrees.json").read_text())
+        assert set(copilot_hooks["hooks"]) == {"userPromptSubmitted", "postToolUse", "postToolUseFailure", "agentStop"}
+        assert copilot_hooks["hooks"]["agentStop"][0]["args"][-2:] == ["copilot", "stop"]
         canonical = knowledge / "how" / "to" / "use" / "knowledgetrees.md"
         shared_skill = target_home / ".agents" / "skills" / "knowledgetrees" / "SKILL.md"
         orientation = knowledge / "where" / "am" / "i.md"
@@ -164,6 +184,7 @@ def main() -> None:
 
         orientation.write_text("Local environment orientation.\n")
         rerun = run(*home_arguments, answer="")
+        assert len(json.loads(codex_hooks.read_text())["hooks"]["Stop"]) == 2
         assert "[n/Y]" not in rerun.stdout
         assert orientation.read_text() == "Local environment orientation.\n"
         assert agents_path.read_text().count(
@@ -174,7 +195,24 @@ def main() -> None:
             assert (target_home / ".agents/skills" / name / "SKILL.md").samefile(knowledge / relative)
 
         capture_owner = knowledge / installed_skills["knowledgetrees-capture"]
+        proof_owner = knowledge / "how/to/use/knowledgetree/hooks.md"
+        proof_content = proof_owner.read_text()
+        assert "Proof: (verified at " in proof_content
+        proof_owner.write_text(proof_content.replace("Proof: (verified at ", "Proof: (falsified at "))
+        run(*home_arguments, expected=2)
+        assert "Proof: (falsified at " in proof_owner.read_text()
+        proof_owner.write_text(proof_content.replace("---\n", "---\nfalsified_at: test-failure\n", 1))
+        run(*home_arguments, expected=2)
+        assert "falsified_at: test-failure" in proof_owner.read_text()
+        proof_owner.write_text(proof_content)
         capture_owner.write_text(capture_owner.read_text() + "\nLocal customization.\n")
+        customized = capture_owner.read_bytes()
+        inode = capture_owner.stat().st_ino
+        opencode_before = opencode_config.read_bytes()
+        run(*home_arguments, "--hooks-only", answer="")
+        assert capture_owner.read_bytes() == customized and capture_owner.stat().st_ino == inode
+        assert opencode_config.read_bytes() == opencode_before
+        assert (target_home / ".agents/skills/knowledgetrees-capture/SKILL.md").samefile(capture_owner)
         run(*home_arguments, expected=2)
         assert "Local customization" in capture_owner.read_text()
         run(*home_arguments, "--force")

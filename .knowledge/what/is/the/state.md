@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T11:50:55+00:00'
+verified_at: '2026-09-12T12:06:21+00:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
-verification: Ran proof timestamp and installer integration tests, both public-tree sweeps, and the installed global verifier in read-only mode; reviewed the documented separation of proof outcomes and leaf validation.
+verification: Ran CLI, installer, shared hook, mock OpenCode adapter, and proof-stamp suites plus all three proof sweeps; reviewed reminder semantics and proof versus leaf validation. Live model adoption remains untested.
 review_when: Update after every material repository change.
 ---
 
@@ -57,7 +57,9 @@ and quoted-question matches, labels project/global roots, reads leaf metadata,
 prints leaves verbatim, and forwards proof roots/options correctly. Question-prefix
 navigation consumes directory words, returns exact
 leaf hits verbatim, then rank unmatched words only inside the selected branch.
-If best lexical keyword coverage is below one half, widen one parent and retry.
+If best non-grammatical keyword coverage is below the default 60% threshold, widen
+one parent and retry. Empty or weak-only matches exit 1 while retaining suggestions;
+adequate heuristic matches precede weak suggestions. `--min-coverage` tunes the cutoff.
 Terminal `_` lists the selected branch. Prefix scoping, exclusion of sibling
 branches, exact reads, and incremental widening have isolated CLI test coverage.
 The installer distributes it alongside the single verifier. `tests/test-kt.py` checks isolated
@@ -80,3 +82,25 @@ verification/capture calls remain allowed. Repository and installed user-wide
 bootstrap instructions use the compact rule, while skills retain root, proof,
 scope, path, privacy, and maintenance details. Checked loaded answers need no
 redundant lookup. Structural checks do not establish behavioral compliance.
+
+Failure and one-shot capture-review hooks are implemented with a shared Python
+handler in `tools/kt-hooks` and a thin OpenCode adapter in `tools/kt-opencode.mjs`.
+The installer merges Codex definitions without replacing unrelated hooks and
+installs dedicated Copilot CLI definitions plus an automatically discovered
+OpenCode plugin. Targeted `--hooks-only` updates preserve installed leaf contents,
+inodes, skills, and permissions. Session counters and hashed receipts use private
+XDG state outside tree payloads; no raw tool logs or knowledge bodies are stored.
+Failures remind agents to query kt and capture the eventual reusable diagnosis.
+At stop/idle, a failure or 10 completed calls requests one capture-review follow-up;
+ordinary user prompts rearm the cycle, synthetic review prompts do not. This is
+reminder delivery, not semantic capture verification. Python protocol tests and a
+mock OpenCode harness test cover failure context, successful-work thresholds,
+deduplication, session isolation, synthetic-loop prevention, and model/agent retention.
+Adapters are installed locally; fresh OpenCode configuration discovery includes
+the plugin. Codex trust still requires user review through `/hooks`. Live model
+behavior remains untested, and this implementation is awaiting publication review.
+
+Installer leaf comparisons ignore only successful proof-marker timestamp refreshes,
+preventing a verifier-stamped leaf from conflicting on an idempotent reinstall.
+Falsified markers, leaf falsification flags, and all substantive content differences
+remain protected; targeted regression checks cover those distinctions.

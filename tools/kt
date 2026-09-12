@@ -50,6 +50,14 @@ def words(value):
     return list(dict.fromkeys(re.findall(r"[^\W_]+", value.casefold())))
 
 
+GRAMMATICAL = set("a an the to is are of for in on at with how what where when why who which does do can should i we my our this that it be as and or".split())
+
+
+def coverage(terms, haystack):
+    meaningful = [t for t in terms if t not in GRAMMATICAL] or terms
+    return sum(t in haystack for t in meaningful) / len(meaningful) if meaningful else 1.0
+
+
 def leaves(root):
     if not root.is_dir():
         return
@@ -90,20 +98,26 @@ def find(args, branches=None, browse=False):
                 score += 20
             lines = [line.strip() for line in body.splitlines() if line.strip()]
             excerpt = max(lines, key=lambda line: sum(t in line.casefold() for t in terms), default="")
-            results.append((-score, precedence, relative, label, path, metadata, excerpt))
-    results.sort(key=lambda row: row[:3])
+            results.append((-score, precedence, relative, label, path, metadata, excerpt,
+                            coverage(terms, route + "\n" + lower)))
+    results.sort(key=lambda row: (not browse and row[-1] < args.min_coverage, *row[:3]))
     if not results:
         print(paint("No matches", "33") + f" for {' '.join(args.terms)!r}.")
         print("This is keyword search; a miss does not establish that the answer is absent.")
         print("Check alternate terms and scoped paths. If no leaf exists, investigate and add it before resuming work.")
         return 1
+    adequate = browse or any(row[-1] >= args.min_coverage for row in results)
+    if not adequate:
+        print(paint("No sufficiently good matches", "33") + "; weak suggestions follow.\n")
     shown = results[:args.limit]
     title = "leaves" if browse else "matches"
     query = f" · {' '.join(args.terms)}" if args.terms else ""
     print(paint(f"{len(shown)} of {len(results)} {title}", "1") + query + "\n")
     width = max(30, min(shutil.get_terminal_size((100, 24)).columns - 4, 116))
-    for index, (negative_score, _, relative, label, path, metadata, excerpt) in enumerate(shown, 1):
+    for index, (negative_score, _, relative, label, path, metadata, excerpt, matched) in enumerate(shown, 1):
         print(f"{paint(str(index) + '.', '1')} {paint(label + ':' + relative, '36')}  {paint('score ' + str(-negative_score), '2')}")
+        if terms:
+            print(f"   keyword coverage {matched:.0%}" + (" · weak suggestion" if matched < args.min_coverage else ""))
         status = ("FALSIFIED " + metadata["falsified_at"] if metadata.get("falsified_at")
                   else metadata.get("status", "leaf reviewed " + metadata.get("verified_at", "unknown")))
         print("   " + paint(status, "31" if metadata.get("falsified_at") else "2"))
@@ -112,7 +126,9 @@ def find(args, branches=None, browse=False):
         print()
     print("Read verbatim: kt open project:<path> or kt open global:<path>")
     print("Check relevant proofs before relying on claims; search scores are not confidence.")
-    return 0
+    if not adequate:
+        print("Check alternate terms and scoped paths; if no leaf exists, investigate and capture the answer.")
+    return 0 if adequate else 1
 
 
 QUESTION_STARTS = {"how", "where", "when", "what", "why", "who", "which"}
@@ -122,9 +138,12 @@ def question(arguments):
     parser = argparse.ArgumentParser(prog="kt", description="Walk question words, then search the nearest relevant branch.")
     parser.add_argument("question", nargs="+")
     parser.add_argument("--limit", type=int, default=10)
+    parser.add_argument("--min-coverage", type=float, default=0.6, help="minimum non-grammatical keyword coverage (default: 0.6)")
     args = parser.parse_args(arguments)
     if args.limit < 1:
         parser.error("--limit must be positive")
+    if not 0 < args.min_coverage <= 1:
+        parser.error("--min-coverage must be greater than zero and at most one")
     components = re.findall(r"[^\W_]+(?:-[^\W_]+)*|_", " ".join(args.question).casefold())
     if "_" in components[:-1]:
         parser.error("_ is a terminal branch-listing placeholder")
@@ -171,7 +190,7 @@ def question(arguments):
                         continue
                     haystack = path.relative_to(branch).as_posix().casefold() + "\n" + body.casefold()
                     # Transparent lexical coverage, not model confidence.
-                    if sum(t in haystack for t in terms) / len(terms) >= 0.5:
+                    if coverage(terms, haystack) >= args.min_coverage:
                         relevant = True
                         break
                 if relevant:
@@ -306,6 +325,7 @@ def main():
     search = commands.add_parser("find", help="rank keyword matches across project and global roots")
     search.add_argument("terms", nargs="+", help="words or a quoted question")
     search.add_argument("--limit", type=int, default=10)
+    search.add_argument("--min-coverage", type=float, default=0.6)
     opening = commands.add_parser("open", help="print a leaf verbatim, including metadata")
     opening.add_argument("path", help="relative path, project:path, global:path, or absolute .md path")
     adding = commands.add_parser("capture", aliases=["add"], help="create a question-derived leaf in one call")
@@ -327,6 +347,8 @@ def main():
     if args.command == "find":
         if args.limit < 1:
             parser.error("--limit must be positive")
+        if not 0 < args.min_coverage <= 1:
+            parser.error("--min-coverage must be greater than zero and at most one")
         return find(args)
     if args.command == "open":
         return open_leaf(args.path)

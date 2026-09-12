@@ -2,7 +2,7 @@
 name: knowledgetrees-lookup
 description: 'Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and capture missing knowledge before continuing.'
 metadata:
-  verified_at: '2026-09-12T20:29:52+10:00'
+  verified_at: '2026-09-12T12:06:21+00:00'
   verified_by: codex /root
   scope: public knowledge-tree example
   source: sanitized operational recommendations and the canonical knowledge-tree contract
@@ -27,6 +27,9 @@ keyword search is intended. No need to reload the skill or orientation per query
    An exact leaf hit returns the full leaf, not a ranked excerpt. `kt how to _`
    lists the prefix branch. Matching is lexical/content-based, not a semantic model;
    scores and widening thresholds are heuristics, not evidence of correctness.
+   Empty or weak-only keyword results exit 1 while showing suggestions. The default
+   minimum is 60% coverage of non-grammatical query terms (`--min-coverage` tunes it).
+   Exit 0 means retrieval met a heuristic, not semantic adequacy or verification.
 2. Read likely matches with `kt open project:PATH` or `kt open global:PATH`.
    Prefer project answers for project questions and global answers for host tooling.
    Results and orientation previews are not substitutes for the full answer.
