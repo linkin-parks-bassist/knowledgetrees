@@ -32,7 +32,7 @@ Use `kt` from PATH, or `~/.knowledge/.tools/kt` if PATH has not been configured.
 Private/wider roots are inactive until approved. Do not request global access merely
 to finish bootstrap when the local project can answer the task.
 
-2. Run `kt proof --root ROOT` for each permitted active
+2. Run `kt prove --root ROOT` for each permitted active
    root. Stop on falsification; inspect and repair evidence within current authority.
 3. Read permitted active roots’ `where/am/i.md`, then the active repository's four spine
    leaves. Each orientation must explain every canonical branch and give actual

@@ -26,7 +26,7 @@ Use `kt find` and `kt open` to find existing owners before adding answers.
 If `kt` cannot find an answer, establish whether a leaf exists via alternate terms
 and scoped semantic inspection. Amend existing owners; if absent, add the leaf
 (or a truthful unresolved record). Preserve an established answer before the next
-unrelated tool call. Use `kt proof --root ROOT TOKEN` for affected predicates.
+unrelated tool call. Use `kt prove --root ROOT TOKEN` for affected predicates.
 Compare every substantive section with actual leaf answers. Resolve contradictions
 against governing authority and current primary evidence; verify no reusable answer
 exists only in the source. Only then, and when authorized, retire the redundant

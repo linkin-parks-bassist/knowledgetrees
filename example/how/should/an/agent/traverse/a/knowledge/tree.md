@@ -36,7 +36,7 @@ keyword search is intended. No need to reload the skill or orientation per query
 3. Check `scope`, `source`, `verification`, `verified_at`, and `review_when`.
    Freshness depends on volatility and evidence, not timestamp recency alone. Read
    the assertion and predicate behind every proof before relying on the claim.
-   Run `kt proof --root ROOT TOKEN` and stop on failed proofs or `falsified_at`.
+   Run `kt prove --root ROOT TOKEN` and stop on failed proofs or `falsified_at`.
 4. If `kt` does not find the information, you MUST determine whether a leaf exists.
    Retry distinctive keywords and synonyms, then try plausible sentence paths
    from known orientation routes with `kt open`. List only the nearest existing

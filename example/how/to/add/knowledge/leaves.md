@@ -31,7 +31,7 @@ Put host/personal tooling in `~/.knowledge` and project/subsystem facts in the
 nearest applicable local root. Never promote professional, customer, partner, or
 restricted material into the global tree; sanitize anything intended for publication.
 Reread an existing owner before editing to preserve concurrent changes.
-Use `kt open ROOT:PATH` for that read and `kt proof --root ROOT TOKEN` after
+Use `kt open ROOT:PATH` for that read and `kt prove --root ROOT TOKEN` after
 changing eligible proofs. Create a new leaf in one call:
 
 ```sh

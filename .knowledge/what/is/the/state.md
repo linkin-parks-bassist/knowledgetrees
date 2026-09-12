@@ -274,3 +274,10 @@ symlink refusal, and denied-root behavior. Existing lookup and access tests pass
 Amendment, lookup, access, installer, Python hook and OpenCode adapter suites pass.
 The installed CLI and hardlinked capture procedure are updated. Newly inserted
 orphan proof markers cannot retain caller-invented verification timestamps.
+
+## Proof command rename
+
+The CLI command is now kt prove throughout implementation, help, tests and
+distributed/installed procedural leaves. The old proof subcommand is rejected.
+All seven integration suites passed; CLI copies are installed. Proof remains
+the noun for evidence and proof markers, not a renamed artifact type.

@@ -118,9 +118,10 @@ def main():
         assert str(local) in run("roots", cwd=local)
         global_only = run("roots", cwd=base)
         assert str(global_root) in global_only and str(local) not in global_only
-        assert json.loads(run("proof", "--no-stamp", "leaves")) == ["--root", str(local), "--no-stamp", "leaves"]
-        assert json.loads(run("proof", str(project), "--no-stamp")) == ["--root", str(local), "--no-stamp"]
-        assert json.loads(run("proof", "--root", str(global_root), "--no-stamp")) == ["--root", str(global_root), "--no-stamp"]
+        run("proof", expected=2)
+        assert json.loads(run("prove", "--no-stamp", "leaves")) == ["--root", str(local), "--no-stamp", "leaves"]
+        assert json.loads(run("prove", str(project), "--no-stamp")) == ["--root", str(local), "--no-stamp"]
+        assert json.loads(run("prove", "--root", str(global_root), "--no-stamp")) == ["--root", str(global_root), "--no-stamp"]
     print("kt integration checks passed")
 
 

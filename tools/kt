@@ -633,7 +633,7 @@ def amend(args):
 
 
 
-def proof(arguments):
+def prove(arguments):
     global_root = Path(os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")).expanduser().resolve()
     verifier = global_root / ".tools/verify-knowledgetree-proofs"
     if not verifier.is_file() or not os.access(verifier, os.X_OK):
@@ -738,8 +738,8 @@ def capture(args):
 
 def main():
     # Forward verifier options unchanged instead of trying to reproduce its parser.
-    if len(sys.argv) > 1 and sys.argv[1] == "proof":
-        return proof(sys.argv[2:])
+    if len(sys.argv) > 1 and sys.argv[1] == "prove":
+        return prove(sys.argv[2:])
     if len(sys.argv) > 1 and sys.argv[1].split() and sys.argv[1].split()[0].casefold() in QUESTION_STARTS:
         return question(sys.argv[1:])
     parser = argparse.ArgumentParser(description=__doc__, epilog="Questions: kt where is vivado; kt how to _ (list a branch).")
@@ -779,7 +779,7 @@ def main():
     access.add_argument("decision", nargs="?", choices=["allow", "deny", "ask", "reset"])
     access.add_argument("--scope", choices=["session", "project", "all"], default="project")
     access.add_argument("--subdirectories", action="store_true", help="explicitly extend a project approval to descendant directories")
-    commands.add_parser("proof", help="forward [directory] [tokens] [options] to the verifier")
+    commands.add_parser("prove", help="forward [directory] [tokens] [options] to the verifier")
     args = parser.parse_args()
     if args.command == "find":
         if args.limit < 1:
@@ -813,7 +813,7 @@ def main():
         print("kt how to _                        list a question branch")
         print('kt find "how to add knowledge leaves"')
         print("kt open global:how/to/add/knowledge/leaves.md")
-        print("kt proof [directory] [tokens] [--no-stamp]")
+        print("kt prove [directory] [tokens] [--no-stamp]")
         print('kt add "how to do the thing" "The answer." --source "checked evidence"')
     return 0
 

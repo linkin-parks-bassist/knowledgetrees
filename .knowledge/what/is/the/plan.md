@@ -55,3 +55,8 @@ Completed registry, access policies, persistent/session grants, private capture 
 
 Completed standalone revision-checked amendment and validation; optional Git
 history remains external to the CLI. Both harnesses use the installed shared CLI.
+
+## Proof command rename
+
+The kt prove rename is implemented and installed. Continue ordinary-use
+privacy and heuristic tuning; restart clients to refresh injected procedure text.

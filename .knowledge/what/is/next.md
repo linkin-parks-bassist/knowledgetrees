@@ -47,3 +47,8 @@ The registry/privacy CLI and shared handler are installed and tested. Keep wider
 
 Standalone kt amend is validated and installed; keep long-term scope/sharing
 and heuristic usability tuning. No Git dependency is introduced.
+
+## Proof command rename
+
+The kt prove rename is implemented and installed. Continue ordinary-use
+privacy and heuristic tuning; restart clients to refresh injected procedure text.

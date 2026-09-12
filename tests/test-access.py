@@ -52,8 +52,8 @@ def main():
                 assert str(global_root / "where") not in run("roots")
                 for arguments in (("open", "global:where/is/private.md"),
                                   ("open", str(global_root / "where/is/private.md")),
-                                  ("proof", "--root", str(global_root))):
-                    output = run(*arguments, expected=3 if arguments[0] != "proof" else 2)
+                                  ("prove", "--root", str(global_root))):
+                    output = run(*arguments, expected=3 if arguments[0] != "prove" else 2)
                     assert "confidential payload" not in output
                 before = config.read_bytes() if config.exists() else None
                 run("access", "global", "allow", expected=3)

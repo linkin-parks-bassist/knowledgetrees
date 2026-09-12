@@ -41,8 +41,8 @@ upward for `.knowledge/where/am/i.md`; searching does not enumerate other projec
 then global. Absolute Markdown leaf paths also work. Content and frontmatter are
 returned verbatim. Relative paths cannot escape the selected root.
 
-`kt proof --no-stamp leaves` checks exact semantic-component tokens in the active
-root. `kt proof /path/to/project --no-stamp` selects that project's `.knowledge`;
+`kt prove --no-stamp leaves` checks exact semantic-component tokens in the active
+root. `kt prove /path/to/project --no-stamp` selects that project's `.knowledge`;
 explicit `--root ROOT` and other verifier options are forwarded. Default proof
 checks may stamp outcomes; lookup and open do not verify or stamp proofs.
 
