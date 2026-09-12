@@ -1,9 +1,10 @@
 ---
-verified_at: '2026-09-12T18:20:19+10:00'
+verified_at: '2026-09-12T20:06:26+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: completed publication plan and current repository state
 verification: Implemented the requested four procedure skills and checked installation and discovery; behavioral evaluation remains separate.
+  The Python kt lookup rewrite and installer distribution are implemented and integration-tested.
 review_when: Update whenever the next actionable step changes.
 ---
 

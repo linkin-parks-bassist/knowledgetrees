@@ -260,13 +260,16 @@ def main(arguments: list[str] | None = None) -> int:
     repository = Path(__file__).resolve().parent
     example = repository / "example"
     verifier_source = repository / "tools" / "verify-knowledgetree-proofs"
-    if not example.is_dir() or not verifier_source.is_file():
+    kt_source = repository / "tools" / "kt"
+    if not example.is_dir() or not verifier_source.is_file() or not kt_source.is_file():
         print("error: run the installer from a complete knowledgetrees checkout", file=sys.stderr)
         return 2
 
     target_home = args.home.expanduser().resolve()
     knowledge_root = target_home / ".knowledge"
     verifier_target = knowledge_root / ".tools" / "verify-knowledgetree-proofs"
+    kt_target = knowledge_root / ".tools" / "kt"
+    kt_command = target_home / ".local" / "bin" / "kt"
     skill_links = [
         (knowledge_root / relative, target_home / harness / "skills" / name / "SKILL.md")
         for name, relative in SKILL_LEAVES.items()
@@ -292,9 +295,10 @@ def main(arguments: list[str] | None = None) -> int:
         leaf_installs.append((source, knowledge_root / relative, rendered_leaf(source)))
 
     verifier_bytes = verifier_source.read_bytes()
+    kt_bytes = kt_source.read_bytes()
     conflicts: list[Path] = []
     file_targets = [destination for _source, destination, _content in leaf_installs]
-    file_targets.extend((verifier_target, *skill_targets))
+    file_targets.extend((verifier_target, kt_target, kt_command, *skill_targets))
     invalid_targets = [
         destination
         for destination in file_targets
@@ -315,6 +319,9 @@ def main(arguments: list[str] | None = None) -> int:
             conflicts.append(destination)
     if path_exists(verifier_target) and not same_bytes(verifier_target, verifier_bytes):
         conflicts.append(verifier_target)
+    for destination in (kt_target, kt_command):
+        if path_exists(destination) and not same_bytes(destination, kt_bytes):
+            conflicts.append(destination)
     for canonical, destination in skill_links:
         skill_bytes = rendered_leaf(example / canonical.relative_to(knowledge_root))
         if path_exists(destination) and not same_bytes(destination, skill_bytes):
@@ -358,6 +365,7 @@ def main(arguments: list[str] | None = None) -> int:
     if args.dry_run:
         print(f"Would install {len(leaf_installs)} reusable leaves into {knowledge_root}")
         print(f"Would install the verifier at {verifier_target}")
+        print(f"Would install kt at {kt_target} and link {kt_command}")
         for canonical, destination in skill_links:
             print(f"Would hard-link {destination} to {canonical}")
         print(f"Would assert the bootstrap in {agents_path}")
@@ -383,6 +391,15 @@ def main(arguments: list[str] | None = None) -> int:
         atomic_write(verifier_target, verifier_bytes, 0o755)
     else:
         os.chmod(verifier_target, 0o755)
+    if kt_target.is_symlink() or not same_bytes(kt_target, kt_bytes):
+        atomic_write(kt_target, kt_bytes, 0o755)
+    else:
+        os.chmod(kt_target, 0o755)
+    kt_command.parent.mkdir(parents=True, exist_ok=True)
+    if not kt_command.is_symlink() or kt_command.resolve() != kt_target:
+        if path_exists(kt_command):
+            kt_command.unlink()
+        kt_command.symlink_to(kt_target)
 
     for canonical_skill, destination in skill_links:
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -429,6 +446,7 @@ def main(arguments: list[str] | None = None) -> int:
 
     print(f"Installed {len(leaf_installs)} reusable leaves into {knowledge_root}")
     print(f"Installed one verifier at {verifier_target}")
+    print(f"Installed kt at {kt_target}; command: {kt_command}")
     print("Installed hard-linked compatibility skills for shared harnesses and Codex")
     print(f"Bootstrap asserted in {agents_path}")
     print(f"OpenCode scoped knowledge-tree permissions configured in {opencode_config}")

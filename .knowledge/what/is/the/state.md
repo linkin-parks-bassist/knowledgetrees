@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T18:20:19+10:00'
+verified_at: '2026-09-12T20:06:26+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
@@ -50,3 +50,11 @@ repository orientations provide concrete entry routes. The installer obtains
 informed `[n/Y]` consent before configuring scoped OpenCode reads and knowledge-tree
 writes or making any installation changes. Integration checks and read-only proof
 sweeps of repository, example, and installed global trees pass.
+
+`tools/kt` is the dependency-free Python lookup CLI, deployed locally under the
+global root's `.tools/` and exposed through `~/.local/bin/kt`. It ranks keyword
+and quoted-question matches, labels project/global roots, reads leaf metadata,
+prints leaves verbatim, and forwards proof roots/options correctly. The installer
+now distributes it alongside the single verifier. `tests/test-kt.py` checks isolated
+roots with spaces, phrase ranking, metadata, missing results, open scoping, and
+proof forwarding without executing real predicates.

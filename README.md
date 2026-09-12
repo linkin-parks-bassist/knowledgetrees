@@ -358,6 +358,13 @@ active across messages and tasks; it is not reinvoked on every turn. The install
 refuses to overwrite differing knowledge unless `--force` is supplied explicitly.
 Preview its work with `./install --dry-run`.
 
+Installation also puts `kt` in `~/.local/bin` (add that directory to your `PATH`
+if needed). Use `kt find leaves` or `kt find "how to add knowledge leaves"` for
+ranked keyword results, `kt open global:how/to/add/knowledge/leaves.md` to read a
+leaf verbatim, and `kt proof --no-stamp leaves` to check relevant proofs.
+`kt roots` shows the active scopes. Search is lexical, not a semantic model;
+scores rank matches, and a miss does not prove knowledge is absent.
+
 ### Why did skills appear after installation?
 
 After installation, Codex and other harnesses may appear to contain a

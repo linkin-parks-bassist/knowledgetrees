@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""Fast, dependency-free knowledge-tree lookup. Search is lexical, not semantic."""
+
+import argparse
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import textwrap
+
+
+def roots():
+    global_root = Path(os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")).expanduser().resolve()
+    cwd = Path.cwd()
+    project = next((p / ".knowledge" for p in (cwd, *cwd.parents)
+                    if (p / ".knowledge/where/am/i.md").is_file()), None)
+    if cwd.name == ".knowledge" and (cwd / "where/am/i.md").is_file():
+        project = cwd
+    result = []
+    if project is not None and project.resolve() != global_root:
+        result.append(("project", project.resolve()))
+    result.append(("global", global_root))
+    return result
+
+
+def paint(value, color):
+    if sys.stdout.isatty() and "NO_COLOR" not in os.environ and os.environ.get("TERM") != "dumb":
+        return f"\033[{color}m{value}\033[0m"
+    return str(value)
+
+
+def leaf_parts(text):
+    metadata = {}
+    body = text
+    match = re.match(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", text, re.S)
+    if match:
+        body = text[match.end():]
+        for key in ("verified_at", "falsified_at", "status"):
+            value = re.search(rf"^\s*{key}:\s*([^\n]+)", match[1], re.M)
+            if value:
+                metadata[key] = value[1].strip().strip("\"'")
+    return metadata, body
+
+
+def words(value):
+    return list(dict.fromkeys(re.findall(r"[^\W_]+", value.casefold())))
+
+
+def leaves(root):
+    if not root.is_dir():
+        return
+    for directory, directories, files in os.walk(root, followlinks=False):
+        directories[:] = sorted(d for d in directories if not d.startswith("."))
+        for name in sorted(files):
+            if name.endswith(".md"):
+                path = Path(directory) / name
+                if not path.is_symlink():
+                    yield path
+
+
+def find(args):
+    terms = words(" ".join(args.terms))
+    if not terms:
+        print("kt: supply at least one word to search", file=sys.stderr)
+        return 2
+    results = []
+    for precedence, (label, root) in enumerate(roots()):
+        for path in leaves(root):
+            try:
+                text = path.read_text()
+            except (OSError, UnicodeError) as error:
+                print(f"kt: skipped {path}: {error}", file=sys.stderr)
+                continue
+            relative = path.relative_to(root).as_posix()
+            route = relative.removesuffix(".md").casefold()
+            metadata, body = leaf_parts(text)
+            lower = body.casefold()
+            head = "\n".join(body.splitlines()[:20]).casefold()
+            score = sum(4 if t in route else 2 if t in head else 1 if t in lower else 0 for t in terms)
+            if not score:
+                continue
+            if all(t in route for t in terms):
+                score += 8
+            if words(route) == terms:
+                score += 20
+            lines = [line.strip() for line in body.splitlines() if line.strip()]
+            excerpt = max(lines, key=lambda line: sum(t in line.casefold() for t in terms), default="")
+            results.append((-score, precedence, relative, label, path, metadata, excerpt))
+    results.sort(key=lambda row: row[:3])
+    if not results:
+        print(paint("No matches", "33") + f" for {' '.join(args.terms)!r}.")
+        print("This is keyword search; a miss does not establish that the answer is absent.")
+        return 1
+    shown = results[:args.limit]
+    print(paint(f"{len(shown)} of {len(results)} matches", "1") + f" · {' '.join(args.terms)}\n")
+    width = max(30, min(shutil.get_terminal_size((100, 24)).columns - 4, 116))
+    for index, (negative_score, _, relative, label, path, metadata, excerpt) in enumerate(shown, 1):
+        print(f"{paint(str(index) + '.', '1')} {paint(label + ':' + relative, '36')}  {paint('score ' + str(-negative_score), '2')}")
+        status = ("FALSIFIED " + metadata["falsified_at"] if metadata.get("falsified_at")
+                  else metadata.get("status", "leaf reviewed " + metadata.get("verified_at", "unknown")))
+        print("   " + paint(status, "31" if metadata.get("falsified_at") else "2"))
+        if excerpt:
+            print(textwrap.fill(excerpt, width=width, initial_indent="   ", subsequent_indent="   "))
+        print()
+    print("Read verbatim: kt open project:<path> or kt open global:<path>")
+    print("Check relevant proofs before relying on claims; search scores are not confidence.")
+    return 0
+
+
+def open_leaf(value):
+    available = roots()
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        candidates = [path] if path.suffix == ".md" else []
+    else:
+        label, separator, relative = value.partition(":")
+        if separator:
+            if label not in {"project", "global"}:
+                raise ValueError(f"unknown root label: {label}")
+            available = [(name, root) for name, root in available if name == label]
+        else:
+            relative = value
+        candidates = []
+        for _, root in available:
+            for suffix in ("", ".md"):
+                candidate = (root / (relative + suffix)).resolve()
+                if candidate.is_relative_to(root) and candidate.suffix == ".md":
+                    candidates.append(candidate)
+    path = next((p for p in candidates if p.is_file()), None)
+    if path is None:
+        raise ValueError(f"no such leaf: {value}")
+    sys.stdout.write(path.read_text())
+    return 0
+
+
+def proof(arguments):
+    global_root = Path(os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")).expanduser().resolve()
+    verifier = global_root / ".tools/verify-knowledgetree-proofs"
+    if not verifier.is_file() or not os.access(verifier, os.X_OK):
+        raise ValueError(f"verifier not found or not executable: {verifier}")
+    arguments = list(arguments)
+    if arguments and not arguments[0].startswith("-") and Path(arguments[0]).expanduser().is_dir():
+        root = Path(arguments.pop(0)).expanduser().resolve()
+        if root.name != ".knowledge" and (root / ".knowledge").is_dir():
+            root /= ".knowledge"
+        arguments = ["--root", str(root), *arguments]
+    elif not any(a in ("--root", "-r") or a.startswith("--root=") for a in arguments):
+        arguments = ["--root", str(roots()[0][1]), *arguments]
+    return subprocess.run([str(verifier), *arguments], check=False).returncode
+
+
+def main():
+    # Forward verifier options unchanged instead of trying to reproduce its parser.
+    if len(sys.argv) > 1 and sys.argv[1] == "proof":
+        return proof(sys.argv[2:])
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command")
+    search = commands.add_parser("find", help="rank keyword matches across project and global roots")
+    search.add_argument("terms", nargs="+", help="words or a quoted question")
+    search.add_argument("--limit", type=int, default=10)
+    opening = commands.add_parser("open", help="print a leaf verbatim, including metadata")
+    opening.add_argument("path", help="relative path, project:path, global:path, or absolute .md path")
+    commands.add_parser("roots", help="show roots in precedence order")
+    commands.add_parser("proof", help="forward [directory] [tokens] [options] to the verifier")
+    args = parser.parse_args()
+    if args.command == "find":
+        if args.limit < 1:
+            parser.error("--limit must be positive")
+        return find(args)
+    if args.command == "open":
+        return open_leaf(args.path)
+    for label, root in roots():
+        print(f"{paint(label.ljust(7), '36')}  {root}")
+    if args.command is None:
+        entry = roots()[0][1] / "where/am/i.md"
+        if entry.is_file():
+            _, body = leaf_parts(entry.read_text())
+            print("\n" + paint("Orientation", "1"))
+            print(textwrap.shorten(" ".join(body.split()), width=600, placeholder=" …"))
+        print("\nkt find leaves                     ranked keyword lookup")
+        print('kt find "how to add knowledge leaves"')
+        print("kt open global:how/to/add/knowledge/leaves.md")
+        print("kt proof [directory] [tokens] [--no-stamp]")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        sys.exit(0)
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"kt: {error}", file=sys.stderr)
+        sys.exit(2)
