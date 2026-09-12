@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T15:01:07+10:00'
+verified_at: '2026-09-12T15:16:38+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
-verification: Confirmed skill entry points are created only by the installer, installed-skill discussion follows installation in the README, session bootstrap semantics remain intact, and checks pass.
+verification: Reviewed OpenCode's Superpowers-derivation leaf, corrected its proof placement, checked the four source attributions, and retained the public-safety boundary.
 review_when: Update after every material repository change.
 ---
 
@@ -21,7 +21,8 @@ adopters how to describe their local environment safely. The local repository us
 and tracks the public GitHub remote. The repository owner reviewed the README edits,
 and commit `7949a71` was pushed as the first public `main` branch publication. The
 example also contains a deliberately terse, metadata-complete Dedekind-complete
-ordered-field leaf.
+ordered-field leaf. `what/leaves/are/distilled/from/superpowers.md` records which
+four example leaves carry Superpowers provenance and checks their source count.
 
 Knowledge-tree skill invocation is a once-per-fresh-session bootstrap. A loaded
 session continues applying the procedure across messages, turns, and tasks without

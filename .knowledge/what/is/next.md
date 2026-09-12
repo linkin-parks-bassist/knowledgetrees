@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T15:01:07+10:00'
+verified_at: '2026-09-12T15:16:38+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: completed publication plan and current repository state
-verification: Confirmed installer-only skill creation and README ordering are implemented with no follow-up task queued.
+verification: Confirmed OpenCode's valid provenance documentation is reviewed and no repository follow-up is queued.
 review_when: Update whenever the next actionable step changes.
 ---
 
