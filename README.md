@@ -2,8 +2,6 @@
 
 *Agentic knowledge as a categorical limit corpus with skeptical intuitionistic sub-verification*
 
-**Democratizing text files.**
-
 Semantic Knowledge Trees are a stateful, self-growing, self-healing filesystem for
 agent knowledge. They aim to replace the split between skills, documentation, code
 comments, project memory, plans, specifications, working policy, and operational
