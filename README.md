@@ -2,10 +2,12 @@
 
 *Agentic knowledge as a categorical limit corpus with skeptical intuitionistic sub-verification*
 
+**Democratizing text files.**
+
 Semantic Knowledge Trees are a stateful, self-growing, self-healing filesystem for
-agent knowledge. They aim to replace the split between skills, documentation,
-project memory, plans, specifications, working policy, and operational notes with
-one canonical, agent-navigable substrate.
+agent knowledge. They aim to replace the split between skills, documentation, code
+comments, project memory, plans, specifications, working policy, and operational
+notes with one canonical, agent-navigable substrate.
 
 The idea is simple: store useful knowledge in meaningful filesystem paths, let
 agents fetch only the answers they need, and make ordinary work continuously improve
@@ -135,6 +137,7 @@ The familiar stack is fragmented:
 | `AGENTS.md` | Global instructions and project quirks |
 | `skills/` | Procedures the model must remember to select |
 | `docs/` | Linear presentations with buried answers |
+| code comments | Design rationale tied to where the implementation happens to live |
 | `plans/` and `specs/` | Current intent, often duplicated elsewhere |
 | notes and chat history | Discoveries mixed with obsolete chronology |
 
@@ -145,6 +148,23 @@ something reusable.
 
 Store knowledge. Generate presentations. Do not make every future agent reread the
 presentation to recover the knowledge.
+
+### Even code comments
+
+Skills. Documentation. Code comments. The same knowledge, trapped in three
+different retrieval conventions. Why should an agent have to discover the right
+source file and scroll to the right comment to understand a design decision?
+
+With `why/does/this/function/do/that.md`, the question itself becomes the retrieval
+route. Constraints, rejected alternatives, invariants, and strange-looking choices
+become maintained knowledge—with provenance, scope, and executable proofs wherever
+the facts are mechanically verifiable. The code shows what happens; the tree
+explains why.
+
+Keep a short inline warning where missing it could cause immediate damage. Let the
+tree own the substantive explanation instead of maintaining competing versions in
+comments and documents. This is not another place to put text. It is a bid to make
+the text compose.
 
 ## What makes it different
 
