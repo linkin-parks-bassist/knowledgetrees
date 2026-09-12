@@ -92,16 +92,20 @@ def agents_text(current: str) -> str:
     block = f"""{AGENTS_BEGIN}
 # Mandatory knowledge-tree bootstrap
 
-As the first move of every task, invoke the `knowledgetrees` skill before task
-reasoning, discovery, planning, or other tool use. Follow its root bootstrap,
-orientation, semantic retrieval, narrowly eligible `Proof:` checks, maintenance,
-and continuous-growth procedures throughout the task. Use the nearest applicable
-project `.knowledge` root and the global `~/.knowledge` root.
+As the first bootstrap action of a fresh agent session, invoke the `knowledgetrees`
+skill before substantive task reasoning, discovery, planning, or other tool use.
+Once loaded, follow its root bootstrap, orientation, semantic retrieval, narrowly
+eligible `Proof:` checks, maintenance, and continuous-growth procedures throughout
+the session. Do not reinvoke the skill merely because a new user message, turn, or
+task arrives. Rebootstrap only for a new session or after a context reset that
+genuinely lost the procedure. Use the nearest applicable project `.knowledge` root
+and the global `~/.knowledge` root.
 
 Run `~/.knowledge/.tools/verify-knowledgetree-proofs` across the working directory's
-knowledge tree at startup. Use semantic path-component tokens for relevant branch
-checks at important junctions. Hyphenate genuinely multi-word path components;
-never use underscores in knowledge-tree paths.
+knowledge tree during bootstrap and when entering a different project scope. Use
+semantic path-component tokens for relevant branch checks at important junctions.
+Hyphenate genuinely multi-word path components; never use underscores in
+knowledge-tree paths.
 {AGENTS_END}"""
     return replace_managed_block(current, block)
 

@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T14:47:59+10:00'
+verified_at: '2026-09-12T14:54:05+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: current example-corpus maintenance state
-verification: Confirmed the terse example leaf satisfies the metadata contract and no further example-specific content change is pending.
+verification: Confirmed session-boundary bootstrap semantics are incorporated and no further example-specific content change is pending.
 review_when: Update when an example-specific improvement is approved.
 ---
 

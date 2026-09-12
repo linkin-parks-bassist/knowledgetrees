@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T14:47:59+10:00'
+verified_at: '2026-09-12T14:54:05+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
-verification: Confirmed the separate trees, empty example orientation, metadata-complete Dedekind-complete ordered-field example, installer integration suite, proof sweeps, privacy scan, and published public main branch.
+verification: Confirmed session-boundary bootstrap semantics across the installed and distributable procedures, AGENTS instructions, installer, regression suite, proof sweeps, and public-safety boundary.
 review_when: Update after every material repository change.
 ---
 
@@ -21,3 +21,8 @@ and tracks the public GitHub remote. The repository owner reviewed the README ed
 and commit `7949a71` was pushed as the first public `main` branch publication. The
 example also contains a deliberately terse, metadata-complete Dedekind-complete
 ordered-field leaf.
+
+Knowledge-tree skill invocation is a once-per-fresh-session bootstrap. A loaded
+session continues applying the procedure across messages, turns, and tasks without
+reinvocation. Entering another project scope triggers orientation and verification,
+not another skill bootstrap.

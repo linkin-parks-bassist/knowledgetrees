@@ -4,7 +4,7 @@ description: 'Mandatory unified knowledge-tree procedure: establish canonical
   roots, orient and retrieve semantically, run leaf proofs, and immediately preserve
   every plausibly reusable answer discovered during work.'
 metadata:
-  verified_at: '2026-09-12T14:22:23+10:00'
+  verified_at: '2026-09-12T14:52:31+10:00'
   verified_by: codex /root
   scope: public knowledge-tree example and distributable skill
   source: sanitized adaptation of the canonical knowledgetrees procedure
@@ -16,7 +16,8 @@ metadata:
     deliberately aggregating orientation and spine projections, heavy-tailed leaf
     sizing, and hyphenated semantic components distinct from code-only snake_case;
     checked the independent verifier and the installer's hard-linked compatibility
-    bootstrap behavior in an isolated target home.
+    bootstrap behavior in an isolated target home; replaced per-task reinvocation
+    with session-boundary bootstrap semantics.
   review_when: Recheck when the knowledge-tree design, scope rules, or agent harness changes.
 ---
 
@@ -75,8 +76,13 @@ the following as guidance, not invariants or automatic rewrite triggers:
 
 ## Bootstrap and orientation
 
-Invoke this skill as the first move of every task, before reasoning, discovery,
-planning, or other tool use. Apply it throughout the task, not merely at startup.
+Invoke this skill once as the first bootstrap action of a fresh agent session,
+before substantive task reasoning, discovery, planning, or other tool use. After it
+is loaded, apply the procedure throughout that session without reinvoking it for
+each user message, turn, or task. Rebootstrap only when a new session begins or a
+context reset has genuinely lost the procedure. Entering a different project scope
+within an already bootstrapped session requires orientation and proof verification
+for the new scope, not another skill invocation.
 
 For the active task scope, identify the nearest applicable project knowledge root
 and the global `~/.knowledge` root. Do not inspect or modify unrelated projects just

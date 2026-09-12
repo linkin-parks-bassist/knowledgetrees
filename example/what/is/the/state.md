@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T14:47:59+10:00'
+verified_at: '2026-09-12T14:54:05+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: direct inspection of the example corpus
-verification: Confirmed the visible location, empty orientation starter, canonical branches, metadata-complete Dedekind-complete ordered-field example, compatibility procedure, adapted methodology leaves, and passing verifier sweep.
+verification: Confirmed the visible location, empty orientation starter, session-boundary bootstrap procedure, installer guidance, adapted methodology leaves, and passing verifier sweep.
 review_when: Update after material example changes.
 ---
 
@@ -14,3 +14,6 @@ so an adopting user can describe their own local environment. The installation l
 explains that current harness skills are hard-linked bootstraps into the canonical
 installed knowledge. A deliberately terse, metadata-complete leaf answers how many
 Dedekind-complete ordered fields there are.
+
+The compatibility skill is invoked once when a fresh agent session bootstraps. It
+is not reinvoked for each message, turn, or task after the procedure is loaded.

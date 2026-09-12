@@ -295,8 +295,10 @@ Run the installer from a clone:
 The installer is knowledge-first. It safely merges the reusable leaves from
 `example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
 single verifier at `~/.knowledge/.tools/verify-knowledgetree-proofs`, and adds the
-mandatory bootstrap to `~/AGENTS.md`. It refuses to overwrite differing knowledge
-unless `--force` is supplied explicitly. Preview its work with `./install --dry-run`.
+mandatory once-per-session bootstrap to `~/AGENTS.md`. The loaded procedure remains
+active across messages and tasks; it is not reinvoked on every turn. The installer
+refuses to overwrite differing knowledge unless `--force` is supplied explicitly.
+Preview its work with `./install --dry-run`.
 
 ### Why is there still a skill?
 

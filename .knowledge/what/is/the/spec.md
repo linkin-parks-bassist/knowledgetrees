@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T14:24:07+10:00'
+verified_at: '2026-09-12T14:54:05+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request in the active Codex session
-verification: Reconciled all requested deliverables, installer behavior, compatibility-bootstrap constraint, public-safety boundary, and review-before-push gate.
+verification: Reconciled all requested deliverables, installer behavior, session-boundary compatibility-bootstrap constraint, public-safety boundary, and publication gate.
 review_when: Recheck when the requested contents or publication workflow changes.
 ---
 
@@ -27,6 +27,8 @@ one verifier under the global knowledge root, asserts the bootstrap in the user'
 `AGENTS.md`, and creates shared-harness and Codex `SKILL.md` entry points as hard
 links to the installed `how/to/use/knowledgetrees.md`. The compatibility skill is a
 bootstrap required by current harnesses, not a parallel knowledge authority.
+It is invoked once when a fresh agent session bootstraps, not once per user message,
+turn, or task; a loaded session continues applying the procedure without rebooting.
 
 The two trees have separate ownership. `.knowledge/` is the real operational root
 for this repository. `example/` is the visible, distributable public specimen and

@@ -68,12 +68,16 @@ def main() -> None:
         assert not codex_skill.is_symlink()
         assert canonical.stat().st_dev == shared_skill.stat().st_dev == codex_skill.stat().st_dev
         assert canonical.stat().st_ino == shared_skill.stat().st_ino == codex_skill.stat().st_ino
+        assert "fresh agent session" in canonical.read_text()
+        assert "first move of every task" not in canonical.read_text()
         assert len(list(knowledge.rglob("verify-knowledgetree-proofs"))) == 1
 
         assert agents_path.is_symlink()
         agents = agents_path.read_text()
         assert "Existing user instructions" in agents
         assert agents.count("BEGIN KNOWLEDGETREES BOOTSTRAP") == 1
+        assert "fresh agent session" in agents
+        assert "first move of every task" not in agents
         config = codex_config.read_text()
         assert 'model = "example-model"' in config
         assert config.count(str(codex_skill)) == 1

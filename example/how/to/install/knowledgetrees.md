@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T14:24:07+10:00'
+verified_at: '2026-09-12T14:54:05+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: repository installer and current agent-harness discovery behavior
-verification: Checked the installer implementation and its isolated-home integration tests.
+verification: Checked the installer implementation, session-boundary bootstrap wording, and isolated-home integration tests.
 review_when: Recheck when installer behavior or harness skill discovery changes.
 ---
 
@@ -13,6 +13,11 @@ into `~/.knowledge` without installing the example's illustrative spine, preserv
 an existing `where/am/i.md`, installs one verifier at
 `~/.knowledge/.tools/verify-knowledgetree-proofs`, and asserts the mandatory
 bootstrap in `~/AGENTS.md`.
+
+That bootstrap invokes the compatibility skill once at the start of a fresh agent
+session. The loaded procedure remains active across messages, turns, and tasks;
+reinvocation is reserved for a new session or genuine loss of the procedure from
+context.
 
 Current agent harnesses still need a skill-shaped bootstrap. The installer creates
 both `~/.agents/skills/knowledgetrees/SKILL.md` and

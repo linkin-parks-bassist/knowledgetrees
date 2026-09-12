@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T14:47:59+10:00'
+verified_at: '2026-09-12T14:54:05+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: completed publication plan and current repository state
-verification: Confirmed the terse example leaf now satisfies the metadata contract and no follow-up task is queued.
+verification: Confirmed the bootstrap cadence is made session-boundary-based and no follow-up task is queued.
 review_when: Update whenever the next actionable step changes.
 ---
 
