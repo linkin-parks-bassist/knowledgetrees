@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T14:45:40+10:00'
+verified_at: '2026-09-12T14:47:59+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
-verification: Confirmed the separate trees, empty example orientation, one-line Dedekind-complete ordered-field example, installer integration suite, proof sweeps, privacy scan, and published public main branch.
+verification: Confirmed the separate trees, empty example orientation, metadata-complete Dedekind-complete ordered-field example, installer integration suite, proof sweeps, privacy scan, and published public main branch.
 review_when: Update after every material repository change.
 ---
 
@@ -19,4 +19,5 @@ sweeps. The example orientation remains intentionally empty and the README tells
 adopters how to describe their local environment safely. The local repository uses `main`
 and tracks the public GitHub remote. The repository owner reviewed the README edits,
 and commit `7949a71` was pushed as the first public `main` branch publication. The
-example also contains a deliberately terse Dedekind-complete ordered-field leaf.
+example also contains a deliberately terse, metadata-complete Dedekind-complete
+ordered-field leaf.
