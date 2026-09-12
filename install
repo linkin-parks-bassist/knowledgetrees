@@ -112,8 +112,10 @@ def agents_text(current: str) -> str:
     block = f"""{AGENTS_BEGIN}
 # Mandatory knowledge-tree bootstrap
 
-As the first bootstrap action of a fresh agent session, invoke the `knowledgetrees`
-skill and follow its procedures throughout the session without reinvoking per task.
+Follow the canonical knowledge-tree procedure once per fresh agent session. When the
+harness injects it into context, it is already loaded: do not invoke a bootstrap
+skill again. Otherwise load `knowledgetrees` as the compatibility fallback.
+Perform startup orientation and evidence checks once, not per task or turn.
 New question -> `kt` first unless adequately checked knowledge is already loaded;
 miss -> determine whether a leaf exists; absent -> investigate and add it (or an
 unresolved record) before the next unrelated tool call or completion. Use nearest
@@ -221,15 +223,17 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
         raise ValueError("Codex hooks configuration must contain a hooks object")
     original = copy.deepcopy(config)
     hooks = config.setdefault("hooks", {})
-    for name, event in (("UserPromptSubmit", "prompt"), ("PreToolUse", "before"), ("PostToolUse", "after"), ("Stop", "stop")):
+    for name, event in (("SessionStart", "start"), ("UserPromptSubmit", "prompt"), ("PreToolUse", "before"), ("PostToolUse", "after"), ("Stop", "stop")):
         groups = hooks.setdefault(name, [])
         if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
             raise ValueError(f"malformed Codex {name} hooks")
         command = f"python3 {shlex.quote(str(handler))} codex {event}"
         if not any(isinstance(h, dict) and h.get("command") == command for g in groups for h in g.get("hooks", [])):
-            groups.append({**({"matcher": "Bash"} if event == "before" else {}),
+            groups.append({**({"matcher": "Bash"} if event == "before" else
+                             {"matcher": "^(startup|resume|clear|compact)$"} if event == "start" else {}),
                            "hooks": [{"type": "command", "command": command,
-                            "timeout": 5, "statusMessage": "Knowledge-tree reminders"}]})
+                            "timeout": 5, **({"additionalContextLimit": 20000} if event == "start" else {}),
+                            "statusMessage": "Knowledge-tree reminders"}]})
     codex_bytes = (current if config == original else json.dumps(config, indent=2) + "\n").encode()
     copilot = {"version": 1, "hooks": {name: [{"type": "command", "exec": "python3",
                   "args": [str(handler), "copilot", event], "timeoutSec": 5}]

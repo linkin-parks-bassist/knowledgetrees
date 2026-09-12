@@ -412,11 +412,27 @@ The installer adds reminders for **Codex, OpenCode, and GitHub Copilot CLI**:
   follow-up. The agent checks existing owners and records missing discoveries,
   or reports that there is nothing new to retain.
 
-Codex uses `PreToolUse`, `PostToolUse`, and `Stop`; Copilot CLI uses `postToolUse`,
+Codex uses `SessionStart`, `PreToolUse`, `PostToolUse`, and `Stop`; Copilot CLI uses `postToolUse`,
 `postToolUseFailure`, and `agentStop`; OpenCode uses a local plugin and
 `session.idle`. Existing unrelated hooks are preserved. In Codex, open `/hooks`
 and review/trust the installed definitions; new hooks are skipped until trusted.
 Restart OpenCode to load its plugin, and start a new Copilot CLI session.
+
+OpenCode's plugin also loads the canonical `how/to/use/knowledgetrees.md` directly
+into model system context before work. The agent does not need to select a bootstrap
+skill. One procedure block stays in the assembled context, without adding conversation
+messages or extra model turns. Startup orientation and evidence checks remain once
+per fresh session; compaction preserves initialization state rather than rebooting it.
+Focused lookup, capture, maintenance, and ingestion skills remain available as needed.
+The procedure is read at plugin startup, so restart after changing it. This context
+can be sent to the configured model provider; it contains the procedure, not the
+whole knowledge tree, and grants no additional permissions.
+
+Codex's native `SessionStart` hook delivers the same canonical procedure as developer
+context on startup, resume, clear, and after compaction—not on every user prompt.
+Resume and compaction restore context without repeating completed startup work.
+Review/trust the new `SessionStart` definition in `/hooks`, then start a fresh
+session to test startup injection. A disabled or untrusted hook cannot supply it.
 
 This Codex release sends Bash output text without the exit code. Its pre-tool
 adapter records exit status privately while preserving stdout and the command's

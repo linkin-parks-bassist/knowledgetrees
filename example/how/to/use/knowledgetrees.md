@@ -2,6 +2,8 @@
 name: knowledgetrees
 description: 'Bootstrap once per fresh session; use kt first for new questions, resolve lookup misses, check proofs, and capture missing knowledge before continuing.'
 metadata:
+  status: unverified
+  updated_at: '2026-09-12T12:34:09+00:00'
   verified_at: '2026-09-12T12:06:21+00:00'
   verified_by: codex /root
   scope: public knowledge-tree example and distributable skill
@@ -11,9 +13,13 @@ metadata:
 ---
 
 Knowledge trees are the authoritative semantic answer substrate; context is working
-memory. Bootstrap once at the start of a fresh agent session, before substantive
-work. Continue the loaded procedure across turns and tasks; rebootstrap only after
-a new session or genuine loss of the procedure.
+memory. Load this procedure once at the start of a fresh agent session, before
+substantive work. A harness may supply it directly in system context; that counts
+as already loaded, so do not invoke a bootstrap skill to load it again. Without
+harness injection, the compatibility skill loads the same canonical procedure.
+Perform startup orientation and evidence checks once, then continue across turns
+and tasks. Compaction should retain completed initialization; restore only genuinely
+lost context or changed scope rather than rerunning completed startup work.
 
 ## Bootstrap
 

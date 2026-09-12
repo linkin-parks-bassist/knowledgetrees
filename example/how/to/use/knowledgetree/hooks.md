@@ -1,4 +1,6 @@
 ---
+status: unverified
+updated_at: '2026-09-12T12:34:09+00:00'
 verified_at: '2026-09-12T12:21:21+00:00'
 verified_by: codex /root
 scope: public knowledge-tree example
@@ -55,6 +57,16 @@ handler performs no model calls and never runs or writes leaf bodies.
 
 ## Harness contracts and activation
 
+Codex's native `SessionStart` hook reads the canonical bootstrap procedure and
+returns its body as `hookSpecificOutput.additionalContext` developer context.
+It matches startup, resume, clear, and compact, not ordinary user prompts.
+The procedure is already loaded; no bootstrap skill invocation is needed.
+On resume/compaction, preserve completed initialization and restore only lost
+context or changed scope. Review/trust the new definition in `/hooks` and start
+a fresh session to test it. Protocol tests cover all four lifecycle sources;
+live startup compliance remains unconfirmed. Missing/invalid procedure files
+fail open with a diagnostic; they do not grant permissions or run proofs.
+
 The observed Codex Bash `PostToolUse` payload contains stdout text, not an exit
 code; a silent failure therefore cannot be detected from that response alone.
 Its `PreToolUse` adapter runs the command once in a Bash subshell, records the exit
@@ -71,6 +83,18 @@ result. `Stop` can request a continuation with `decision: block` and `reason`;
 this is not guaranteed pre-display gating. Use `/hooks` to review and trust new
 definitions: installation does not bypass that requirement.
 [Official Codex hooks](https://learn.chatgpt.com/docs/hooks).
+
+OpenCode's plugin reads the canonical `how/to/use/knowledgetrees.md` at startup
+and includes its procedure body once in each assembled model system context.
+This is harness-owned context, not repeated skill invocation or new conversation
+messages. It is also available after compaction; the compaction hook asks the
+summary to preserve completed initialization, checked evidence, and open captures.
+Startup work remains once per fresh session, not per turn. Focused skills still
+apply when triggered. Restart after editing the canonical procedure. Only the
+procedure is loaded, not the entire tree; it may be sent to the configured provider.
+Missing or empty procedure files report a diagnostic and leave other hooks active.
+Adapter tests cover injection, duplicate prevention, request/session availability,
+and compaction context; model compliance still requires an uncoached live test.
 
 OpenCode's adapter inspects shell result metadata and terminal tool-part events,
 queues failed-tool guidance into subsequent model context, and requests a synthetic

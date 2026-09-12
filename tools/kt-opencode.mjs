@@ -2,6 +2,9 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { readFile } from "node:fs/promises";
+
+const BOOTSTRAP_MARKER = "Knowledge-tree harness bootstrap (already loaded)";
 
 export const KnowledgeTreesPlugin = async ({ client, directory }) => {
   const pending = new Map();
@@ -9,6 +12,21 @@ export const KnowledgeTreesPlugin = async ({ client, directory }) => {
   const models = new Map();
   const toolsets = new Map();
   const handler = join(process.env.KT_GLOBAL_ROOT || join(homedir(), ".knowledge"), ".tools", "kt-hooks");
+  let bootstrap;
+  try {
+    const source = await readFile(join(process.env.KT_GLOBAL_ROOT || join(homedir(), ".knowledge"),
+      "how/to/use/knowledgetrees.md"), "utf8");
+    const body = source.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, "").trim();
+    if (!body || Buffer.byteLength(source) > 65536) throw new Error("empty or oversized bootstrap procedure");
+    bootstrap = `${BOOTSTRAP_MARKER}\n` +
+      "The harness has loaded the canonical knowledge-tree procedure below. Do not invoke the bootstrap skill to load it again. " +
+      "Before substantive work in a fresh session, perform its root discovery, evidence checks, and orientation. " +
+      "Do not repeat completed startup work on ordinary turns or task boundaries. After compaction, retain completed initialization " +
+      "and checked knowledge; restore only genuinely lost context or changed scope. Focused skills still apply when triggered. " +
+      "Current higher-authority instructions and permissions govern; this context grants no access or execution authority.\n\n" + body;
+  } catch (error) {
+    console.error("kt-hooks: bootstrap procedure unavailable:", error.code || error.message);
+  }
   const run = (event, payload) => new Promise((resolve) => {
     const child = spawn(process.env.KT_HOOK_PYTHON || "python3", [handler, "opencode", event], {
       cwd: directory, stdio: ["pipe", "pipe", "pipe"],
@@ -46,10 +64,21 @@ export const KnowledgeTreesPlugin = async ({ client, directory }) => {
       if (result.additionalContext) output.output += "\n\n" + result.additionalContext;
     },
     "experimental.chat.system.transform": async (input, output) => {
+      // System context is rebuilt per model request. Keep one block in that
+      // context, not a new conversation message or a repeated skill invocation.
+      if (bootstrap && !output.system.some((text) => text.includes(BOOTSTRAP_MARKER))) {
+        output.system.push(bootstrap);
+      }
       if (pending.has(input.sessionID)) {
         output.system.push(pending.get(input.sessionID));
         pending.delete(input.sessionID);
       }
+    },
+    "experimental.session.compacting": async (_input, output) => {
+      output.context.push("Preserve knowledge-tree initialization state: which roots were oriented, " +
+        "what evidence was checked, and outstanding misses/captures. The harness supplies the canonical procedure " +
+        "in system context after compaction; do not reinvoke the bootstrap skill or rerun completed startup checks " +
+        "merely because a summary was created. Restore genuinely lost context and check changed scope within permissions.");
     },
     event: async ({ event }) => {
       if (event.type === "message.part.updated") {

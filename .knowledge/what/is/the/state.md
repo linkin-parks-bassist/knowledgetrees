@@ -1,4 +1,6 @@
 ---
+status: unverified
+updated_at: '2026-09-12T12:34:09+00:00'
 verified_at: '2026-09-12T12:21:21+00:00'
 verified_by: codex /root
 scope: knowledgetrees repository
@@ -24,7 +26,7 @@ example also contains a deliberately terse, metadata-complete Dedekind-complete
 ordered-field leaf. `what/leaves/are/distilled/from/superpowers.md` records which
 four example leaves carry Superpowers provenance and checks their source count.
 
-Knowledge-tree skill invocation is a once-per-fresh-session bootstrap. A loaded
+Knowledge-tree procedure loading is a once-per-fresh-session bootstrap. A loaded
 session continues applying the procedure across messages, turns, and tasks without
 reinvocation. Entering another project scope triggers orientation and verification,
 not another skill bootstrap.
@@ -102,8 +104,19 @@ silent failures. A guarded pre-tool bridge now records private exit-status recei
 without altering stdout; live wrapped false delivered actual developer-context
 guidance and retained exit 1. Automatic wrapping requires trusting the new
 PreToolUse definition and is limited to already-bypassed sessions, avoiding approval
-bypass in other modes. OpenCode/Copilot model behavior remains untested, and this
-implementation is awaiting publication review.
+bypass in other modes. The owner supplied a live OpenCode transcript confirming
+idle capture review after intentional false, without an invented capture. Failure
+reminder delivery in OpenCode and Copilot live behavior remain unconfirmed.
+This implementation is awaiting publication review.
+
+OpenCode now loads the canonical bootstrap procedure body into one block of each
+assembled model system context. It adds no conversation prompts or model turns;
+the procedure explicitly avoids repeated skill invocation and startup checks.
+Compaction context preserves initialization state and pending captures. Mock SDK
+tests cover injection before work, duplicate prevention, rebuilt requests and
+separate sessions, and compaction context. The plugin is installed locally; restart
+OpenCode for an uncoached live bootstrap test. Other harnesses retain compatibility
+skill loading until their startup-context adapters are implemented.
 
 Installer leaf comparisons ignore only successful proof-marker timestamp refreshes,
 preventing a verifier-stamped leaf from conflicting on an idempotent reinstall.

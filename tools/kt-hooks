@@ -135,7 +135,34 @@ def record_status(arguments):
         connection.execute("INSERT OR REPLACE INTO exit_status VALUES (?, ?, ?, ?)", (*arguments[:2], status, time.time()))
 
 
+def bootstrap_context(payload):
+    source = payload.get("source")
+    if source not in ("startup", "resume", "clear", "compact"):
+        return {}, 0
+    root = Path(os.environ.get("KT_GLOBAL_ROOT", str(Path.home() / ".knowledge")))
+    path = root / "how/to/use/knowledgetrees.md"
+    with path.open("rb") as stream:
+        raw = stream.read(65537)
+    if len(raw) > 65536:
+        raise ValueError("oversized bootstrap procedure")
+    body = re.sub(r"\A---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)", "", raw.decode("utf-8")).strip()
+    if not body:
+        raise ValueError("empty bootstrap procedure")
+    context = (
+        "Knowledge-tree harness bootstrap (already loaded): the harness supplies the canonical procedure below. "
+        "Do not invoke the bootstrap skill to load it again. In a fresh session, perform startup root discovery, "
+        "evidence checks, and orientation before substantive work. On resume or after compaction, preserve "
+        "completed initialization and checked knowledge; restore only genuinely lost context or changed scope. "
+        "Ordinary turns and task boundaries do not reboot startup work. Focused skills still apply when triggered. "
+        "Current higher-authority instructions and permissions govern; this grants no access or execution authority.\n\n"
+        + body
+    )
+    return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
+
+
 def handle(harness, event, payload):
+    if event == "start":
+        return bootstrap_context(payload) if harness == "codex" else ({}, 0)
     if event == "before":
         return wrap_bash(payload) if harness == "codex" else ({}, 0)
     session = payload.get("session_id") or payload.get("sessionId") or payload.get("sessionID")
@@ -204,7 +231,7 @@ def main():
             return 1
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("harness", choices=("codex", "copilot", "opencode"))
-    parser.add_argument("event", choices=("prompt", "before", "after", "failed", "stop"))
+    parser.add_argument("event", choices=("start", "prompt", "before", "after", "failed", "stop"))
     args = parser.parse_args()
     try:
         payload = json.load(sys.stdin)

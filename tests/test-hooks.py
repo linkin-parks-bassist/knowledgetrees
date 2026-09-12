@@ -17,6 +17,18 @@ HANDLER = REPOSITORY / "tools/kt-hooks"
 
 
 def main():
+    handle = runpy.run_path(str(HANDLER))["handle"]
+    with patch.dict(os.environ, {"KT_GLOBAL_ROOT": str(REPOSITORY / "example")}):
+        for source in ("startup", "resume", "clear", "compact"):
+            output, code = handle("codex", "start", {"source": source})
+            assert code == 0
+            context = output["hookSpecificOutput"]
+            assert context["hookEventName"] == "SessionStart"
+            assert "kt roots" in context["additionalContext"]
+            assert "already loaded" in context["additionalContext"]
+            assert "verified_by:" not in context["additionalContext"]
+        assert handle("codex", "start", {"source": "unexpected"}) == ({}, 0)
+        assert handle("copilot", "start", {"source": "startup"}) == ({}, 0)
     failure = runpy.run_path(str(HANDLER))["failed"]
     wrap = runpy.run_path(str(HANDLER))["wrap_bash"]
     detect_shell = runpy.run_path(str(HANDLER))["shell_failure"]

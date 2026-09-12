@@ -13,10 +13,28 @@ try {
   process.env.KT_HOOK_MIN_CALLS = "3";
   await mkdir(join(process.env.KT_GLOBAL_ROOT, ".tools"), { recursive: true });
   await copyFile(fileURLToPath(new URL("../tools/kt-hooks", import.meta.url)), join(process.env.KT_GLOBAL_ROOT, ".tools/kt-hooks"));
+  await mkdir(join(process.env.KT_GLOBAL_ROOT, "how/to/use"), { recursive: true });
+  await copyFile(fileURLToPath(new URL("../example/how/to/use/knowledgetrees.md", import.meta.url)),
+    join(process.env.KT_GLOBAL_ROOT, "how/to/use/knowledgetrees.md"));
   const prompts = [];
   const plugin = await KnowledgeTreesPlugin({ directory: temporary,
     client: { session: { promptAsync: async (value) => { prompts.push(value); return {}; } } } });
   const model = { providerID: "local", modelID: "test-model" };
+  const startup = { system: ["existing harness instructions"] };
+  await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);
+  assert.equal(startup.system[0], "existing harness instructions");
+  assert.match(startup.system[1], /already loaded/);
+  assert.match(startup.system[1], /kt roots/);
+  assert.doesNotMatch(startup.system[1], /verified_by:/);
+  await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);
+  assert.equal(startup.system.length, 2, "no duplicate bootstrap blocks in assembled context");
+  const rebuilt = { system: [] };
+  await plugin["experimental.chat.system.transform"]({ sessionID: "two" }, rebuilt);
+  assert.equal(rebuilt.system[0], startup.system[1], "fresh requests and sessions retain the procedure");
+  const compacted = { context: ["existing compaction context"] };
+  await plugin["experimental.session.compacting"]({ sessionID: "one" }, compacted);
+  assert.match(compacted.context[1], /initialization state/);
+  assert.equal(compacted.context[0], "existing compaction context");
   await plugin["chat.message"]({ sessionID: "one", agent: "build", model },
                                 { message: { tools: { edit: false } }, parts: [{ type: "text", text: "ordinary task" }] });
   const output = { title: "test", output: "failed command", metadata: { exit: 1 } };
@@ -41,7 +59,7 @@ try {
   await plugin.event(terminal("f", "error"));
   const system = { system: [] };
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, system);
-  assert.match(system.system[0], /check kt/);
+  assert.match(system.system.at(-1), /check kt/);
   await plugin.event(idle);
   assert.equal(prompts.length, 2);
   await plugin.event({ event: { type: "session.idle", properties: { sessionID: "other" } } });
