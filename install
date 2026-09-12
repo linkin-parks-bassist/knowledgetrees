@@ -1,0 +1,318 @@
+#!/usr/bin/env python3
+"""Install knowledge trees and their compatibility bootstrap into a user home."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+
+
+EXCLUDED_EXAMPLE_LEAVES = {
+    Path("where/am/i.md"),
+    Path("what/is/next.md"),
+    Path("what/is/the/plan.md"),
+    Path("what/is/the/spec.md"),
+    Path("what/is/the/state.md"),
+}
+AGENTS_BEGIN = "<!-- BEGIN KNOWLEDGETREES BOOTSTRAP -->"
+AGENTS_END = "<!-- END KNOWLEDGETREES BOOTSTRAP -->"
+
+
+def path_exists(path: Path) -> bool:
+    return path.exists() or path.is_symlink()
+
+
+def containing_device(path: Path) -> int:
+    candidate = path.parent
+    while not candidate.exists():
+        candidate = candidate.parent
+    return candidate.stat().st_dev
+
+
+def writable_target(path: Path) -> Path:
+    return path.resolve(strict=True) if path.is_symlink() else path
+
+
+def rendered_leaf(source: Path) -> bytes:
+    text = source.read_text()
+    text = text.replace(
+        "  scope: public knowledge-tree example and distributable skill\n",
+        "  scope: personal global\n",
+        1,
+    )
+    text = text.replace(
+        "\nscope: public knowledge-tree example\n",
+        "\nscope: personal global\n",
+        1,
+    )
+    return text.encode()
+
+
+def same_bytes(path: Path, expected: bytes) -> bool:
+    try:
+        return path.is_file() and path.read_bytes() == expected
+    except OSError:
+        return False
+
+
+def atomic_write(path: Path, content: bytes, mode: int) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(prefix=path.name + ".", dir=path.parent)
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+        os.chmod(temporary, mode)
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def replace_managed_block(current: str, block: str) -> str:
+    begins = current.count(AGENTS_BEGIN)
+    ends = current.count(AGENTS_END)
+    if begins != ends or begins > 1:
+        raise ValueError("~/AGENTS.md contains malformed knowledgetrees markers")
+    if begins == 1:
+        start = current.index(AGENTS_BEGIN)
+        finish = current.index(AGENTS_END, start) + len(AGENTS_END)
+        return current[:start] + block + current[finish:]
+    separator = "" if not current else ("\n" if current.endswith("\n") else "\n\n")
+    return current + separator + block + "\n"
+
+
+def agents_text(current: str) -> str:
+    block = f"""{AGENTS_BEGIN}
+# Mandatory knowledge-tree bootstrap
+
+As the first move of every task, invoke the `knowledgetrees` skill before task
+reasoning, discovery, planning, or other tool use. Follow its root bootstrap,
+orientation, semantic retrieval, narrowly eligible `Proof:` checks, maintenance,
+and continuous-growth procedures throughout the task. Use the nearest applicable
+project `.knowledge` root and the global `~/.knowledge` root.
+
+Run `~/.knowledge/.tools/verify-knowledgetree-proofs` across the working directory's
+knowledge tree at startup. Use semantic path-component tokens for relevant branch
+checks at important junctions. Hyphenate genuinely multi-word path components;
+never use underscores in knowledge-tree paths.
+{AGENTS_END}"""
+    return replace_managed_block(current, block)
+
+
+SKILLS_TABLE = re.compile(
+    r"(?ms)^\[\[skills\.config\]\]\s*\n.*?(?=^\[|\Z)"
+)
+PATH_SETTING = re.compile(r"(?m)^path\s*=\s*(['\"])(.*?)\1\s*$")
+ENABLED_SETTING = re.compile(r"(?m)^enabled\s*=\s*(?:true|false)\s*$")
+
+
+def codex_config_text(current: str, skill_path: Path) -> str:
+    target = str(skill_path)
+    for match in SKILLS_TABLE.finditer(current):
+        block = match.group(0)
+        path_match = PATH_SETTING.search(block)
+        if path_match is None or path_match.group(2) != target:
+            continue
+        if ENABLED_SETTING.search(block):
+            replacement = ENABLED_SETTING.sub("enabled = true", block, count=1)
+        else:
+            replacement = block.rstrip() + "\nenabled = true\n\n"
+        return current[:match.start()] + replacement + current[match.end():]
+
+    encoded_path = json.dumps(target)
+    block = (
+        "# BEGIN KNOWLEDGETREES SKILL\n"
+        "[[skills.config]]\n"
+        f"path = {encoded_path}\n"
+        "enabled = true\n"
+        "# END KNOWLEDGETREES SKILL\n"
+    )
+    separator = "" if not current else ("\n" if current.endswith("\n") else "\n\n")
+    return current + separator + block
+
+
+def parser_for_cli() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--home",
+        type=Path,
+        default=Path.home(),
+        help="target user home (default: current user's home)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="check conflicts and describe the installation without writing",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="replace differing managed leaves and bootstrap files; orientation is still preserved",
+    )
+    return parser
+
+
+def main(arguments: list[str] | None = None) -> int:
+    args = parser_for_cli().parse_args(arguments)
+    repository = Path(__file__).resolve().parent
+    example = repository / "example"
+    verifier_source = repository / "tools" / "verify-knowledgetree-proofs"
+    if not example.is_dir() or not verifier_source.is_file():
+        print("error: run the installer from a complete knowledgetrees checkout", file=sys.stderr)
+        return 2
+
+    target_home = args.home.expanduser().resolve()
+    knowledge_root = target_home / ".knowledge"
+    verifier_target = knowledge_root / ".tools" / "verify-knowledgetree-proofs"
+    canonical_skill = knowledge_root / "how" / "to" / "use" / "knowledgetrees.md"
+    skill_targets = (
+        target_home / ".agents" / "skills" / "knowledgetrees" / "SKILL.md",
+        target_home / ".codex" / "skills" / "knowledgetrees" / "SKILL.md",
+    )
+
+    link_devices = {
+        containing_device(destination) for destination in (canonical_skill, *skill_targets)
+    }
+    if len(link_devices) != 1:
+        print(
+            "error: the knowledge root and skill destinations must share a filesystem",
+            file=sys.stderr,
+        )
+        return 2
+
+    leaf_installs: list[tuple[Path, Path, bytes]] = []
+    for source in sorted(example.rglob("*.md")):
+        relative = source.relative_to(example)
+        if relative in EXCLUDED_EXAMPLE_LEAVES:
+            continue
+        leaf_installs.append((source, knowledge_root / relative, rendered_leaf(source)))
+
+    verifier_bytes = verifier_source.read_bytes()
+    conflicts: list[Path] = []
+    file_targets = [destination for _source, destination, _content in leaf_installs]
+    file_targets.extend((verifier_target, *skill_targets))
+    invalid_targets = [
+        destination
+        for destination in file_targets
+        if path_exists(destination) and not destination.is_file()
+    ]
+    for destination in (target_home / "AGENTS.md", target_home / ".codex" / "config.toml"):
+        if path_exists(destination) and not destination.is_file():
+            invalid_targets.append(destination)
+    if invalid_targets:
+        print("Refusing to replace non-file installation targets:", file=sys.stderr)
+        for invalid in invalid_targets:
+            print(f"  {invalid}", file=sys.stderr)
+        return 2
+
+    for _source, destination, content in leaf_installs:
+        if path_exists(destination) and not same_bytes(destination, content):
+            conflicts.append(destination)
+    if path_exists(verifier_target) and not same_bytes(verifier_target, verifier_bytes):
+        conflicts.append(verifier_target)
+    skill_bytes = rendered_leaf(example / "how" / "to" / "use" / "knowledgetrees.md")
+    for destination in skill_targets:
+        if path_exists(destination) and not same_bytes(destination, skill_bytes):
+            conflicts.append(destination)
+
+    agents_path = target_home / "AGENTS.md"
+    agents_storage = writable_target(agents_path)
+    agents_current = agents_storage.read_text() if agents_storage.is_file() else ""
+    try:
+        agents_updated = agents_text(agents_current)
+    except ValueError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+
+    codex_config = target_home / ".codex" / "config.toml"
+    config_storage = writable_target(codex_config)
+    config_current = config_storage.read_text() if config_storage.is_file() else ""
+    config_updated = codex_config_text(config_current, skill_targets[1])
+
+    if conflicts and not args.force:
+        print("Refusing to overwrite differing installed content:", file=sys.stderr)
+        for conflict in conflicts:
+            print(f"  {conflict}", file=sys.stderr)
+        print("Review the differences, or rerun with --force to replace them.", file=sys.stderr)
+        return 2
+
+    if args.dry_run:
+        print(f"Would install {len(leaf_installs)} reusable leaves into {knowledge_root}")
+        print(f"Would install the verifier at {verifier_target}")
+        for destination in skill_targets:
+            print(f"Would hard-link {destination} to {canonical_skill}")
+        print(f"Would assert the bootstrap in {agents_path}")
+        print(f"Would enable the Codex skill in {codex_config}")
+        return 0
+
+    for branch in ("how", "what", "where", "why"):
+        (knowledge_root / branch).mkdir(parents=True, exist_ok=True)
+    orientation = knowledge_root / "where" / "am" / "i.md"
+    if not path_exists(orientation):
+        atomic_write(orientation, b"", 0o644)
+
+    for _source, destination, content in leaf_installs:
+        if destination.is_symlink() or not same_bytes(destination, content):
+            atomic_write(destination, content, 0o644)
+    if verifier_target.is_symlink() or not same_bytes(verifier_target, verifier_bytes):
+        atomic_write(verifier_target, verifier_bytes, 0o755)
+    else:
+        os.chmod(verifier_target, 0o755)
+
+    for destination in skill_targets:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            already_linked = not destination.is_symlink() and destination.samefile(
+                canonical_skill
+            )
+        except (FileNotFoundError, OSError):
+            already_linked = False
+        if already_linked:
+            continue
+        if path_exists(destination):
+            if destination.is_dir() and not destination.is_symlink():
+                print(f"error: skill destination is a directory: {destination}", file=sys.stderr)
+                return 2
+            destination.unlink()
+        try:
+            os.link(canonical_skill, destination)
+        except OSError as error:
+            print(f"error: could not hard-link {destination}: {error}", file=sys.stderr)
+            return 2
+
+    if agents_updated != agents_current:
+        mode = agents_storage.stat().st_mode & 0o777 if agents_storage.exists() else 0o644
+        atomic_write(agents_storage, agents_updated.encode(), mode)
+    if config_updated != config_current:
+        mode = config_storage.stat().st_mode & 0o777 if config_storage.exists() else 0o600
+        atomic_write(config_storage, config_updated.encode(), mode)
+
+    verifier_environment = os.environ.copy()
+    verifier_environment["HOME"] = str(target_home)
+    completed = subprocess.run(
+        [str(verifier_target), "--root", str(knowledge_root)],
+        cwd=target_home,
+        env=verifier_environment,
+        check=False,
+    )
+    if completed.returncode:
+        print("error: installed knowledge-tree verification failed", file=sys.stderr)
+        return completed.returncode
+
+    print(f"Installed {len(leaf_installs)} reusable leaves into {knowledge_root}")
+    print(f"Installed one verifier at {verifier_target}")
+    print("Installed hard-linked compatibility skills for shared harnesses and Codex")
+    print(f"Bootstrap asserted in {agents_path}")
+    print(f"Next: describe the local environment in {orientation}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

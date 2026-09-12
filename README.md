@@ -1,0 +1,395 @@
+# Semantic Knowledge Trees
+
+> Stop stuffing the whole world into the prompt.
+
+Semantic Knowledge Trees are a stateful, self-growing, self-healing filesystem for
+agent knowledge. They aim to replace the split between skills, documentation,
+project memory, plans, specifications, working policy, and operational notes with
+one canonical, agent-navigable substrate.
+
+The idea is simple: store useful knowledge in meaningful filesystem paths, let
+agents fetch only the answers they need, and make ordinary work continuously improve
+the knowledge available to the next agent.
+
+**Knowledge is discovered as needed and captured as learned.**
+
+This repository contains:
+
+- a visible, self-describing public corpus in [`example/`](example/where/am/i.md);
+- the knowledge-first [`install`](install) script;
+- the [`knowledgetrees` compatibility skill](skills/knowledgetrees/SKILL.md), linked
+  to its canonical procedure inside the example tree;
+- the standalone [`verify-knowledgetree-proofs`](tools/verify-knowledgetree-proofs)
+  verifier; and
+- selected planning and specification practices distilled into semantic leaves,
+  without inheriting an inflexible skill-driven workflow.
+
+## Install
+
+Run the installer from a clone:
+
+```bash
+./install
+```
+
+The installer is knowledge-first. It safely merges the reusable leaves from
+`example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
+single verifier at `~/.knowledge/.tools/verify-knowledgetree-proofs`, and adds the
+mandatory bootstrap to `~/AGENTS.md`. It refuses to overwrite differing knowledge
+unless `--force` is supplied explicitly. Preview its work with `./install --dry-run`.
+
+### Why is there still a skill?
+
+Because current agent harnesses still require a skill-shaped entry point to start
+the procedure. The skill is compatibility plumbing, not another knowledge store.
+After installing the canonical procedure at
+`~/.knowledge/how/to/use/knowledgetrees.md`, the installer creates
+`~/.agents/skills/knowledgetrees/SKILL.md` and
+`~/.codex/skills/knowledgetrees/SKILL.md` as hard links to that same file. All three
+paths share one inode: there is no wrapper and no second body to drift.
+
+The repository keeps [`skills/knowledgetrees/SKILL.md`](skills/knowledgetrees/SKILL.md)
+as a relative link for browsability. Git cannot preserve hard-link identity, so the
+installer creates real hard links on the target system.
+
+## Two roots, two jobs
+
+This repository intentionally contains two different semantic trees:
+
+| Path | Role |
+| --- | --- |
+| [`.knowledge/`](.knowledge/where/am/i.md) | The real operational knowledge root for developing and publishing this repository. It contains this project's requirements, plan, current state, and next action. |
+| [`example/`](example/where/am/i.md) | The visible distributable example. It contains public, reusable knowledge-tree methodology and illustrative planning/specification leaves. |
+
+They are not mirrors. Repository-specific facts belong only in `.knowledge/`.
+Reusable public example knowledge belongs only in `example/`. The compatibility
+skill points into `example/` because that is the distributable corpus; agents working
+on this repository orient through `.knowledge/` first.
+
+### Make the example yours
+
+[`example/where/am/i.md`](example/where/am/i.md) is intentionally empty. Fill it in
+with an orientation to your own local environment: what scope the tree covers, the
+repository or workspace purpose, important topology, active priorities, relevant
+tools, operational boundaries, and the semantic routes an agent should try first.
+Write enough that a fresh agent can orient without recursively inventorying the
+workspace.
+
+Keep the orientation current and useful, but do not put passwords, tokens, private
+keys, or other secrets in it. If the tree will be published, also remove personal or
+organization-specific details that should not become public.
+
+## A filesystem that doubles as an ontology
+
+A Knowledge Tree is usually a `.knowledge/` directory. Its paths are not arbitrary
+folders: they are meaningful questions and concepts. The structure itself helps an
+agent retrieve the answer.
+
+```text
+.knowledge/
+├── where/
+│   └── am/
+│       └── i.md
+├── what/
+│   └── is/
+│       ├── the/
+│       │   ├── spec.md
+│       │   ├── plan.md
+│       │   └── state.md
+│       └── a/
+│           └── knowledge/
+│               └── tree.md
+├── how/
+│   └── to/
+│       ├── check/
+│       │   └── knowledgetree/
+│       │       └── proofs.md
+│       └── make/
+│           └── a/
+│               └── plan.md
+├── when/
+│   └── to/
+│       └── ask/
+│           └── clarification.md
+└── why/
+    └── is/
+        └── a/
+            └── knowledge/
+                └── tree/
+                    └── not/
+                        └── an/
+                            └── index.md
+```
+
+If an agent needs to know how to make a plan, it can predict
+`how/to/make/a/plan.md`. If it needs to understand why a knowledge tree is not an
+index, it can descend through `why/is/a/knowledge/tree/not/an/index.md`.
+
+The path is already half the retrieval query. This is not merely documentation
+stored in folders: every branch narrows what the agent is asking, and the leaf
+directly answers the question.
+
+The context window starts with an index into knowledge, not all the knowledge
+itself.
+
+## Why it matters
+
+Agent context is expensive, fragile, and temporary. Useful knowledge is commonly
+scattered across giant instruction files, README pages, skill blobs, chat history,
+plans, notes, and source comments. Agents repeatedly load too much, miss the right
+thing, or rediscover facts that another run already worked out.
+
+Knowledge Trees change that trade-off:
+
+- **Less prompt bloat.** Detailed knowledge can exist in abundance without being
+  injected into every run. Its cost is paid only when needed.
+- **Survives fresh starts.** A new worker, compacted session, or different model can
+  reconstruct context from persistent current knowledge.
+- **Current truth wins.** The canonical state is updated rather than forcing a model
+  to infer which paragraph in a chronology is newest.
+- **Knowledge compounds.** Every reusable discovery can save a future reasoning
+  loop, failed command, search, or architectural mistake.
+- **One substrate, many uses.** The same tree can carry build procedures, policy,
+  architecture, plans, specs, environment facts, and rationale.
+- **Composable by design.** An agent can retrieve a general rule, local refinement,
+  current state, and rationale separately, then combine only what applies.
+
+The familiar stack is fragmented:
+
+| Traditional surface | Typical role |
+| --- | --- |
+| `AGENTS.md` | Global instructions and project quirks |
+| `skills/` | Procedures the model must remember to select |
+| `docs/` | Linear presentations with buried answers |
+| `plans/` and `specs/` | Current intent, often duplicated elsewhere |
+| notes and chat history | Discoveries mixed with obsolete chronology |
+
+A Knowledge Tree gives those concerns one distributed, versionable semantic
+environment. The agent asks a question, retrieves the current answer, follows
+related leaves only when necessary, and preserves better knowledge when it learns
+something reusable.
+
+Store knowledge. Generate presentations. Do not make every future agent reread the
+presentation to recover the knowledge.
+
+## What makes it different
+
+This is not a search system bolted onto documentation. The tree itself is the
+primary agent-facing knowledge representation. Documents can still exist as
+external authorities, evidence, source material, exports, or human-facing views.
+
+### The tree contains answers, not just pointers
+
+“The refund policy is in `customer-guide.pdf`” is weak knowledge. A useful leaf
+states the current policy directly, links to the governing source if necessary, and
+says when to check it again.
+
+### Current state is mutable; history is separate
+
+When a policy changes, amend its current semantic owner. Keep the old version in Git
+or explicit history when history still matters. Do not make the next agent reason
+over incompatible versions and guess which governs.
+
+### Knowledge is federated
+
+A user-wide tree can carry reusable tooling and host knowledge; a project tree can
+carry local policy and architecture; a subsystem can carry narrower context. The
+nearest applicable knowledge is consulted before broader knowledge.
+
+### Growth is ordinary maintenance
+
+When an agent has to determine something, it asks whether a future agent would have
+to rediscover the answer. If so, verifying and preserving it is part of finishing
+the work—not a documentation chore deferred until later.
+
+### Concrete facts can reconnect themselves to reality
+
+A narrowly eligible factual claim can carry a small executable proof:
+
+````markdown
+The repository skill entry point resolves to its canonical procedure leaf.
+
+Proof:
+
+```bash
+test "$(readlink -f skills/knowledgetrees/SKILL.md)" = \
+  "$(pwd)/example/how/to/use/knowledgetrees.md"
+```
+````
+
+The goal is not to turn every sentence into code. Proofs are for single, immediately
+checkable true-or-false assertions—not requirements, instructions, opinions, plans,
+or compound conclusions.
+
+Run every marked proof in this repository with:
+
+```bash
+tools/verify-knowledgetree-proofs --root example
+```
+
+Run a semantic slice by passing exact path-component tokens:
+
+```bash
+tools/verify-knowledgetree-proofs --root example knowledge-tree proofs
+```
+
+Multiple tokens select their disjunction. Use `--verbose` for per-leaf diagnostics.
+
+The operating loop is:
+
+```text
+lookup → discover → verify → record → use
+```
+
+## Policy, procedure, and state compose naturally
+
+Instead of one giant deployment manual, independent concerns can remain
+independently owned:
+
+```text
+how/to/release/software.md
+how/to/release/the/web-app.md
+how/to/verify/a/release.md
+what/is/the/current/release/channel.md
+where/is/the/staging/environment.md
+why/does/production/require/two-approvals.md
+```
+
+A release worker can assemble the pieces relevant to its situation without forcing
+every other task to ingest the entire release universe. General procedure,
+environment-specific refinement, current state, and rationale can change
+independently and compose at the point of use.
+
+## A self-improving documentation methodology
+
+Traditional documentation decays because writing it is a separate activity. A
+Knowledge Tree makes maintenance part of normal agent work.
+
+| Traditional pattern | Knowledge Tree pattern |
+| --- | --- |
+| Agent searches documents | Agent follows the semantic tree to the current answer |
+| Agent discovers a missing fact | Agent verifies and records it at the right scope |
+| Documents become stale | Leaves carry provenance, review triggers, and eligible proofs |
+| Documentation is linear | Knowledge is addressed by question and assembled on demand |
+| One giant guide | Focused answers plus deliberate orientation and spine projections |
+| Skills are separate blobs | Procedures share a namespace with their facts and policies |
+
+The long-term effect is cumulative: what one agent learns becomes part of the
+environment in which the next agent thinks.
+
+## Deliberately ordinary machinery
+
+The mechanism does not require a vector database, graph store, ontology language,
+memory server, or new agent protocol. It starts with files, directories, Markdown,
+links, normal version control, and ordinary tooling.
+
+- **Versionable.** Code and knowledge can change atomically in the same commit.
+- **Human-readable.** Any leaf opens in an ordinary editor.
+- **Extensible.** Routing models, embeddings, proof schedulers, and gardening agents
+  can be added later without changing the basic abstraction.
+
+### Hard obligations
+
+- Use applicable Knowledge Trees during ordinary agent work.
+- Keep paths semantic and traversable.
+- Store useful answers, not merely directions to internal documents.
+- Maintain current truth instead of relying on chronology.
+- Preserve reusable discoveries immediately.
+- Verify eligible base facts proportionately.
+- Keep knowledge separate from execution authority.
+
+### Contextual judgments
+
+- Whether a topic needs one leaf or several.
+- Whether a leaf should be short or substantial.
+- Whether to split or consolidate related material.
+- How much controlled repetition belongs in orientation.
+- Whether direct reading, listing, or search is the cheapest retrieval method.
+- How a mature tree should be reorganized as it grows.
+
+Rigor belongs in the obligations. Flexibility belongs in the organization.
+
+## A minimal adoption path
+
+1. Create `.knowledge/where/am/i.md` and the canonical `how/`, `what/`, `where/`,
+   and `why/` branches.
+2. For repositories, create current-truth spine leaves for the spec, plan, state,
+   and next action.
+3. Project frequently needed answers into paths that read as natural-language
+   questions.
+4. Teach agents to retrieve from and continuously maintain the tree.
+5. Add proofs only where a concrete fact is cheap and safe to check.
+6. Garden ambiguous branches, stale answers, duplication, and fragmentation when
+   actual use exposes friction.
+
+## Common questions
+
+### Is this just RAG with folders?
+
+No. RAG usually treats documents as the primary corpus and retrieves chunks from
+them. A Knowledge Tree makes the maintained semantic answer the primary artifact,
+with the path participating in retrieval. Search remains a fallback.
+
+### Does every fact need its own file?
+
+No. The design favors useful semantic boundaries, not maximum file count. Closely
+related material can stay together, and orientation, spec, plan, and state leaves
+are deliberate aggregation points.
+
+### Does this mean deleting all normal documentation?
+
+No. External governing documents, published manuals, and human deliverables may
+remain important. The internal agent-facing source of reusable knowledge should be
+structured as knowledge first. Human presentations can be generated or frozen when
+needed.
+
+### Does a Knowledge Tree replace task management?
+
+No. It provides knowledge continuity. Work still needs bounded objectives,
+authority, ownership, acceptance criteria, and runtime lifecycle.
+
+### What happens when a proof fails?
+
+Stop trusting the claim. Determine whether the fact is stale, the predicate is
+broken, or the check could not run. Then update or mark the knowledge accordingly. A
+failed implementation check does not automatically rewrite a requirement.
+
+## Methodology provenance
+
+The visible `example/` tree is adapted from a working global Knowledge Tree. Host paths,
+personal facts, private state, and local experiment history have deliberately been
+excluded. The planning, specification, update, and clarification leaves distill
+generally useful ideas from the MIT-licensed
+[Superpowers](https://github.com/obra/superpowers) 6.3.0 methodology; they are not
+copies of its skill-era process or mandatory approval gates.
+
+## Installer guarantees
+
+The installer is covered by an isolated-home integration test. It verifies that:
+
+- reusable knowledge is installed without importing the example's illustrative
+  spec, plan, state, or next-action leaves;
+- an existing orientation, `AGENTS.md`, and Codex configuration are preserved;
+- repeated installation is idempotent;
+- differing knowledge is rejected before overwrite unless `--force` is explicit;
+- the verifier runs successfully from its single global installation; and
+- both compatibility `SKILL.md` paths have the same device and inode as the
+  canonical installed procedure.
+
+Run the checks with:
+
+```bash
+python3 -B tests/test-install.py
+```
+
+## The proposal in one sentence
+
+Make the filesystem remember what agents learn.
+
+A Semantic Knowledge Tree is a distributed, stateful knowledge environment in which
+paths encode meaning, agents discover current answers on demand, procedures and
+policy compose with project state, mechanically checkable facts can revalidate
+themselves, and every useful piece of work has the opportunity to make the next
+piece of work easier.
+
+**Knowledge is discovered as needed and captured as learned.**

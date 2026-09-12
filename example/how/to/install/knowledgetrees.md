@@ -1,0 +1,27 @@
+---
+verified_at: '2026-09-12T14:24:07+10:00'
+verified_by: codex /root
+scope: public knowledge-tree example
+source: repository installer and current agent-harness discovery behavior
+verification: Checked the installer implementation and its isolated-home integration tests.
+review_when: Recheck when installer behavior or harness skill discovery changes.
+---
+
+From a complete repository checkout, run `./install`. Preview the targets without
+writing with `./install --dry-run`. The installer merges reusable example leaves
+into `~/.knowledge` without installing the example's illustrative spine, preserves
+an existing `where/am/i.md`, installs one verifier at
+`~/.knowledge/.tools/verify-knowledgetree-proofs`, and asserts the mandatory
+bootstrap in `~/AGENTS.md`.
+
+Current agent harnesses still need a skill-shaped bootstrap. The installer creates
+both `~/.agents/skills/knowledgetrees/SKILL.md` and
+`~/.codex/skills/knowledgetrees/SKILL.md` as hard links to the canonical installed
+leaf at `~/.knowledge/how/to/use/knowledgetrees.md`. It also enables the Codex entry
+in `~/.codex/config.toml`. The three paths share one inode, so editing the canonical
+leaf cannot leave a wrapper or copied skill body stale.
+
+Installation is idempotent when installed content is unchanged. Differing existing
+leaves or bootstrap skill bodies cause a preflight failure; inspect the differences
+before using `--force`. The orientation leaf is preserved even with `--force`.
+Hard links require the relevant destinations to be on the same filesystem.
