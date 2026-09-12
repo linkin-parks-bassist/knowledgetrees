@@ -100,11 +100,7 @@ mock OpenCode harness test cover failure context, successful-work thresholds,
 deduplication, session isolation, synthetic-loop prevention, and model/agent retention.
 Adapters are installed locally; fresh OpenCode configuration discovery includes
 the plugin. A live Codex test exposed stdout-only Bash hook transport, which lost
-silent failures. A guarded pre-tool bridge now records private exit-status receipts
-without altering stdout; live wrapped false delivered actual developer-context
-guidance and retained exit 1. Automatic wrapping requires trusting the new
-PreToolUse definition and is limited to already-bypassed sessions, avoiding approval
-bypass in other modes. The owner supplied a live OpenCode transcript confirming
+silent failures. The former exit-status bridge has been retired in favor of unwrapped diagnostic heuristics; silent failures remain a documented limitation. The owner supplied a live OpenCode transcript confirming
 idle capture review after intentional false, without an invented capture. Scoped
 read-only OpenCode database inspection also confirmed metadata exit 1 and the full
 failure reminder appended to that stored tool output, although the terminal
@@ -126,3 +122,35 @@ Installer leaf comparisons ignore only successful proof-marker timestamp refresh
 preventing a verifier-stamped leaf from conflicting on an idempotent reinstall.
 Falsified markers, leaf falsification flags, and all substantive content differences
 remain protected; targeted regression checks cover those distinctions.
+
+## Unwrapped failure detection
+
+Use unwrapped PostToolUse with structured-status precedence and diagnostic-line
+heuristics, plus existing Stop bookkeeping. No pre-tool command rewriting remains;
+legacy `codex before` calls are inert. The installer removes only its managed
+pre-tool definition and preserves unrelated hooks, including mixed hook groups.
+
+Explicit exit status wins, including zero even when expected error text appears.
+Otherwise inspect diagnostic shapes: error/fatal prefixes, compiler error locations,
+Python traceback and exception lines, shell command/syntax/path failures, npm,
+make/CMake/ninja failures, build-failure markers, and common network/file diagnostics.
+Strip ANSI formatting and bound heuristic input to 256 KiB. Plain mentions of
+errors, ordinary warnings, and zero-error summaries do not trigger reminders.
+This is best-effort detection: silent nonzero Bash exits remain undetectable from
+stdout-only transport, and printed or quoted diagnostic examples can false-trigger.
+
+Completed calls and detected failures still update session counters and hashed
+receipts. Repeated callbacks are deduplicated; detected failures arm the one-shot
+Stop review. Ordinary prompts rearm the cycle; review prompts do not loop.
+No raw commands, outputs, or diagnostic bodies are stored. Test coverage includes
+positive/negative diagnostics, success precedence, failure deduplication, stop
+arming, silent-output limits, and preservation/removal during installer migration.
+Source: tools/kt-hooks, install, tests/test-hooks.py, tests/test-install.py;
+current Codex live stdout-only payload shape and owner-authorized heuristic tradeoff.
+
+Local deployment verified: an unwrapped SYNTH_BUILD_FAIL diagnostic delivered
+the failure reminder and retained exit 1. Hook and installer integration tests passed.
+
+Final validation passed: hook, installer, lookup/capture, proof-stamp, and OpenCode
+adapter integration suites; project and example proof sweeps; git diff --check.
+The owner authorized publication of this update. No uncertainty hook was added.

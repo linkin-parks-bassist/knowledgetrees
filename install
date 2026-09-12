@@ -223,7 +223,22 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
         raise ValueError("Codex hooks configuration must contain a hooks object")
     original = copy.deepcopy(config)
     hooks = config.setdefault("hooks", {})
-    for name, event in (("SessionStart", "start"), ("UserPromptSubmit", "prompt"), ("PreToolUse", "before"), ("PostToolUse", "after"), ("Stop", "stop")):
+    # Retire only this installer's managed command-rewriting adapter.
+    legacy = f"python3 {shlex.quote(str(handler))} codex before"
+    if isinstance(hooks.get("PreToolUse"), list):
+        retained = []
+        for group in hooks["PreToolUse"]:
+            if not isinstance(group, dict) or not isinstance(group.get("hooks", []), list):
+                raise ValueError("malformed Codex PreToolUse hooks")
+            remaining = [h for h in group.get("hooks", [])
+                         if not (isinstance(h, dict) and h.get("command") == legacy)]
+            if remaining or not group.get("hooks"):
+                retained.append({**group, "hooks": remaining})
+        if retained:
+            hooks["PreToolUse"] = retained
+        else:
+            hooks.pop("PreToolUse", None)
+    for name, event in (("SessionStart", "start"), ("UserPromptSubmit", "prompt"), ("PostToolUse", "after"), ("Stop", "stop")):
         groups = hooks.setdefault(name, [])
         if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
             raise ValueError(f"malformed Codex {name} hooks")

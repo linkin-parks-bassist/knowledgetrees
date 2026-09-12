@@ -410,7 +410,7 @@ The installer adds reminders for **Codex, OpenCode, and GitHub Copilot CLI**:
   follow-up. The agent checks existing owners and records missing discoveries,
   or reports that there is nothing new to retain.
 
-Codex uses `SessionStart`, `PreToolUse`, `PostToolUse`, and `Stop`; Copilot CLI uses `postToolUse`,
+Codex uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, and `Stop`; Copilot CLI uses `postToolUse`,
 `postToolUseFailure`, and `agentStop`; OpenCode uses a local plugin and
 `session.idle`. Existing unrelated hooks are preserved. In Codex, open `/hooks`
 and review/trust the installed definitions; new hooks are skipped until trusted.
@@ -432,13 +432,13 @@ Resume and compaction restore context without repeating completed startup work.
 Review/trust the new `SessionStart` definition in `/hooks`, then start a fresh
 session to test startup injection. A disabled or untrusted hook cannot supply it.
 
-This Codex release sends Bash output text without the exit code. Its pre-tool
-adapter records exit status privately while preserving stdout and the command's
-exit status. Codex requires an `allow` decision for rewrites, so automatic wrapping
-is restricted to sessions **already in bypass-permissions mode**. It never changes
-your mode or approves commands in approval-based sessions. Without structured
-status or this bridge, shell failure detection is limited; do not weaken permissions
-just to enable it. Review/trust the new `PreToolUse` definition in `/hooks`.
+Codex can send Bash output text without an exit code. The post-tool adapter prefers
+structured status and otherwise looks for common diagnostic lines, including compiler
+errors, Python tracebacks, shell failures, and build-tool errors. Explicit successful
+exit status takes precedence over expected error text. Commands stay unchanged;
+hook updates remove the former managed pre-tool wrapper while preserving unrelated
+hooks. Silent failures can be missed, and printed diagnostic examples can produce
+false positives. Iterate on the patterns during ordinary use.
 
 Set `KT_HOOK_MIN_CALLS` in the harness environment to change the activity threshold.
 Session-isolated counters and hashed event receipts live under
@@ -447,7 +447,7 @@ They store no raw commands, tool outputs, passwords, or knowledge contents.
 Reviews can consume an extra model turn. A one-shot guard prevents the review
 from recursively waking itself; the next ordinary user prompt starts a new cycle.
 These are reliability reminders, not semantic capture verification or a security
-boundary. Failures need detectable result status; arbitrary prose errors cannot
+boundary. Failures need detectable result status or diagnostic text; arbitrary prose errors cannot
 always be recognized. They do not grant permissions or automatically write leaves.
 
 Existing installations can update the CLI and hooks without replacing their leaves:

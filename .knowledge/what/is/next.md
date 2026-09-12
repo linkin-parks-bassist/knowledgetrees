@@ -10,10 +10,7 @@ review_when: Update whenever the next actionable step changes.
 ---
 
 The owner approved publication of the hook implementation and diagnostic update.
-Locally, review
-and trust the new Codex PreToolUse definition using `/hooks`, then test plain false
-to verify automatic wrapping. The post-tool reminder has been delivered live for
-wrapped false. Restart OpenCode to load its discovered
+Unwrapped PostToolUse diagnostics are installed and the managed PreToolUse wrapper is retired. Restart OpenCode to load its discovered
 plugin, and start a new Copilot CLI session. Failure reminders and one-shot task-end
 capture review are implemented; isolated adapter tests do not establish actual model
 adoption or guarantee that knowledge was captured. Publication approval is recorded;
@@ -32,3 +29,7 @@ When model capacity is available, evaluate kt-first lookup and miss-resolution b
 task relying only on installed harness instructions, without prompting knowledge
 retrieval or naming the expected answer paths. This is not mechanically proved by
 installer tests or skill discovery.
+
+## Unwrapped failure detection
+
+Unwrapped detection is installed: a live SYNTH_BUILD_FAIL diagnostic triggered the failure reminder and preserved exit 1. Review heuristic false positives during ordinary work; Stop bookkeeping remains tested and active. The owner authorized committing and pushing this update. After publication, refine heuristics based on ordinary use and consider uncertainty reminders only after validating available transcript content.

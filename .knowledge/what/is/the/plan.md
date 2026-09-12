@@ -43,5 +43,8 @@ The approved publication plan is complete.
 19. [ ] Review the local hook implementation commit and approve publication.
 20. [x] Diagnose live Codex stdout-only hook payloads; add a guarded exit-status
     bridge and confirm developer-context delivery for a live wrapped failure.
-21. [ ] Trust the new Codex pre-tool definition and confirm automatic plain-command
-    failure handling in a fresh trust-loaded turn.
+21. [x] Retire command wrapping in favor of unwrapped diagnostic heuristics; preserve
+    Stop bookkeeping and verify live diagnostic failure delivery.
+The owner authorized committing and pushing the reviewed heuristic update.
+Long-term tuning will follow observations from ordinary use; no uncertainty hook
+is implemented in this update.

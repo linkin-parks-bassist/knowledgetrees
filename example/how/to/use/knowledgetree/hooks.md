@@ -5,7 +5,7 @@ verified_at: '2026-09-12T12:21:21+00:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: repository handler and installer; official Codex hooks, OpenCode plugins, and GitHub Copilot hooks documentation
-verification: Reviewed protocols and tested the observed Codex stdout-only shape; live wrapped false delivered developer-context guidance without changing stdout or exit status. Automatic wrapping awaits new hook trust; OpenCode/Copilot model behavior remains untested.
+verification: Tested diagnostic heuristics, explicit status precedence, failure bookkeeping, one-shot review, and retirement of the managed pre-tool wrapper. Live unwrapped diagnostic output delivered failure guidance; other harness model adoption remains unconfirmed.
 review_when: Recheck after harness hook-schema or lifecycle changes.
 ---
 
@@ -67,16 +67,12 @@ a fresh session to test it. Protocol tests cover all four lifecycle sources;
 live startup compliance remains unconfirmed. Missing/invalid procedure files
 fail open with a diagnostic; they do not grant permissions or run proofs.
 
-The observed Codex Bash `PostToolUse` payload contains stdout text, not an exit
-code; a silent failure therefore cannot be detected from that response alone.
-Its `PreToolUse` adapter runs the command once in a Bash subshell, records the exit
-status in a private hashed receipt, preserves stdout, and exits with the original
-status. The post-tool handler joins that receipt to detect silent failures.
-Quotes, syntax errors, `exit`, `exec`, and `set -e` have regression coverage.
-Because Codex requires `permissionDecision: allow` for `updatedInput`, wrapping
-runs only in sessions already reporting `bypassPermissions`. Approval-based
-sessions are never auto-approved; native structured failure detection remains
-available when provided. Do not weaken permissions just to enable the bridge.
+Codex Bash PostToolUse can supply stdout alone without an exit code. The adapter
+prefers structured failure statuses when available and otherwise uses diagnostic-line
+heuristics. Successful explicit exit status suppresses heuristic matches. It never
+rewrites commands or requests permission decisions. Silent nonzero exits can be
+missed; quoted diagnostic output can produce false positives. The installer retires
+its former managed PreToolUse bridge while preserving unrelated hooks.
 
 The handler adds `hookSpecificOutput.additionalContext` without suppressing the original
 result. `Stop` can request a continuation with `decision: block` and `reason`;
@@ -117,3 +113,28 @@ state between sessions. This is a local reliability mechanism, not an adversaria
 enforcement boundary. It does not authorize access, edits, escalation, publication,
 or automatic proof execution. Local Copilot CLI installation does not configure
 VS Code or ephemeral Copilot cloud jobs.
+
+## Unwrapped failure detection
+
+Use unwrapped PostToolUse with structured-status precedence and diagnostic-line
+heuristics, plus existing Stop bookkeeping. No pre-tool command rewriting remains;
+legacy `codex before` calls are inert. The installer removes only its managed
+pre-tool definition and preserves unrelated hooks, including mixed hook groups.
+
+Explicit exit status wins, including zero even when expected error text appears.
+Otherwise inspect diagnostic shapes: error/fatal prefixes, compiler error locations,
+Python traceback and exception lines, shell command/syntax/path failures, npm,
+make/CMake/ninja failures, build-failure markers, and common network/file diagnostics.
+Strip ANSI formatting and bound heuristic input to 256 KiB. Plain mentions of
+errors, ordinary warnings, and zero-error summaries do not trigger reminders.
+This is best-effort detection: silent nonzero Bash exits remain undetectable from
+stdout-only transport, and printed or quoted diagnostic examples can false-trigger.
+
+Completed calls and detected failures still update session counters and hashed
+receipts. Repeated callbacks are deduplicated; detected failures arm the one-shot
+Stop review. Ordinary prompts rearm the cycle; review prompts do not loop.
+No raw commands, outputs, or diagnostic bodies are stored. Test coverage includes
+positive/negative diagnostics, success precedence, failure deduplication, stop
+arming, silent-output limits, and preservation/removal during installer migration.
+Source: tools/kt-hooks, install, tests/test-hooks.py, tests/test-install.py;
+current Codex live stdout-only payload shape and the documented heuristic tradeoff.

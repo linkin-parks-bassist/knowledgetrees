@@ -83,7 +83,7 @@ def main() -> None:
         )
         codex_hooks = target_home / ".codex/hooks.json"
         unrelated_hook = {"hooks": [{"type": "command", "command": "existing-review-command"}]}
-        codex_hooks.write_text(json.dumps({"description": "existing hooks", "hooks": {"Stop": [unrelated_hook]}}))
+        codex_hooks.write_text(json.dumps({"description": "existing hooks", "hooks": {"Stop": [unrelated_hook], "PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": f"python3 {target_home}/.knowledge/.tools/kt-hooks codex before"}, {"type": "command", "command": "unrelated-pre-check"}]}]}}))
         instructions = target_home / "user-instructions.md"
         instructions.write_text("# Existing user instructions\n")
         agents_path = target_home / "AGENTS.md"
@@ -102,7 +102,7 @@ def main() -> None:
         assert hooks["description"] == "existing hooks" and hooks["hooks"]["Stop"][0] == unrelated_hook
         assert len(hooks["hooks"]["Stop"]) == 2
         assert hooks["hooks"]["PreToolUse"][0]["matcher"] == "Bash"
-        assert hooks["hooks"]["PreToolUse"][0]["hooks"][0]["command"].endswith("codex before")
+        assert hooks["hooks"]["PreToolUse"][0]["hooks"] == [{"type": "command", "command": "unrelated-pre-check"}]
         assert hooks["hooks"]["SessionStart"][0]["matcher"] == "^(startup|resume|clear|compact)$"
         assert hooks["hooks"]["SessionStart"][0]["hooks"][0]["command"].endswith("codex start")
         assert (knowledge / ".tools/kt-hooks").is_file()

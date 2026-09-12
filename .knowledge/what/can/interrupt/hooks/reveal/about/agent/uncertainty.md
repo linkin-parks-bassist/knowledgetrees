@@ -1,0 +1,8 @@
+---
+status: "unverified"
+created_at: "2026-09-13T00:33:32+10:00"
+scope: "nearest project"
+source: "Official https://learn.chatgpt.com/docs/hooks Interrupt and common-field contracts; shape-only current rollout inspection; scoped path inspection on 2026-09-13"
+---
+
+Interrupt fires when the user interrupts an active main-thread turn; it is not an observer of streamed tokens. Its documented payload supplies turn_id and common fields including optional transcript_path, not partial assistant text or a thought trace. It can return systemMessage for a user-visible warning, but cannot restart the turn or supply the usual additionalContext steering. The transcript format is explicitly unstable. A shape-only inspection of the current Codex 0.154.0 rollout found response_item reasoning entries with summary lists and encrypted_content, not a plaintext thought-trace field; this does not establish what partial content is flushed at interruption. Do not assume raw reasoning is available or decrypt encrypted content. A question-mark heuristic could inspect available assistant commentary or reasoning summaries only, but would miss unexpressed uncertainty and flag rhetorical/code questions. For an immediate kt reminder before action, PreToolUse additionalContext is a better documented delivery point and does not require updatedInput or wrapping; any transcript scanner would be best-effort, bounded, turn-scoped and deduplicated, with content availability tested live.
