@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T14:54:05+10:00'
+verified_at: '2026-09-12T15:01:07+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request in the active Codex session
-verification: Reconciled all requested deliverables, installer behavior, session-boundary compatibility-bootstrap constraint, public-safety boundary, and publication gate.
+verification: Reconciled all requested deliverables, installer-only skill creation, session-boundary bootstrap constraint, public-safety boundary, and publication gate.
 review_when: Recheck when the requested contents or publication workflow changes.
 ---
 
@@ -12,7 +12,7 @@ GitHub repository. It must contain:
 
 - `README.md`, adapting `~/Downloads/knowledge_trees_pitch.html` into readable
   Markdown;
-- the installed `knowledgetrees` skill's `SKILL.md`;
+- the canonical `knowledgetrees` procedure in the visible example corpus;
 - a distributable copy of the knowledge-tree proof verifier outside `.knowledge`;
 - its own canonical `.knowledge` root;
 - a visible `example/` corpus containing all global knowledge that pertains directly
@@ -26,7 +26,8 @@ without installing the example spine, preserves an existing orientation, install
 one verifier under the global knowledge root, asserts the bootstrap in the user's
 `AGENTS.md`, and creates shared-harness and Codex `SKILL.md` entry points as hard
 links to the installed `how/to/use/knowledgetrees.md`. The compatibility skill is a
-bootstrap required by current harnesses, not a parallel knowledge authority.
+bootstrap created by the installer for current harnesses, not a parallel knowledge
+authority.
 It is invoked once when a fresh agent session bootstraps, not once per user message,
 turn, or task; a loaded session continues applying the procedure without rebooting.
 

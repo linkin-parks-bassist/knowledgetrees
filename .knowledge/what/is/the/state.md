@@ -1,20 +1,21 @@
 ---
-verified_at: '2026-09-12T14:54:05+10:00'
+verified_at: '2026-09-12T15:01:07+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
-verification: Confirmed session-boundary bootstrap semantics across the installed and distributable procedures, AGENTS instructions, installer, regression suite, proof sweeps, and public-safety boundary.
+verification: Confirmed skill entry points are created only by the installer, installed-skill discussion follows installation in the README, session bootstrap semantics remain intact, and checks pass.
 review_when: Update after every material repository change.
 ---
 
 The repository's actual operational knowledge lives in `.knowledge/`. The separate,
 visible `example/` corpus contains the canonical knowledge-tree procedure, complete
 public-safe generic methodology, and distilled planning and specification leaves.
-The repository compatibility skill targets that example. The knowledge-first
-installer merges reusable leaves into the user's global root, preserves local
+The knowledge-first installer merges reusable leaves into the user's global root,
+preserves local
 orientation, installs the single verifier, asserts the `AGENTS.md` bootstrap, and
 hard-links shared-harness and Codex skill entry points to the installed canonical
-procedure. Its isolated-home integration suite passes, as do both repository proof
+procedure. Skill-shaped entry points are created during installation. Its
+isolated-home integration suite passes, as do both repository proof
 sweeps. The example orientation remains intentionally empty and the README tells
 adopters how to describe their local environment safely. The local repository uses `main`
 and tracks the public GitHub remote. The repository owner reviewed the README edits,

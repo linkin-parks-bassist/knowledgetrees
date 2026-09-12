@@ -15,8 +15,6 @@ This repository contains:
 
 - a visible, self-describing public corpus in [`example/`](example/where/am/i.md);
 - the knowledge-first [`install`](install) script;
-- the [`knowledgetrees` compatibility skill](skills/knowledgetrees/SKILL.md), linked
-  to its canonical procedure inside the example tree;
 - the standalone [`verify-knowledgetree-proofs`](tools/verify-knowledgetree-proofs)
   verifier; and
 - selected planning and specification practices distilled into semantic leaves,
@@ -32,9 +30,8 @@ This repository intentionally contains two different semantic trees:
 | [`example/`](example/where/am/i.md) | The visible distributable example. It contains public, reusable knowledge-tree methodology and illustrative planning/specification leaves. |
 
 They are not mirrors. Repository-specific facts belong only in `.knowledge/`.
-Reusable public example knowledge belongs only in `example/`. The compatibility
-skill points into `example/` because that is the distributable corpus; agents working
-on this repository orient through `.knowledge/` first.
+Reusable public example knowledge belongs only in `example/`. Agents working on
+this repository orient through `.knowledge/` first.
 
 ### Make the example yours
 
@@ -182,13 +179,12 @@ the work—not a documentation chore deferred until later.
 A narrowly eligible factual claim can carry a small executable proof:
 
 ````markdown
-The repository skill entry point resolves to its canonical procedure leaf.
+The repository has a local orientation leaf.
 
 Proof:
 
 ```bash
-test "$(readlink -f skills/knowledgetrees/SKILL.md)" = \
-  "$(pwd)/example/how/to/use/knowledgetrees.md"
+test -f .knowledge/where/am/i.md
 ```
 ````
 
@@ -300,19 +296,16 @@ active across messages and tasks; it is not reinvoked on every turn. The install
 refuses to overwrite differing knowledge unless `--force` is supplied explicitly.
 Preview its work with `./install --dry-run`.
 
-### Why is there still a skill?
+### Why did skills appear after installation?
 
-Because current agent harnesses still require a skill-shaped entry point to start
-the procedure. The skill is compatibility plumbing, not another knowledge store.
-After installing the canonical procedure at
+After installation, Codex and other harnesses may appear to contain a
+`knowledgetrees` skill. Current agent harnesses still require a skill-shaped entry
+point to start the procedure, so the installer creates one as compatibility
+plumbing—not as another knowledge store. After installing the canonical procedure at
 `~/.knowledge/how/to/use/knowledgetrees.md`, the installer creates
 `~/.agents/skills/knowledgetrees/SKILL.md` and
 `~/.codex/skills/knowledgetrees/SKILL.md` as hard links to that same file. All three
 paths share one inode: there is no wrapper and no second body to drift.
-
-The repository keeps [`skills/knowledgetrees/SKILL.md`](skills/knowledgetrees/SKILL.md)
-as a relative link for browsability. Git cannot preserve hard-link identity, so the
-installer creates real hard links on the target system.
 
 ## A minimal adoption path
 

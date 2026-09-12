@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T14:54:05+10:00'
+verified_at: '2026-09-12T15:01:07+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: completed publication plan and current repository state
-verification: Confirmed the bootstrap cadence is made session-boundary-based and no follow-up task is queued.
+verification: Confirmed installer-only skill creation and README ordering are implemented with no follow-up task queued.
 review_when: Update whenever the next actionable step changes.
 ---
 
