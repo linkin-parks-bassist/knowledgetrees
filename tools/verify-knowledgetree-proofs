@@ -2,8 +2,10 @@
 """Run marked proofs in a knowledge tree, optionally filtered by tokens."""
 
 import argparse
+from datetime import datetime
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -15,6 +17,7 @@ PROOF_FENCES = {
     "```python3": "python3",
 }
 OUTPUT_LIMIT = 4096
+PROOF_MARKER = re.compile(r"^Proof:(?: \((verified|falsified) at ([^)]+)\))?$")
 
 
 def discover_knowledge_root(directory):
@@ -88,7 +91,8 @@ def closing_fence(lines, index):
 
 
 def parse_proofs(path):
-    lines = path.read_text().splitlines()
+    original = path.read_text()
+    lines = original.splitlines()
     proofs = []
     errors = []
     index = 0
@@ -101,9 +105,20 @@ def parse_proofs(path):
                 break
             index = closing + 1
             continue
-        if line != "Proof:":
+        marker = PROOF_MARKER.fullmatch(line)
+        if marker is None:
+            if line.startswith("Proof:"):
+                errors.append((index + 1, "malformed proof verification marker"))
             index += 1
             continue
+        stamp = marker.group(2)
+        if stamp not in (None, "_"):
+            try:
+                parsed = datetime.fromisoformat(stamp)
+                if parsed.utcoffset() is None:
+                    raise ValueError("timezone required")
+            except ValueError:
+                errors.append((index + 1, "proof timestamp must be ISO 8601 with timezone"))
 
         previous = previous_content_line(lines, index)
         if previous < 0 or lines[previous].startswith("```"):
@@ -123,9 +138,48 @@ def parse_proofs(path):
         if not script.strip():
             errors.append((fence + 1, "proof script is empty"))
         else:
-            proofs.append((fence + 1, PROOF_FENCES[lines[fence]], script))
+            proofs.append((index, fence + 1, PROOF_FENCES[lines[fence]], script))
         index = closing + 1
-    return proofs, errors
+    return original, proofs, errors
+
+
+def stamp_proofs(path, original, markers, falsified):
+    lines = original.splitlines(keepends=True)
+    timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
+    for index, passed in markers:
+        ending = "\r\n" if lines[index].endswith("\r\n") else "\n" if lines[index].endswith("\n") else ""
+        status = "verified" if passed else "falsified"
+        lines[index] = f"Proof: ({status} at {timestamp}){ending}"
+    updated = "".join(lines)
+    if falsified:
+        updated = falsify_leaf(updated, timestamp)
+    # Write through existing links: atomic replacement would detach hardlinks.
+    with path.open("r+") as stream:
+        if stream.read() != original:
+            raise OSError("leaf changed during verification; refusing to overwrite")
+        stream.seek(0)
+        stream.write(updated)
+        stream.truncate()
+
+
+def falsify_leaf(text, timestamp):
+    if not text.startswith("---\n"):
+        return f"---\nfalsified_at: '{timestamp}'\n---\n\n{text}"
+    finish = text.find("\n---", 4)
+    if finish == -1:
+        raise OSError("cannot mark falsification: unclosed metadata front matter")
+    header = text[4:finish]
+    nested = re.search(r"(?m)^metadata:\s*$", header) is not None
+    indent = "  " if nested else ""
+    field = re.compile(rf"(?m)^{indent}falsified_at:.*$")
+    value = f"{indent}falsified_at: '{timestamp}'"
+    if field.search(header):
+        header = field.sub(value, header)
+    elif nested:
+        header = re.sub(r"(?m)^metadata:\s*$", f"metadata:\n{value}", header, count=1)
+    else:
+        header += "\n" + value
+    return "---\n" + header + text[finish:]
 
 
 def clipped(value):
@@ -155,6 +209,8 @@ def run_proof(command, script, directory, timeout):
         )
     except subprocess.TimeoutExpired as error:
         return False, f"timed out after {timeout:g}s", error.stdout or "", error.stderr or ""
+    except OSError as error:
+        return False, f"could not execute proof: {error}", "", ""
     return result.returncode == 0, f"exit {result.returncode}", result.stdout, result.stderr
 
 
@@ -183,6 +239,11 @@ def parser_for_cli():
         type=positive_timeout,
         default=10.0,
         help="maximum seconds for each proof (default: 10)",
+    )
+    parser.add_argument(
+        "--no-stamp",
+        action="store_true",
+        help="check without writing proof timestamps or leaf falsification metadata",
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -227,7 +288,15 @@ def main(arguments=None):
 
     proof_directory = root.parent
     for relative, path in selected:
-        proofs, errors = parse_proofs(path)
+        original, proofs, errors = parse_proofs(path)
+        results = []
+        leaf_falsified = bool(errors)
+        header = original.split("\n---", 1)[0] if original.startswith("---\n") else ""
+        if re.search(r"(?m)^\s{0,2}falsified_at:", header):
+            failed += 1
+            failed_paths.add(relative)
+            if args.verbose:
+                print("  ERROR leaf remains falsified pending independent review")
         if args.verbose:
             print(f"LEAF {relative} proofs={len(proofs)}")
         for line, message in errors:
@@ -235,15 +304,17 @@ def main(arguments=None):
             failed_paths.add(relative)
             if args.verbose:
                 print(f"  ERROR line={line} {message}")
-        for line, command, script in proofs:
+        for marker, line, command, script in proofs:
             proof_count += 1
             passed, detail, stdout, stderr = run_proof(
                 command, script, proof_directory, args.timeout)
+            results.append((marker, passed))
             if passed:
                 if args.verbose:
                     print(f"  PASS line={line} language={command}")
                 continue
             failed += 1
+            leaf_falsified = True
             failed_paths.add(relative)
             if args.verbose:
                 print(f"  FAIL line={line} language={command} {detail}")
@@ -251,6 +322,14 @@ def main(arguments=None):
                     output = clipped(output)
                     if output:
                         print(f"    {label}: {output}")
+        if (results or leaf_falsified) and not args.no_stamp:
+            try:
+                stamp_proofs(path, original, [] if errors else results, leaf_falsified)
+            except OSError as error:
+                failed += 1
+                failed_paths.add(relative)
+                if args.verbose:
+                    print(f"  ERROR stamping proofs: {error}")
 
     if args.verbose:
         print(

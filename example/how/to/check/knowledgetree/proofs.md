@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T14:22:23+10:00'
+verified_at: '2026-09-12T15:33:08+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: sanitized adaptation of the canonical global knowledge-tree methodology
-verification: Compared the generic answer with the verifier implementation and exercised its installed location in the installer integration test.
+verification: Checked per-proof timestamp integration tests, legacy markers, read-only checking, and installed verifier behavior.
 review_when: Recheck when the knowledge-tree model or operating procedure changes.
 ---
 
@@ -42,3 +42,20 @@ leaves succeeds as an empty check. Proofs run from the directory containing
 For a user-wide installation, keep one executable copy at
 `~/.knowledge/.tools/verify-knowledgetree-proofs`. Harness integrations should call
 that canonical installed copy rather than multiplying it per harness.
+
+Write new markers as `Proof: (verified at _)`. Every successful proof execution
+replaces the placeholder or previous timestamp with ISO 8601 local time including
+timezone. Failed proofs receive `Proof: (falsified at …)`, and a failing proof or
+malformed proof structure sets leaf-level `falsified_at` metadata. Bare `Proof:`
+remains compatible; both verified and falsified markers are rechecked on later runs.
+Write failures or concurrent content changes
+make verification fail rather than silently losing an update.
+
+Only proof markers are refreshed. Leaf-level `verified_at` records an independent
+whole-leaf review and is not changed by the verifier. Use `--no-stamp` to execute
+proofs without writing markers. Timestamp writes preserve existing hardlinks.
+
+Leaf falsification is sticky and makes checks fail until an agent independently
+reviews and repairs the leaf and explicitly clears `falsified_at`. Passing every
+proof is necessary but not sufficient for leaf validation; the verifier never
+promotes the whole leaf to verified or repairs its knowledge automatically.

@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T15:01:07+10:00'
+verified_at: '2026-09-12T15:33:08+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request in the active Codex session
@@ -34,6 +34,13 @@ turn, or task; a loaded session continues applying the procedure without rebooti
 The two trees have separate ownership. `.knowledge/` is the real operational root
 for this repository. `example/` is the visible, distributable public specimen and
 must not become a mirror of repository-specific plan or state.
+
+The verifier timestamps individual proof outcomes using `Proof: (verified at …)`
+or `Proof: (falsified at …)`. A failed proof falsifies the whole leaf via sticky
+`falsified_at` metadata; only independent agent review may clear it. Passing all
+proofs never changes leaf `verified_at` or establishes whole-leaf validation.
+Keep legacy markers compatible, support read-only checking, preserve hardlinks,
+and leave agentic knowledge repair outside the verifier's scope.
 
 Every repository leaf must be suitable for public release: it must not name the
 repository owner as an individual, expose home-directory identifiers, or include

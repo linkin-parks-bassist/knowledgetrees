@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T15:22:03+10:00'
+verified_at: '2026-09-12T15:33:08+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
-verification: Reviewed README directory-scope composition and proof-checking guidance against the canonical procedure and updated the corresponding example answers.
+verification: Ran proof timestamp and installer integration tests, both public-tree sweeps, and the installed global verifier in read-only mode; reviewed the documented separation of proof outcomes and leaf validation.
 review_when: Update after every material repository change.
 ---
 
@@ -32,3 +32,9 @@ not another skill bootstrap.
 The README explicitly explains roots in arbitrary directories and nested subsystem
 scope as a context-relevance mechanism. It emphasizes verification before reliance,
 repair of failing proofs, and executable provability limited to marked predicates.
+
+The verifier stamps each proof outcome separately, marks leaves falsified after a
+failed proof or malformed proof structure, and retains that flag until independent
+review clears it. Passing proofs never modify leaf verification metadata. Legacy
+markers, read-only mode, mixed outcomes, and hardlink preservation have dedicated
+integration coverage in `tests/test-proof-stamps.py`.

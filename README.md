@@ -191,7 +191,7 @@ immediately and mechanically verifiable:
 ````markdown
 The repository has a local orientation leaf.
 
-Proof:
+Proof: (verified at _)
 
 ```bash
 test -f .knowledge/where/am/i.md
@@ -211,6 +211,16 @@ the check before using that knowledge.
 This gives the schema a layer of executable provability: eligible facts reconnect
 to reality instead of remaining unchecked prose. A passing verifier establishes
 that the marked predicates passed—not that every unproved statement is true.
+
+Each passing proof refreshes its own `Proof: (verified at …)` marker with an ISO
+8601 timestamp. Failed proofs receive `Proof: (falsified at …)` and set the leaf's
+`falsified_at` metadata. That flag requires independent review to clear: even if
+every proof later passes, the leaf remains falsified and the verifier reports it.
+Passing every proof is necessary but not sufficient for leaf validation.
+Leaf-level `verified_at`
+is separate and changes only after an independent review of the whole leaf; the
+verifier does not infer whether every statement is covered by proofs. Use
+`--no-stamp` when a read-only check is needed.
 
 Run every marked proof in this repository with:
 

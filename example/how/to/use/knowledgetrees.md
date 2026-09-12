@@ -4,7 +4,7 @@ description: 'Mandatory unified knowledge-tree procedure: establish canonical
   roots, orient and retrieve semantically, run leaf proofs, and immediately preserve
   every plausibly reusable answer discovered during work.'
 metadata:
-  verified_at: '2026-09-12T14:52:31+10:00'
+  verified_at: '2026-09-12T15:33:08+10:00'
   verified_by: codex /root
   scope: public knowledge-tree example and distributable skill
   source: sanitized adaptation of the canonical knowledgetrees procedure
@@ -196,18 +196,21 @@ non-trivial conclusions. If a sentence bundles several independently useful simp
 facts, split it into atomic assertions and give each eligible assertion its own
 proof. Otherwise rely on truthful provenance and verification metadata.
 
-The exact cadence for an eligible assertion is:
+The cadence for an eligible assertion, with a separate proof-verification stamp, is:
 
     The single mechanically verifiable assertion.
 
-    Proof:
+    Proof: (verified at _)
 
     ```bash
     the_read_only_predicate
     ```
 
-`Proof:` must appear exactly as a standalone paragraph between the assertion and
-its fenced Bash, Python, or similarly ubiquitous script. An executable block without
+`Proof: (verified at _)` must appear as a standalone paragraph between the assertion
+and its fenced Bash, Python, or similarly ubiquitous script. The verifier replaces
+`_` with an ISO 8601 timestamp with timezone after that proof passes and refreshes
+it on subsequent passing runs. Legacy bare `Proof:` markers remain accepted and are
+upgraded on success. An executable block without
 that marker is an instruction or example, not a leaf proof. The proof script must be
 read-only, bounded, self-contained, small enough to understand at a glance, and
 return status 0 if and only if the one immediately preceding assertion is currently
@@ -220,7 +223,15 @@ The reader must inspect and run every `Proof:` script before relying on its
 assertion. An eligible assertion with no marker and proof is a tree defect: establish
 the predicate and add both immediately. A marker without a safe eligible script, or
 a script testing more than the immediately preceding atomic assertion, is also a
-defect. If the script returns 0, do nothing: the leaf and metadata remain unchanged.
+defect. If the script returns 0, the verifier refreshes only that proof's marker.
+Leaf-level `verified_at` remains unchanged: it records an independent review of the
+whole leaf, including statements not covered by proofs. Mechanical proof execution
+does not establish whole-leaf verification. A failed proof receives
+`Proof: (falsified at …)` and sets leaf-level `falsified_at` metadata. This flag is
+sticky: later passing proofs do not validate the leaf or clear it. Checks continue
+to fail until an agent independently reviews and repairs the leaf and explicitly
+clears the flag. Passing all proofs is necessary but not sufficient for validation.
+The verifier performs no agentic repair. Use `--no-stamp` for read-only checking.
 If it is malformed, unsafe, or returns nonzero, establish current truth from primary
 evidence and revise or remove the assertion, proof, and metadata immediately.
 
