@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only CLI checks using isolated knowledge roots."""
+"""CLI checks using isolated knowledge roots."""
 import json
 import os
 from pathlib import Path
@@ -48,6 +48,40 @@ def main():
             assert "\033[" not in result.stdout
             return result.stdout
 
+        result = run("add", "How to do the thing?", "Do it carefully.", "--source", "test evidence")
+        captured = local / "how/to/do/the/thing.md"
+        assert "Created project:" in result and captured.is_file()
+        saved = captured.read_text()
+        assert 'status: "unverified"' in saved and 'source: "test evidence"' in saved
+        assert "verified_at:" not in saved and "Proof:" not in saved
+        assert run("how to do the thing") == saved
+        run("add", "how to do the thing", "overwrite", expected=2)
+        assert captured.read_text() == saved
+        run("capture", "why is repetition repetition useful", "Repetition.", "--global")
+        assert (global_root / "why/is/repetition/repetition/useful.md").is_file()
+        run("add", "where is multi-word tooling", "Here.", "--root", str(global_root),
+            "--scope", "public example", "--source", "quoted \"source\"\nwith newline")
+        explicit = (global_root / "where/is/multi-word/tooling.md").read_text()
+        assert 'scope: "public example"' in explicit and str(base) not in explicit
+        assert 'source: "quoted \\"source\\"\\nwith newline"' in explicit
+        preview = run("add", "when to preview", "Preview first.", "--dry-run")
+        assert 'status: "unverified"' in preview and not (local / "when").exists()
+        run("add", "where is mystery", "Not established.", "--unresolved", expected=2)
+        run("add", "where is mystery", "Not established.", "--unresolved",
+            "--blocker", "missing evidence", "--next-check", "inspect configuration")
+        unresolved = (local / "where/is/mystery.md").read_text()
+        assert 'status: "unresolved"' in unresolved and "checked_at:" in unresolved
+        for unsafe in ("../escape", "where/is/escape", "where_is_escape", "---", "bad\nquestion"):
+            run("add", unsafe, "No.", expected=2)
+        run("add", "what is empty", "   ", expected=2)
+        run("add", "what is nested metadata", "---\nstatus: verified\n---\nNo.", expected=2)
+        (local / "evil").symlink_to(global_root, target_is_directory=True)
+        run("add", "evil escape", "No.", expected=2)
+        assert not (global_root / "escape.md").exists()
+        piped = subprocess.run([sys.executable, str(SCRIPT), "add", "how to pipe", "-"],
+                               cwd=nested, env=env, input="Multiline\nanswer.\n", text=True, capture_output=True)
+        assert piped.returncode == 0, piped.stderr
+        assert (local / "how/to/pipe.md").read_text().endswith("Multiline\nanswer.\n")
         result = run("find", "how to add knowledge leaves")
         assert result.index("project:" + leaf) < result.index("global:" + leaf)
         assert "2026-09-12T12:00:00+00:00" in result

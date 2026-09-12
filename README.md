@@ -374,6 +374,23 @@ Use `where/is/` for locations, `how/to/` for procedures, `when/to/` for triggers
 `what/is/` for definitions/state, and `why/does/` or `why/is/` for rationale.
 `kt find` remains the deliberately broad search interface.
 
+Capture a new answer in one call:
+
+```sh
+kt add "how to prepare the demo" "Run the project's documented demo command." --source "checked project instructions"
+```
+
+`kt capture` works too. The full question becomes `how/to/prepare/the/demo.md`.
+Capture defaults to the nearest project tree, otherwise global; select `--global`,
+`--project`, or `--root example` explicitly. Use `--scope` for a scope description,
+`--dry-run` to preview, or `-` as the answer to read multiline Markdown from stdin.
+Existing leaves are protected: read their owner and amend deliberately.
+New leaves receive a creation timestamp and `status: unverified`, not an invented
+verification claim. Capture neither executes nor manufactures proofs. Independently
+review the whole answer and check eligible proofs before relying on it.
+For unresolved answers, add `--unresolved --blocker "missing evidence" --next-check
+"specific next investigation"`; the record receives a separate checked timestamp.
+
 The agent default is **new question → `kt` first**, unless adequately checked
 knowledge is already loaded. If `kt` does not find the information, the agent must
 determine whether a leaf exists using alternate terms and scoped semantic inspection.

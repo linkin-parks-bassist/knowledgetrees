@@ -2,11 +2,11 @@
 name: knowledgetrees-capture
 description: 'Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs.'
 metadata:
-  verified_at: '2026-09-12T20:29:52+10:00'
+  verified_at: '2026-09-12T11:50:55+00:00'
   verified_by: codex /root
   scope: public knowledge-tree example
   source: sanitized operational recommendations and the canonical knowledge-tree contract
-  verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
+  verification: Reviewed the complete capture contract and tested single-call creation, metadata, scope selection, stdin, dry runs, unresolved records, overwrite protection, and path rejection in isolated roots; installer and proof-stamp suites pass.
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
@@ -32,7 +32,22 @@ nearest applicable local root. Never promote professional, customer, partner, or
 restricted material into the global tree; sanitize anything intended for publication.
 Reread an existing owner before editing to preserve concurrent changes.
 Use `kt open ROOT:PATH` for that read and `kt proof --root ROOT TOKEN` after
-changing eligible proofs; `kt` does not currently provide a capture/write command.
+changing eligible proofs. Create a new leaf in one call:
+
+```sh
+kt add "how to prepare the demo" "Run the project's documented demo command." --source "checked project instructions"
+```
+
+`capture` is an alias for `add`. The nearest project root is the default, falling
+back to global; choose `--global`, `--project`, or `--root example` explicitly when
+scope matters. `--scope` supplies a scope description. `--dry-run` previews without
+writing. Pass `-` as the answer to read multiline Markdown from stdin.
+The command preserves repeated words and hyphenated components, creates metadata,
+and refuses existing owners rather than overwriting them. It records new answers
+as `unverified`, never invents whole-leaf verification or a proof, and never executes
+the supplied body. Review everything independently before adding verified metadata;
+inspect and run eligible proofs separately. For an unresolved question, supply
+`--unresolved --blocker "missing evidence" --next-check "specific next investigation"`.
 
 Write the full natural-language question first. Lowercase it, remove only punctuation
 not belonging to a literal identifier, replace spaces with `/`, and add `.md` to

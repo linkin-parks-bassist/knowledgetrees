@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Fast, dependency-free knowledge-tree lookup. Search is lexical, not semantic."""
+"""Dependency-free knowledge-tree lookup and capture. Search is lexical."""
 
 import argparse
+from datetime import datetime
+import json
 import os
 from pathlib import Path
 import re
@@ -226,6 +228,73 @@ def proof(arguments):
     return subprocess.run([str(verifier), *arguments], check=False).returncode
 
 
+def capture(args):
+    """Create only: existing owners (including hardlinked skills) are never replaced."""
+    if any(c in args.question for c in ("/", "\\", "_")) or any(
+            ord(c) < 32 for c in args.question):
+        raise ValueError("supply a natural-language question; use hyphens, not slashes or underscores")
+    components = re.findall(r"[^\W_]+(?:-[^\W_]+)*", args.question.casefold())
+    if not components:
+        raise ValueError("question must contain words")
+    available = roots()
+    if args.root:
+        label, root = "explicit", Path(args.root).expanduser().absolute()
+    elif args.project or args.global_root:
+        label = "project" if args.project else "global"
+        root = next((p for name, p in available if name == label), None)
+        if root is None:
+            raise ValueError("no project knowledge root; establish one or select --root")
+    else:
+        label, root = available[0]
+    if not root.is_dir():
+        raise ValueError(f"knowledge root does not exist: {root}")
+    # Reject symlink roots/ancestors before any directory or file mutation.
+    for ancestor in (root, *root.parents):
+        if ancestor.is_symlink():
+            raise ValueError(f"symlink in capture root: {ancestor}")
+    path = root.joinpath(*components).with_suffix(".md")
+    for ancestor in path.relative_to(root).parents:
+        if (root / ancestor).is_symlink():
+            raise ValueError("symlink in leaf path")
+    if path.exists() or path.is_symlink():
+        raise ValueError(f"leaf already exists: {path}; read its owner and amend deliberately")
+    if args.answer == "-":
+        if sys.stdin.isatty():
+            raise ValueError("pipe the answer on stdin when using -")
+        answer = sys.stdin.read()
+    else:
+        answer = args.answer
+    if not answer.strip():
+        raise ValueError("answer must not be empty")
+    if re.match(r"\A\s*---\s*\n", answer):
+        raise ValueError("supply the Markdown body, not a second frontmatter block")
+    if args.unresolved and (not args.blocker or not args.next_check):
+        raise ValueError("--unresolved requires --blocker and --next-check")
+    if not args.unresolved and (args.blocker or args.next_check):
+        raise ValueError("--blocker and --next-check require --unresolved")
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    metadata = {"status": "unresolved" if args.unresolved else "unverified",
+                "created_at": now, "scope": args.scope or {"project": "nearest project", "global": "personal global", "explicit": "explicitly selected knowledge root"}[label],
+                "source": args.source or "caller-supplied answer; evidence not recorded"}
+    if args.unresolved:
+        metadata.update(checked_at=now, blocker=args.blocker, next_check=args.next_check)
+    content = "---\n" + "".join(f"{k}: {json.dumps(v, ensure_ascii=False)}\n"
+                                 for k, v in metadata.items()) + "---\n\n" + answer.rstrip() + "\n"
+    if args.dry_run:
+        print(f"Would create {label}:{path.relative_to(root)}", file=sys.stderr)
+        sys.stdout.write(content)
+        return 0
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Exclusive creation protects an existing leaf even if it appeared after preflight.
+    with path.open("x", encoding="utf-8") as handle:
+        handle.write(content)
+    print(paint("Created", "32") + f" {label}:{path.relative_to(root)}")
+    print(f"  {path}")
+    print("  Unresolved record saved." if args.unresolved else
+          "  Unverified: independently review the leaf; check eligible proofs before reliance.")
+    return 0
+
+
 def main():
     # Forward verifier options unchanged instead of trying to reproduce its parser.
     if len(sys.argv) > 1 and sys.argv[1] == "proof":
@@ -239,6 +308,19 @@ def main():
     search.add_argument("--limit", type=int, default=10)
     opening = commands.add_parser("open", help="print a leaf verbatim, including metadata")
     opening.add_argument("path", help="relative path, project:path, global:path, or absolute .md path")
+    adding = commands.add_parser("capture", aliases=["add"], help="create a question-derived leaf in one call")
+    adding.add_argument("question", help="quoted full question; preserve multi-word components with hyphens")
+    adding.add_argument("answer", help="Markdown answer, or - to read stdin")
+    scope = adding.add_mutually_exclusive_group()
+    scope.add_argument("--global", dest="global_root", action="store_true")
+    scope.add_argument("--project", action="store_true")
+    scope.add_argument("--root", help="existing knowledge root (for example, example/)")
+    adding.add_argument("--scope", help="scope description; defaults to the selected root category")
+    adding.add_argument("--source", help="actual evidence/provenance supplied by the caller")
+    adding.add_argument("--dry-run", action="store_true", help="preview path and complete leaf without writing")
+    adding.add_argument("--unresolved", action="store_true")
+    adding.add_argument("--blocker")
+    adding.add_argument("--next-check")
     commands.add_parser("roots", help="show roots in precedence order")
     commands.add_parser("proof", help="forward [directory] [tokens] [options] to the verifier")
     args = parser.parse_args()
@@ -248,6 +330,8 @@ def main():
         return find(args)
     if args.command == "open":
         return open_leaf(args.path)
+    if args.command in ("capture", "add"):
+        return capture(args)
     for label, root in roots():
         print(f"{paint(label.ljust(7), '36')}  {root}")
     if args.command is None:
@@ -262,6 +346,7 @@ def main():
         print('kt find "how to add knowledge leaves"')
         print("kt open global:how/to/add/knowledge/leaves.md")
         print("kt proof [directory] [tokens] [--no-stamp]")
+        print('kt add "how to do the thing" "The answer." --source "checked evidence"')
     return 0
 
 

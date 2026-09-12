@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T20:29:52+10:00'
+verified_at: '2026-09-12T11:50:55+00:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
@@ -51,7 +51,7 @@ informed `[n/Y]` consent before configuring scoped OpenCode reads and knowledge-
 writes or making any installation changes. Integration checks and read-only proof
 sweeps of repository, example, and installed global trees pass.
 
-`tools/kt` is the dependency-free Python lookup CLI, deployed locally under the
+`tools/kt` is the dependency-free Python lookup and capture CLI, deployed locally under the
 global root's `.tools/` and exposed through `~/.local/bin/kt`. It ranks keyword
 and quoted-question matches, labels project/global roots, reads leaf metadata,
 prints leaves verbatim, and forwards proof roots/options correctly. Question-prefix
@@ -63,6 +63,15 @@ branches, exact reads, and incremental widening have isolated CLI test coverage.
 The installer distributes it alongside the single verifier. `tests/test-kt.py` checks isolated
 roots with spaces, phrase ranking, metadata, missing results, open scoping, and
 proof forwarding without executing real predicates.
+
+`kt add QUESTION ANSWER` (alias `capture`) creates a sentence-derived leaf in one
+call, defaults to nearest-project then global scope, and accepts explicit root,
+provenance, multiline stdin, dry-run, and unresolved-record options. It refuses
+existing owners and unsafe path forms. Creation timestamps and unverified status
+are separate from independent whole-leaf review and proof outcomes. Capture never
+executes the body or fabricates proofs. Isolated tests cover creation, exact
+retrieval of captured answers, repeated question words, overwrite protection,
+scope, stdin, previews, unresolved metadata, and path rejection.
 
 All five procedures integrate `kt`. A search/content miss must be resolved as an
 existing leaf to retrieve/amend or an absent leaf to investigate/add. Established
