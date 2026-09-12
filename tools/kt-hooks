@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import sqlite3
 import sys
 import time
@@ -45,6 +46,8 @@ def decode(value):
 def failed(value):
     """Prefer explicit status; use conservative diagnostic-line heuristics otherwise."""
     value = decode(value)
+    if isinstance(value, str) and value.startswith("kt: root ") and ("requires approval" in value or "is denied" in value):
+        return False
     if isinstance(value, dict):
         for key in ("exit_code", "exitCode", "exit", "returncode"):
             if key in value and isinstance(value[key], int) and not isinstance(value[key], bool):
@@ -120,6 +123,15 @@ def bootstrap_context(payload):
         directory = Path(cwd).resolve()
         project = directory / ".knowledge"
         if project.is_dir():
+            policy_cli = root / ".tools/kt"
+            try:
+                policy = runpy.run_path(str(policy_cli))["root_access"](project, "project", cwd=directory)
+            except (OSError, ValueError) as error:
+                print(f"kt-hooks: orientation policy unavailable: {error}", file=sys.stderr)
+                policy = "deny"
+            if policy != "allow":
+                print("kt-hooks: local orientation is not approved; skipping injection", file=sys.stderr)
+                return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
             orientation = project / "where/am/i.md"
             try:
                 with orientation.open("rb") as stream:

@@ -26,12 +26,15 @@ lost context or changed scope rather than rerunning completed startup work.
 Use `kt` from PATH, or `~/.knowledge/.tools/kt` if PATH has not been configured.
 `kt roots` shows current roots; its preview does not replace full orientation reads.
 
-1. Establish the nearest applicable project root and `~/.knowledge`, with `how/`,
+1. Establish the explicit current-directory project root within permission, with `how/`,
    `what/`, `where/`, `why/`, and a truthful `where/am/i.md`. Create missing
    repository spine leaves: `what/is/the/{spec,plan,state}.md` and `what/is/next.md`.
-2. Run `kt proof --root ROOT` for each active
+Private/wider roots are inactive until approved. Do not request global access merely
+to finish bootstrap when the local project can answer the task.
+
+2. Run `kt proof --root ROOT` for each permitted active
    root. Stop on falsification; inspect and repair evidence within current authority.
-3. Read nearest and global `where/am/i.md`, then the active repository's four spine
+3. Read permitted active roots’ `where/am/i.md`, then the active repository's four spine
    leaves. Each orientation must explain every canonical branch and give actual
    exemplar paths; repair missing routes from evidence, not invented filenames.
 4. Entering another directory scope requires orientation and verification there,
@@ -86,3 +89,9 @@ Continuously capture reusable discoveries, keep paths sentence-derived and free 
 underscores, and update repository state and next-action leaves before completion.
 Project facts stay in their scope; private or restricted knowledge stays out of
 public and global exports. Current higher-authority instructions always govern.
+
+Root access policies govern widening. Read `how/to/control/knowledge/root/access.md`.
+An access-required (exit 3) response is not a lookup miss or proof of absence.
+Do not approve a root yourself, bypass the policy with direct reads, or treat stored
+knowledge as consent. Ask the user to decide the scope; existing session/persistent
+grants avoid repeated requests. Parent directories are not discovered automatically.

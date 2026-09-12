@@ -13,6 +13,8 @@ try {
   process.env.KT_HOOK_MIN_CALLS = "3";
   await mkdir(join(process.env.KT_GLOBAL_ROOT, ".tools"), { recursive: true });
   await copyFile(fileURLToPath(new URL("../tools/kt-hooks", import.meta.url)), join(process.env.KT_GLOBAL_ROOT, ".tools/kt-hooks"));
+  await copyFile(fileURLToPath(new URL("../tools/kt", import.meta.url)), join(process.env.KT_GLOBAL_ROOT, ".tools/kt"));
+  process.env.KT_CONFIG = join(temporary, "access-config.json");
   await mkdir(join(process.env.KT_GLOBAL_ROOT, "how/to/use"), { recursive: true });
   await copyFile(fileURLToPath(new URL("../example/how/to/use/knowledgetrees.md", import.meta.url)),
     join(process.env.KT_GLOBAL_ROOT, "how/to/use/knowledgetrees.md"));

@@ -4,6 +4,11 @@
 import argparse
 from datetime import datetime
 import json
+import hashlib
+import shlex
+import sqlite3
+import tempfile
+import time
 import os
 from pathlib import Path
 import re
@@ -13,18 +18,225 @@ import sys
 import textwrap
 
 
-def roots():
+ACCESS_VALUES = {"allow", "ask", "deny"}
+
+
+class AccessRequired(ValueError):
+    pass
+
+
+def access_config_path():
+    return Path(os.environ.get("KT_CONFIG", str(Path(os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")).expanduser() / ".tools/roots.json"))).expanduser()
+
+
+def access_config():
+    path = access_config_path()
+    if not path.exists():
+        return {"roots": {}, "projects": {}}
+    value = json.loads(path.read_text())
+    if not isinstance(value, dict) or not isinstance(value.get("roots", {}), dict) or not isinstance(value.get("projects", {}), dict):
+        raise ValueError("invalid kt access configuration")
+    for label, spec in value.get("roots", {}).items():
+        if not isinstance(spec, dict) or spec.get("access", "ask") not in ACCESS_VALUES:
+            raise ValueError(f"invalid policy for root {label!r}")
+        if label not in ("project", "global") and not isinstance(spec.get("path"), str):
+            raise ValueError(f"configured root {label!r} needs a path")
+        if "path" in spec and (not isinstance(spec["path"], str) or not Path(spec["path"]).expanduser().is_absolute()):
+            raise ValueError("registered root paths must be absolute (tilde expansion is allowed)")
+    for project, grants in value.get("projects", {}).items():
+        if not Path(project).is_absolute() or not isinstance(grants, dict) or any(not (v in ACCESS_VALUES if isinstance(v, str) else isinstance(v, dict) and v.get("access") in ACCESS_VALUES and isinstance(v.get("subdirectories", False), bool)) for v in grants.values()):
+            raise ValueError("invalid project access grants")
+    value.setdefault("roots", {})
+    value.setdefault("projects", {})
+    return value
+
+
+def discovered_roots(config=None, cwd=None):
+    config = access_config() if config is None else config
+    cwd = Path(cwd or Path.cwd()).resolve()
     global_root = Path(os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")).expanduser().resolve()
-    cwd = Path.cwd()
-    project = next((p / ".knowledge" for p in (cwd, *cwd.parents)
-                    if (p / ".knowledge/where/am/i.md").is_file()), None)
-    if cwd.name == ".knowledge" and (cwd / "where/am/i.md").is_file():
-        project = cwd
     result = []
-    if project is not None and project.resolve() != global_root:
-        result.append(("project", project.resolve()))
-    result.append(("global", global_root))
+    local = cwd if cwd.name == ".knowledge" else cwd / ".knowledge"
+    if local.is_dir():
+        result.append(("project", local.resolve()))
+    if global_root not in {root for _, root in result}:
+        result.append(("global", global_root))
+    for label, spec in config["roots"].items():
+        if label in ("project", "global"):
+            continue
+        root = Path(spec["path"]).expanduser().resolve()
+        if root not in {path for _, path in result}:
+            result.append((label, root))
     return result
+
+
+def access_session():
+    return os.environ.get("KT_SESSION_ID") or os.environ.get("CODEX_THREAD_ID") or os.environ.get("OPENCODE_SESSION_ID")
+
+
+def access_database():
+    directory = Path(os.environ.get("KT_ACCESS_STATE_DIR", str(Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "knowledgetrees")))
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path = directory / "access.sqlite3"
+    descriptor = os.open(path, os.O_CREAT | os.O_WRONLY, 0o600)
+    os.close(descriptor)
+    os.chmod(path, 0o600)
+    return path
+
+
+def root_access(root, label=None, cwd=None, config=None):
+    config = access_config() if config is None else config
+    cwd = Path(cwd or Path.cwd()).resolve()
+    root = Path(root).resolve()
+    # Default implicit trust applies only to a tree actually inside the explicit cwd.
+    local = cwd if cwd.name == ".knowledge" else cwd / ".knowledge"
+    default = "allow" if root == local.resolve() and root.is_relative_to(cwd) else "ask"
+    policies = [spec.get("access", "ask") for name, spec in config["roots"].items()
+                if (name == label and name in ("project", "global")) or
+                (isinstance(spec.get("path"), str) and Path(spec["path"]).expanduser().resolve() == root)]
+    policy = "deny" if "deny" in policies else "allow" if default == "allow" or "allow" in policies else policies[-1] if policies else default
+    for name, spec in config["roots"].items():
+        if spec.get("access") != "deny":
+            continue
+        denied = spec.get("path")
+        if denied is None and name == "global":
+            denied = os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")
+        if isinstance(denied, str) and root.is_relative_to(Path(denied).expanduser().resolve()):
+            return "deny"
+    if policy == "deny":
+        return "deny"
+    # Exact pairwise scope by default; inheritance must be explicitly approved.
+    projects = sorted(((Path(path), grants) for path, grants in config["projects"].items()
+                       if cwd.is_relative_to(Path(path))), key=lambda item: len(item[0].parts), reverse=True)
+    for project, grants in projects:
+        if str(root) in grants:
+            grant = grants[str(root)]
+            access = grant if isinstance(grant, str) else grant["access"]
+            inherit = isinstance(grant, dict) and grant.get("subdirectories", False)
+            if cwd == project or inherit:
+                return access
+    session = access_session()
+    if session:
+        path = Path(os.environ.get("KT_ACCESS_STATE_DIR", str(Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "knowledgetrees"))) / "access.sqlite3"
+        if path.is_file():
+            with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as connection:
+                exists = connection.execute("SELECT name FROM sqlite_master WHERE name='grants'").fetchone()
+                if exists:
+                    rows = connection.execute("SELECT project, access FROM grants WHERE session=? AND root=? AND touched>?", (hashlib.sha256(session.encode()).hexdigest(), str(root), time.time()-7*86400)).fetchall()
+                    rows = sorted(((Path(project), access) for project, access in rows if cwd == Path(project)), key=lambda row: len(row[0].parts), reverse=True)
+                    if rows:
+                        return rows[0][1]
+    return policy
+
+
+def require_root(root, label=None):
+    if label is None:
+        label = next((name for name, path in discovered_roots() if path == Path(root).resolve()), None)
+    policy = root_access(root, label)
+    if policy != "allow":
+        name = label or str(root)
+        message = f"kt: root {name!r} is denied" if policy == "deny" else f"kt: root {name!r} requires approval; in your terminal run: kt access {shlex.quote(name)} allow --scope project"
+        raise AccessRequired(message)
+
+
+def roots():
+    result = []
+    for label, root in discovered_roots():
+        try:
+            require_root(root, label)
+        except AccessRequired:
+            pass
+        else:
+            result.append((label, root))
+    return result
+
+
+def save_access_config(config):
+    path = access_config_path()
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    descriptor, temporary = tempfile.mkstemp(prefix=".kt-config-", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "w") as stream:
+            json.dump(config, stream, indent=2)
+            stream.write("\n")
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def register_root(root, name=None):
+    root = Path(root).expanduser().resolve()
+    config = access_config()
+    existing = next((label for label, spec in config["roots"].items()
+                     if isinstance(spec.get("path"), str) and Path(spec["path"]).expanduser().resolve() == root), None)
+    if existing:
+        return existing
+    if not root.is_dir():
+        raise ValueError("register an existing knowledge-root directory")
+    name = name or "root-" + hashlib.sha256(str(root).encode()).hexdigest()[:12]
+    if name in ("project", "global") or name in config["roots"] or not re.fullmatch(r"[a-z][a-z0-9-]*", name):
+        raise ValueError("choose a unique root name using lowercase words and hyphens")
+    config["roots"][name] = {"path": str(root), "access": "ask"}
+    save_access_config(config)
+    return name
+
+
+def access_command(args):
+    config = access_config()
+    available = discovered_roots(config)
+    root = next((path for label, path in available if label == args.root), None)
+    label = args.root
+    if root is None:
+        if not Path(args.root).expanduser().is_absolute():
+            raise ValueError("select a discovered root label or an absolute knowledge-root path")
+        root = Path(args.root).expanduser().resolve()
+        if not root.is_dir():
+            raise ValueError("knowledge root does not exist")
+        label = next((name for name, path in available if path == root), "root-" + hashlib.sha256(str(root).encode()).hexdigest()[:12])
+    if args.decision is None:
+        print(f"{label}: {root_access(root, label)}\nConfiguration: {access_config_path()}")
+        return 0
+    session = access_session()
+    if args.scope == "session" and not session:
+        raise ValueError("session scope requires KT_SESSION_ID (or CODEX_THREAD_ID/OPENCODE_SESSION_ID); use the same identifier in the agent environment")
+    if not sys.stdin.isatty():
+        raise AccessRequired("kt: access decisions require confirmation in your own interactive terminal; no grant was saved")
+    project = str(Path.cwd().resolve())
+    subdirectories = getattr(args, "subdirectories", False)
+    if subdirectories and args.scope != "project":
+        raise ValueError("--subdirectories applies only to persistent project approvals")
+    print(f"Root: {root}\nScope: {args.scope}" + (f" ({project}" + (" and descendants)" if subdirectories else ")") if args.scope != "all" else " (all projects)"))
+    print("Retrieved knowledge may be sent to the agent's configured model provider. This policy controls kt, not direct filesystem reads.")
+    if input(f"Save {args.decision!r} decision? Type yes: ").strip().lower() != "yes":
+        print("No access decision saved.")
+        return 1
+    if args.scope == "session":
+        with sqlite3.connect(access_database()) as connection:
+            connection.execute("CREATE TABLE IF NOT EXISTS grants (session TEXT, project TEXT, root TEXT, access TEXT, touched REAL, PRIMARY KEY(session,project,root))")
+            connection.execute("DELETE FROM grants WHERE touched<?", (time.time()-7*86400,))
+            key = hashlib.sha256(session.encode()).hexdigest()
+            if args.decision == "reset":
+                connection.execute("DELETE FROM grants WHERE session=? AND project=? AND root=?", (key, project, str(root)))
+            else:
+                connection.execute("INSERT OR REPLACE INTO grants VALUES (?,?,?,?,?)", (key, project, str(root), args.decision, time.time()))
+    else:
+        if args.scope == "all":
+            if args.decision == "reset":
+                config["roots"].pop(label, None)
+            else:
+                config["roots"][label] = {"path": str(root), "access": args.decision}
+        else:
+            grants = config["projects"].setdefault(project, {})
+            if args.decision == "reset":
+                grants.pop(str(root), None)
+            else:
+                grants[str(root)] = {"access": args.decision, "subdirectories": True} if subdirectories else args.decision
+                if label not in dict(available):
+                    config["roots"][label] = {"path": str(root), "access": "ask"}
+        save_access_config(config)
+    print(f"Saved {args.decision} for {label} ({args.scope}).")
+    return 0
 
 
 def paint(value, color):
@@ -58,16 +270,24 @@ def coverage(terms, haystack):
     return sum(t in haystack for t in meaningful) / len(meaningful) if meaningful else 1.0
 
 
+def leaf_allowed(path):
+    path = Path(path).resolve()
+    owners = [(label, root) for label, root in discovered_roots() if path.is_relative_to(root)]
+    if not owners:
+        return False
+    label, owner = max(owners, key=lambda pair: len(pair[1].parts))
+    return root_access(owner, label) == "allow"
+
+
 def leaves(root):
     if not root.is_dir():
         return
     for directory, directories, files in os.walk(root, followlinks=False):
-        directories[:] = sorted(d for d in directories if not d.startswith("."))
+        directories[:] = sorted(d for d in directories if not d.startswith(".") and leaf_allowed(Path(directory) / d))
         for name in sorted(files):
-            if name.endswith(".md"):
-                path = Path(directory) / name
-                if not path.is_symlink():
-                    yield path
+            path = Path(directory) / name
+            if name.endswith(".md") and not path.is_symlink() and leaf_allowed(path):
+                yield path
 
 
 def find(args, branches=None, browse=False):
@@ -75,9 +295,14 @@ def find(args, branches=None, browse=False):
     if not terms and not browse:
         print("kt: supply at least one word to search", file=sys.stderr)
         return 2
+    if branches is None:
+        allowed = roots()
+        if not allowed:
+            raise AccessRequired("kt: no accessible knowledge roots; review kt access policies")
+        branches = [(label, root, root) for label, root in allowed]
     results = []
     for precedence, (label, root, branch) in enumerate(
-            branches if branches is not None else [(label, root, root) for label, root in roots()]):
+            branches):
         for path in leaves(branch):
             try:
                 text = path.read_text()
@@ -104,7 +329,7 @@ def find(args, branches=None, browse=False):
     if not results:
         print(paint("No matches", "33") + f" for {' '.join(args.terms)!r}.")
         print("This is keyword search; a miss does not establish that the answer is absent.")
-        print("Check alternate terms and scoped paths. If no leaf exists, investigate and add it before resuming work.")
+        print("Check alternate terms and permitted scoped paths. Private roots are excluded; use kt roots to inspect policies.")
         return 1
     adequate = browse or any(row[-1] >= args.min_coverage for row in results)
     if not adequate:
@@ -151,11 +376,13 @@ def question(arguments):
     if browse:
         components.pop()
     available = roots()
+    if not available:
+        raise AccessRequired("kt: no accessible knowledge roots")
     # Try the full sentence path without scanning any directory contents.
     if components and not browse:
         for label, root in available:
             candidate = root.joinpath(*components).with_suffix(".md")
-            if candidate.is_file() and not candidate.is_symlink() and candidate.resolve().is_relative_to(root):
+            if candidate.is_file() and not candidate.is_symlink() and candidate.resolve().is_relative_to(root) and leaf_allowed(candidate):
                 print(f"kt: exact {label}:{candidate.relative_to(root)}; check relevant proofs before reliance", file=sys.stderr)
                 sys.stdout.write(candidate.read_text())
                 return 0
@@ -209,12 +436,19 @@ def open_leaf(value):
     available = roots()
     path = Path(value).expanduser()
     if path.is_absolute():
-        candidates = [path] if path.suffix == ".md" else []
+        resolved = path.resolve()
+        owners = [(name, root) for name, root in discovered_roots() if resolved.is_relative_to(root)]
+        if not owners:
+            raise AccessRequired("kt: absolute leaf is outside configured knowledge roots; register/approve its root first")
+        name, root = max(owners, key=lambda pair: len(pair[1].parts))
+        require_root(root, name)
+        candidates = [resolved] if path.suffix == ".md" else []
     else:
         label, separator, relative = value.partition(":")
         if separator:
-            if label not in {"project", "global"}:
+            if label not in dict(discovered_roots()):
                 raise ValueError(f"unknown root label: {label}")
+            require_root(dict(discovered_roots())[label], label)
             available = [(name, root) for name, root in available if name == label]
         else:
             relative = value
@@ -227,6 +461,8 @@ def open_leaf(value):
     path = next((p for p in candidates if p.is_file()), None)
     if path is None:
         raise ValueError(f"no such leaf: {value}")
+    if not leaf_allowed(path):
+        raise AccessRequired("kt: leaf is inside a restricted registered root")
     sys.stdout.write(path.read_text())
     return 0
 
@@ -243,7 +479,22 @@ def proof(arguments):
             root /= ".knowledge"
         arguments = ["--root", str(root), *arguments]
     elif not any(a in ("--root", "-r") or a.startswith("--root=") for a in arguments):
-        arguments = ["--root", str(roots()[0][1]), *arguments]
+        allowed = roots()
+        if not allowed:
+            raise AccessRequired("kt: no accessible proof root")
+        arguments = ["--root", str(allowed[0][1]), *arguments]
+    selected = None
+    for index, argument in enumerate(arguments):
+        if argument in ("--root", "-r") and index + 1 < len(arguments):
+            selected = arguments[index + 1]
+        elif argument.startswith("--root="):
+            selected = argument.partition("=")[2]
+    if selected is None:
+        raise AccessRequired("kt: select an accessible proof root")
+    selected = Path(selected).expanduser().resolve()
+    require_root(selected, next((label for label, root in discovered_roots() if root == selected), None))
+    if any(root != selected and root.is_relative_to(selected) and root_access(root, label) != "allow" for label, root in discovered_roots()):
+        raise AccessRequired("kt: proof scope contains a restricted registered subtree; narrow the scope or approve it first")
     return subprocess.run([str(verifier), *arguments], check=False).returncode
 
 
@@ -264,7 +515,12 @@ def capture(args):
         if root is None:
             raise ValueError("no project knowledge root; establish one or select --root")
     else:
+        if not available:
+            raise AccessRequired("kt: no accessible knowledge root for capture")
         label, root = available[0]
+    if not args.dry_run and root.is_dir() and not any(isinstance(spec.get("path"), str) and Path(spec["path"]).expanduser().resolve() == root.resolve() for spec in access_config()["roots"].values()):
+        register_root(root)
+    require_root(root, None if label == "explicit" else label)
     if not root.is_dir():
         raise ValueError(f"knowledge root does not exist: {root}")
     # Reject symlink roots/ancestors before any directory or file mutation.
@@ -293,7 +549,7 @@ def capture(args):
         raise ValueError("--blocker and --next-check require --unresolved")
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     metadata = {"status": "unresolved" if args.unresolved else "unverified",
-                "created_at": now, "scope": args.scope or {"project": "nearest project", "global": "personal global", "explicit": "explicitly selected knowledge root"}[label],
+                "created_at": now, "scope": args.scope or {"project": "nearest project", "global": "personal global", "parent": "approved parent root", "explicit": "explicitly selected knowledge root"}[label],
                 "source": args.source or "caller-supplied answer; evidence not recorded"}
     if args.unresolved:
         metadata.update(checked_at=now, blocker=args.blocker, next_check=args.next_check)
@@ -341,7 +597,15 @@ def main():
     adding.add_argument("--unresolved", action="store_true")
     adding.add_argument("--blocker")
     adding.add_argument("--next-check")
-    commands.add_parser("roots", help="show roots in precedence order")
+    commands.add_parser("roots", help="show root policies without reading their contents")
+    register = commands.add_parser("register", help="register an existing root as private (ask)")
+    register.add_argument("name")
+    register.add_argument("path")
+    access = commands.add_parser("access", help="inspect, approve, deny, or revoke root access")
+    access.add_argument("root", help="root label or absolute root path")
+    access.add_argument("decision", nargs="?", choices=["allow", "deny", "ask", "reset"])
+    access.add_argument("--scope", choices=["session", "project", "all"], default="project")
+    access.add_argument("--subdirectories", action="store_true", help="explicitly extend a project approval to descendant directories")
     commands.add_parser("proof", help="forward [directory] [tokens] [options] to the verifier")
     args = parser.parse_args()
     if args.command == "find":
@@ -354,11 +618,18 @@ def main():
         return open_leaf(args.path)
     if args.command in ("capture", "add"):
         return capture(args)
-    for label, root in roots():
-        print(f"{paint(label.ljust(7), '36')}  {root}")
+    if args.command == "register":
+        print(f"Registered {register_root(args.path, args.name)} as private (ask).")
+        return 0
+    if args.command == "access":
+        return access_command(args)
+    for label, root in discovered_roots():
+        policy = root_access(root, label)
+        print(f"[{policy}] {paint(label.ljust(7), '36')}  {root if policy == 'allow' else '(restricted)'}")
     if args.command is None:
-        entry = roots()[0][1] / "where/am/i.md"
-        if entry.is_file():
+        allowed = roots()
+        entry = allowed[0][1] / "where/am/i.md" if allowed else None
+        if entry is not None and entry.is_file():
             _, body = leaf_parts(entry.read_text())
             print("\n" + paint("Orientation", "1"))
             print(textwrap.shorten(" ".join(body.split()), width=600, placeholder=" …"))
@@ -377,6 +648,9 @@ if __name__ == "__main__":
         sys.exit(main())
     except BrokenPipeError:
         sys.exit(0)
-    except (OSError, UnicodeError, ValueError) as error:
+    except AccessRequired as error:
+        print(error, file=sys.stderr)
+        sys.exit(3)
+    except (OSError, UnicodeError, ValueError, sqlite3.Error) as error:
         print(f"kt: {error}", file=sys.stderr)
         sys.exit(2)

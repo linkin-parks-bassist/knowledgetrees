@@ -39,9 +39,12 @@ def main():
         verifier.chmod(0o755)
         nested = project / "sub/folder"
         nested.mkdir(parents=True)
-        env = {**os.environ, "KT_GLOBAL_ROOT": str(global_root), "NO_COLOR": "1"}
+        config = base / "config.json"
+        config.write_text(json.dumps({"roots": {"global": {"path": str(global_root), "access": "allow"}}}))
+        env = {**os.environ, "KT_CONFIG": str(config), "KT_GLOBAL_ROOT": str(global_root), "NO_COLOR": "1"}
 
-        def run(*args, expected=0, cwd=nested):
+
+        def run(*args, expected=0, cwd=project):
             result = subprocess.run([sys.executable, str(SCRIPT), *args], cwd=cwd,
                                     env=env, text=True, capture_output=True)
             assert result.returncode == expected, (result.stdout, result.stderr)
@@ -79,7 +82,7 @@ def main():
         run("add", "evil escape", "No.", expected=2)
         assert not (global_root / "escape.md").exists()
         piped = subprocess.run([sys.executable, str(SCRIPT), "add", "how to pipe", "-"],
-                               cwd=nested, env=env, input="Multiline\nanswer.\n", text=True, capture_output=True)
+                               cwd=project, env=env, input="Multiline\nanswer.\n", text=True, capture_output=True)
         assert piped.returncode == 0, piped.stderr
         assert (local / "how/to/pipe.md").read_text().endswith("Multiline\nanswer.\n")
         result = run("find", "how to add knowledge leaves")
@@ -114,7 +117,7 @@ def main():
         assert "Test orientation." in run()
         assert str(local) in run("roots", cwd=local)
         global_only = run("roots", cwd=base)
-        assert len(global_only.splitlines()) == 1 and str(global_root) in global_only
+        assert str(global_root) in global_only and str(local) not in global_only
         assert json.loads(run("proof", "--no-stamp", "leaves")) == ["--root", str(local), "--no-stamp", "leaves"]
         assert json.loads(run("proof", str(project), "--no-stamp")) == ["--root", str(local), "--no-stamp"]
         assert json.loads(run("proof", "--root", str(global_root), "--no-stamp")) == ["--root", str(global_root), "--no-stamp"]

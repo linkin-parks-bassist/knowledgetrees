@@ -213,7 +213,11 @@ def main() -> None:
         customized = capture_owner.read_bytes()
         inode = capture_owner.stat().st_ino
         opencode_before = opencode_config.read_bytes()
+        registry = knowledge / ".tools/roots.json"
+        registry.write_text('{"roots":{"private":{"path":"/example/private","access":"ask"}},"projects":{}}')
+        registered = registry.read_bytes()
         run(*home_arguments, "--hooks-only", answer="")
+        assert registry.read_bytes() == registered
         assert capture_owner.read_bytes() == customized and capture_owner.stat().st_ino == inode
         assert opencode_config.read_bytes() == opencode_before
         assert (target_home / ".agents/skills/knowledgetrees-capture/SKILL.md").samefile(capture_owner)

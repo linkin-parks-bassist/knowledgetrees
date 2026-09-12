@@ -68,3 +68,7 @@ threshold is 10 completed tool calls or an encountered failure. Installer-only h
 updates must preserve existing leaves and hardlinked skills. Keyword retrieval must
 exit nonzero on empty or insufficiently relevant results while retaining useful
 weak suggestions; heuristic success never certifies knowledge correctness.
+
+## Root access policies
+
+User-global registry; private-by-default wider roots; persistent pairwise approvals and open-access overrides; no automatic parent discovery. Exact project directory approvals by default, optional explicit descendant inheritance. Enforce access on search/read/capture/proof and startup injection.

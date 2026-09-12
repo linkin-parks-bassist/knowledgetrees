@@ -575,3 +575,45 @@ themselves, and every useful piece of work has the opportunity to make the next
 piece of work easier.
 
 **Knowledge is discovered as needed and captured as learned.**
+
+### Root privacy and cross-project sharing
+
+`kt` uses your current directory's tree plus registered roots; it does not search
+parent directories. Wider roots, including global knowledge, default to private
+(`ask`). Unapproved roots are excluded from searches and reads. The registry lives
+at `~/.knowledge/.tools/roots.json` and is preserved by installer updates.
+
+Register a shared tree, then approve it from a project in your own terminal:
+
+```bash
+kt register shared /path/to/shared/.knowledge
+kt access shared allow --scope project
+```
+
+That approval persists for this exact project directory. Use `--subdirectories`
+only if you explicitly want descendant directories included. Without it, approval
+from your home directory does not authorize every repository below it.
+
+For an open-access tree, use `kt access shared allow --scope all`. To revoke a
+project grant, use `kt access shared reset --scope project`. `deny` blocks access.
+`--scope session` grants temporarily and requires the same session identifier in
+your terminal and the agent environment (`KT_SESSION_ID`, `CODEX_THREAD_ID`, or
+`OPENCODE_SESSION_ID`). Agents cannot approve through a noninteractive lookup.
+
+The registry is editable JSON, for example:
+
+```json
+{
+  "roots": {
+    "shared": {"path": "/path/to/shared/.knowledge", "access": "allow"},
+    "global": {"access": "ask"}
+  },
+  "projects": {}
+}
+```
+
+`kt add --root /path/to/new/tree` registers an unfamiliar existing tree as private.
+A wider capture still needs approval before a leaf is written. Access-required
+operations exit with code 3; this is not a knowledge miss. Retrieved content may
+reach the configured model provider. These controls cover `kt` and startup hooks;
+they are not a substitute for filesystem permissions against direct reads.

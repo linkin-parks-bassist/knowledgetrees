@@ -48,3 +48,7 @@ The approved publication plan is complete.
 The owner authorized committing and pushing the reviewed heuristic update.
 Long-term tuning will follow observations from ordinary use; no uncertainty hook
 is implemented in this update.
+
+## Root access policies
+
+Completed registry, access policies, persistent/session grants, private capture registration, and shared startup enforcement. Validation and local deployment pass; no automatic approval of personal/global knowledge.

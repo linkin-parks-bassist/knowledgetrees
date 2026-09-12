@@ -29,7 +29,14 @@ def main():
             assert "verified_by:" not in context["additionalContext"]
         assert handle("codex", "start", {"source": "unexpected"}) == ({}, 0)
         assert handle("copilot", "start", {"source": "startup"}) == ({}, 0)
-    with tempfile.TemporaryDirectory(prefix="kt orientation ") as temporary, patch.dict(os.environ, {"KT_GLOBAL_ROOT": str(REPOSITORY / "example")}):
+    with tempfile.TemporaryDirectory(prefix="kt orientation ") as temporary, patch.dict(os.environ, {"KT_GLOBAL_ROOT": str(REPOSITORY / "example"), "KT_CONFIG": ""}):
+        fixture_global = Path(temporary) / "global"
+        (fixture_global / ".tools").mkdir(parents=True)
+        (fixture_global / ".tools/kt").write_bytes((REPOSITORY / "tools/kt").read_bytes())
+        (fixture_global / "how/to/use").mkdir(parents=True)
+        (fixture_global / "how/to/use/knowledgetrees.md").write_bytes((REPOSITORY / "example/how/to/use/knowledgetrees.md").read_bytes())
+        os.environ["KT_GLOBAL_ROOT"] = str(fixture_global)
+        os.environ["KT_CONFIG"] = str(Path(temporary) / "config.json")
         directory = Path(temporary) / "project"
         orientation = directory / ".knowledge/where/am/i.md"
         orientation.parent.mkdir(parents=True)
@@ -59,6 +66,9 @@ def main():
         (nearer / "where/am/i.md").write_text("Nested orientation")
         result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
         assert "Nested orientation" in result["additionalContext"]
+        Path(os.environ["KT_CONFIG"]).write_text(json.dumps({"roots": {"blocked": {"path": str(nearer), "access": "deny"}}}))
+        result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
+        assert "Nested orientation" not in result["additionalContext"]
     failure = runpy.run_path(str(HANDLER))["failed"]
     for mode in ("default", "bypassPermissions", "plan", None):
         assert handle("codex", "before", {"permission_mode": mode}) == ({}, 0)

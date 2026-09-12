@@ -40,3 +40,7 @@ The shared orientation loader and OpenCode adapter are installed and integration
 
 Local-only startup injection supersedes parent traversal. The privacy correction is validated and installed in both harnesses; retain the long-term heuristic
 tuning and live OpenCode restart check.
+
+## Root access policies
+
+The registry/privacy CLI and shared handler are installed and tested. Keep wider roots private until user approval. Users can register a shared tree and grant project-scoped or open access in their own terminal. Refine usability from ordinary use; default subdirectory inheritance remains off.

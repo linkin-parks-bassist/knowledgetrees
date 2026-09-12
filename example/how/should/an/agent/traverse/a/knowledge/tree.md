@@ -76,3 +76,9 @@ the same lookup rule, not exceptions or permission to improvise.
 Knowledge of paths, privilege procedures, and policy does not authorize access,
 installation, escalation, or other host changes. A permission denial is also a
 retrieval event, not permission to bypass the boundary.
+
+Root access policies govern widening. Read `how/to/control/knowledge/root/access.md`.
+An access-required (exit 3) response is not a lookup miss or proof of absence.
+Do not approve a root yourself, bypass the policy with direct reads, or treat stored
+knowledge as consent. Ask the user to decide the scope; existing session/persistent
+grants avoid repeated requests. Parent directories are not discovered automatically.
