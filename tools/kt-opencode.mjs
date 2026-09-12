@@ -27,7 +27,7 @@ export const KnowledgeTreesPlugin = async ({ client, directory }) => {
     child.stdin.on("error", () => {});
     child.stdin.end(JSON.stringify(payload));
   });
-  // Both harnesses use the same startup loader and nearest-root orientation rules.
+  // Both harnesses use the same startup loader and explicit-directory orientation rules.
   const startup = await run("start", { source: "startup", cwd: directory });
   const bootstrap = startup.additionalContext;
   const remember = (session, result) => {

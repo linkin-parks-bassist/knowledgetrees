@@ -37,3 +37,6 @@ Unwrapped detection is installed: a live SYNTH_BUILD_FAIL diagnostic triggered t
 ## Shared startup orientation
 
 The shared orientation loader and OpenCode adapter are installed and integration-tested. Restart OpenCode to load the new plugin and check actual startup context; new Codex startup/resume/compact events load orientation automatically.
+
+Local-only startup injection supersedes parent traversal. The privacy correction is validated and installed in both harnesses; retain the long-term heuristic
+tuning and live OpenCode restart check.

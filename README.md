@@ -383,7 +383,7 @@ kt add "how to prepare the demo" "Run the project's documented demo command." --
 ```
 
 `kt capture` works too. The full question becomes `how/to/prepare/the/demo.md`.
-Capture defaults to the nearest project tree, otherwise global; select `--global`,
+Capture defaults to the session directory’s project tree, otherwise global; select `--global`,
 `--project`, or `--root example` explicitly. Use `--scope` for a scope description,
 `--dry-run` to preview, or `-` as the answer to read multiline Markdown from stdin.
 Existing leaves are protected: read their owner and amend deliberately.
@@ -422,7 +422,7 @@ skill. One procedure block stays in the assembled context, without adding conver
 messages or extra model turns. Startup orientation and evidence checks remain once
 per fresh session; compaction preserves initialization state rather than rebooting it.
 Focused lookup, capture, maintenance, and ingestion skills remain available as needed.
-The procedure and nearest project `.knowledge/where/am/i.md` are read at plugin
+The procedure and session directory’s project `.knowledge/where/am/i.md` are read at plugin
 startup through the shared loader, so restart after changing them. The orientation
 is included verbatim; its evidence and root proofs still need checking. This context
 can be sent to the configured model provider; it contains the procedure, not the
@@ -433,8 +433,9 @@ Codex's native `SessionStart` hook delivers the same canonical procedure as deve
 context on startup, resume, clear, and after compaction—not on every user prompt.
 Resume and compaction restore context without repeating completed startup work.
 Review/trust the new `SessionStart` definition in `/hooks`, then start a fresh
-session to test startup injection. The hook also includes the nearest project
-`.knowledge/where/am/i.md`, resolving from the session working directory. A disabled
+session to test startup injection. The hook also includes the session directory’s project
+`.knowledge/where/am/i.md`, only in the session working directory. Parent directories and global orientation
+are never searched automatically. A disabled
 or untrusted hook cannot supply it.
 
 Codex can send Bash output text without an exit code. The post-tool adapter prefers

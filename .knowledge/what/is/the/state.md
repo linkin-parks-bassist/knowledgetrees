@@ -158,10 +158,10 @@ The owner authorized publication of this update. No uncertainty hook was added.
 ## Shared startup orientation
 
 Codex SessionStart and OpenCode system-context bootstrap share the Python startup
-loader. It resolves the supplied cwd and chooses the nearest ancestor containing
-.knowledge. It appends where/am/i.md verbatim after the canonical procedure,
+loader. It resolves the supplied cwd and reads only that directory’s
+.knowledge; it never searches parent directories. It appends where/am/i.md verbatim after the canonical procedure,
 labeling the source and retaining the obligation to verify evidence/proofs.
-It never substitutes a broader root when the nearest orientation is missing;
+It never substitutes a parent or global orientation when the local file is missing;
 missing or oversized (over 64 KiB) orientation reports a diagnostic and retains
 the canonical bootstrap. No root means no injected project orientation.
 Codex startup/resume/clear/compact events use the same loader; OpenCode loads it
@@ -178,3 +178,10 @@ tests/test-opencode-hooks.mjs. Relevant integration checks passed.
 Installed handler and OpenCode adapter match repository bytes. Hook, OpenCode
 adapter, and installer integration checks passed, along with project/example proof
 sweeps and git diff --check. Live OpenCode startup requires a restart to verify.
+
+Privacy boundary: automatic orientation injection is restricted to the supplied
+session directory. Parent/home orientations are never searched or used as fallback.
+The canonical global procedure remains loaded; this does not inject global orientation.
+
+Local-directory privacy regression tests, Python/OpenCode hook tests, installer
+tests, and project/example proof checks passed. Both installed adapters are updated.

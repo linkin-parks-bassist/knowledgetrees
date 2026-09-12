@@ -38,10 +38,15 @@ def main():
         nested.mkdir(parents=True)
         for harness in ("codex", "opencode"):
             for source in ("startup", "resume", "clear", "compact"):
-                result, code = handle(harness, "start", {"source": source, "cwd": str(nested)})
+                result, code = handle(harness, "start", {"source": source, "cwd": str(directory)})
                 context = result["hookSpecificOutput"]["additionalContext"] if harness == "codex" else result["additionalContext"]
                 assert orientation.read_text() in context
                 assert str(orientation) in context
+        # Privacy boundary: parent orientation must never be injected from a subdirectory.
+        for harness in ("codex", "opencode"):
+            result, _ = handle(harness, "start", {"source": "startup", "cwd": str(nested)})
+            context = result["hookSpecificOutput"]["additionalContext"] if harness == "codex" else result["additionalContext"]
+            assert "Nearest project orientation" not in context
         # No project root: keep the canonical bootstrap without invented orientation.
         result, _ = handle("codex", "start", {"source": "startup", "cwd": temporary})
         assert "Nearest project orientation" not in result["hookSpecificOutput"]["additionalContext"]
