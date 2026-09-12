@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T15:33:08+10:00'
+verified_at: '2026-09-12T16:59:59+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request in the active Codex session
@@ -28,6 +28,11 @@ one verifier under the global knowledge root, asserts the bootstrap in the user'
 links to the installed `how/to/use/knowledgetrees.md`. The compatibility skill is a
 bootstrap created by the installer for current harnesses, not a parallel knowledge
 authority.
+The compact bootstrap must carry observable lookup gates inline and link detailed
+retrieval, capture, maintenance, and ingestion procedures. Real root orientations
+must name branch purposes and actual entry routes. Installer OpenCode grants require
+an informed `[n/Y]` gate before any writes, disclose reads and knowledge-tree writes,
+and preserve unrelated configuration and the empty example orientation.
 It is invoked once when a fresh agent session bootstraps, not once per user message,
 turn, or task; a loaded session continues applying the procedure without rebooting.
 

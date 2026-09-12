@@ -1,0 +1,92 @@
+---
+verified_at: '2026-09-12T16:50:03+10:00'
+verified_by: codex /root
+scope: public knowledge-tree example
+source: sanitized operational recommendations and the canonical knowledge-tree contract
+verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
+review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
+---
+
+Maintain current truth in place within current authority. Knowledge records facts
+and procedure; it neither grants execution permission nor resurrects superseded
+requirements. Keep one clear canonical owner per answer across composed directory
+scopes, not parallel monolithic documentation authorities.
+
+## Establish and orient active roots
+
+Every required root contains `how/`, `what/`, `where/`, `why/`, and `where/am/i.md`.
+Repair missing components immediately when permitted. Any directory can own a local
+root; use the nearest applicable root and broader roots only for shared context.
+Project leaves must be portable across machines and checkout locations.
+
+Orientation is a truthful README-like projection, not a thin link catalog. Describe
+scope, topology, priorities, state, boundaries, and concrete semantic entry routes.
+Include at least one line for every canonical branch saying which questions it
+answers and a few actual exemplar paths overall; describe optional branches such
+as `when/` when present. Verify exemplars exist. A branch with no answers yet is
+explicitly empty, not populated with invented examples. Navigation belongs in each
+root's orientation because it is the guaranteed starting point.
+
+Repository roots also contain and maintain four current-truth leaves:
+
+- `what/is/the/spec.md`: governing requirements and acceptance contract; directly
+  contain the cohesive answer, except when canonical authority is genuinely external.
+- `what/is/the/plan.md`: approved implementation plan, decision points, completion.
+- `what/is/the/state.md`: implemented, checked, broken, or blocked present.
+- `what/is/next.md`: ordered immediate next work.
+
+Create missing leaves from evidence or truthful minimal/unresolved content, never
+invent requirements or priorities. Read the active repository spine at task startup.
+Before reporting repository-task completion, refresh state and next action, removing
+superseded information. These are coordinated projections, not append-only journals.
+
+Tree payloads are Markdown leaves only: no scripts, JSON, images, caches, manifests,
+copied code, or source bundles. Root-level `.git` is storage metadata; never create
+nested Git repositories in project roots. Only the global root may contain the
+infrastructure directory `.tools/`; scripts otherwise belong outside the tree.
+
+## Proof checks and falsification
+
+Call the single installed `~/.knowledge/.tools/verify-knowledgetree-proofs`.
+Use `--root ROOT` for an explicit root. Check every active root during bootstrap
+and on entry into a new scope. Before consequential use, after proof changes, when
+focus narrows, and before completing materially affected work, check relevant exact
+semantic path-component tokens. Multiple tokens are disjunctive, not physical
+subdirectory names; use `--verbose` for diagnostics.
+
+Inspect each proof's assertion and read-only predicate before execution. A passing
+proof stamps `Proof: (verified at …)`; a failed or timed-out execution stamps
+`Proof: (falsified at …)` and marks the leaf's `falsified_at`. Malformed proof
+structure also falsifies the leaf. Legacy `Proof:` markers are accepted. Writes
+preserve hardlink identity; `--no-stamp` makes checks read-only.
+
+Stop relying on falsified knowledge. Inspect evidence and repair or remove false,
+malformed, or unsafe claims and predicates only within authorized scope. Review the
+whole leaf independently before explicitly clearing `falsified_at`; rerun until
+checks pass. Passing every proof is necessary but not sufficient for leaf validation,
+and never changes leaf `verified_at` or clears a falsification automatically.
+The verifier neither judges proof eligibility nor performs agentic repair.
+
+## Growth, freshness, and retirement
+
+Capture reusable answers immediately after a lookup miss is resolved. Tree hits
+create no duplicate leaf. Unresolved questions record blocker and next check;
+forbidden writes require a scoped handoff. Read `how/to/add/knowledge/leaves.md`
+before capture or proof creation. Timestamp freshness is relative to source
+volatility and evidence, not recency alone.
+
+Reread before replacing a leaf, preserve concurrent edits, correct contradictions
+against governing evidence, and update affected orientation/spine projections.
+Commit project knowledge with owning changes when permitted; never automatically
+publish global personal knowledge. Superseded current truth leaves the active
+answer; Git retains history and explicit history is kept only when still useful.
+
+Ingest redundant documents section by section under
+`how/should/legacy/documents/be/ingested/into/a/knowledge/tree.md`. Retire them only
+after verified answer coverage and authorization. Broad enumeration is a last-resort
+retrieval diagnostic, or a bounded authorized migration audit, not routine orientation.
+
+Before finishing, check that reusable discoveries were captured, relevant predicates
+passed, scope and provenance are truthful, roots are canonical, payloads are leaves,
+and a representative sentence-derived route works. Do not turn gardening judgments,
+atomicity, cohesion, or leaf length into automatic rewrite rules.

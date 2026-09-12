@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T15:01:07+10:00'
+verified_at: '2026-09-12T16:59:59+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request in the active Codex session; filesystem inspection
@@ -21,3 +21,15 @@ Use `what/is/the/spec.md` for the acceptance contract, `what/is/the/plan.md` for
 approved workflow, `what/is/the/state.md` for verified present state, and
 `what/is/next.md` for the next action. Use `example/where/am/i.md` to enter the
 public example corpus.
+
+## How to navigate this tree
+
+- `how/` contains repository procedures: `how/to/work/on/this/repository.md`,
+  `how/to/test/the/installer.md`, and `how/to/test/proof/stamps.md`.
+- `what/` owns requirements and progress: `what/is/the/spec.md`,
+  `what/is/the/plan.md`, `what/is/the/state.md`, and `what/is/next.md`.
+- `where/` establishes repository scope through `where/am/i.md`.
+- `why/` explains layout through `why/is/the/example/visible.md`.
+
+Reusable procedures live in the global root and distributable `example/`, not in
+this repository's project-state leaves.

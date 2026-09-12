@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T15:42:49+10:00'
+verified_at: '2026-09-12T16:59:59+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
@@ -41,3 +41,10 @@ integration coverage in `tests/test-proof-stamps.py`.
 
 The README opens with the requested tongue-in-cheek categorical-limit and skeptical
 intuitionistic sub-verification tagline.
+
+The bootstrap now carries observable pre-shell lookup gates inline, with detailed
+retrieval, capture, maintenance, and ingestion in direct-answer leaves. Global and
+repository orientations provide concrete entry routes. The installer obtains
+informed `[n/Y]` consent before configuring scoped OpenCode reads and knowledge-tree
+writes or making any installation changes. Integration checks and read-only proof
+sweeps of repository, example, and installed global trees pass.

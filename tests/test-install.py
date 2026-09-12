@@ -2,7 +2,9 @@
 """Integration checks for the knowledge-tree installer."""
 
 from pathlib import Path
+import json
 import os
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -12,11 +14,12 @@ REPOSITORY = Path(__file__).resolve().parents[1]
 INSTALLER = REPOSITORY / "install"
 
 
-def run(*arguments: str, expected: int = 0) -> subprocess.CompletedProcess[str]:
+def run(*arguments: str, expected: int = 0, answer: str = "Y\n") -> subprocess.CompletedProcess[str]:
     completed = subprocess.run(
         [str(INSTALLER), *arguments],
         cwd=REPOSITORY,
         text=True,
+        input=answer,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -26,6 +29,13 @@ def run(*arguments: str, expected: int = 0) -> subprocess.CompletedProcess[str]:
 
 
 def main() -> None:
+    merge = runpy.run_path(str(INSTALLER))["opencode_config_text"]
+    hypothetical_home = Path("/example-user")
+    scoped = "/example-user/.knowledge/**"
+    reordered = merge(json.dumps({"permission": {"read": {scoped: "allow", "*": "deny"}}}), hypothetical_home)
+    assert list(json.loads(reordered)["permission"]["read"]).index(scoped) > 0
+    assert merge(reordered, hypothetical_home) == reordered
+
     with tempfile.TemporaryDirectory(prefix="knowledgetrees-install-test-") as temporary:
         target_home = Path(temporary) / "user"
         home_arguments = ("--home", str(target_home))
@@ -34,6 +44,25 @@ def main() -> None:
         dry_run = run("--home", str(dry_home), "--dry-run")
         assert "Would hard-link" in dry_run.stdout
         assert not dry_home.exists()
+        assert "[n/Y]" in dry_run.stdout
+
+        for reply in ("n\n", ""):
+            denied_home = Path(temporary) / ("denied-user" if reply else "eof-user")
+            denied = run("--home", str(denied_home), expected=2, answer=reply)
+            assert "cancelled" in denied.stdout
+            assert not denied_home.exists(), "consent must precede every write"
+
+        accepted_home = Path(temporary) / "default-consent-user"
+        run("--home", str(accepted_home), answer="\n")
+        assert (accepted_home / ".knowledge").is_dir()
+
+        malformed_home = Path(temporary) / "malformed-config-user"
+        malformed_config = malformed_home / ".config/opencode/opencode.json"
+        malformed_config.parent.mkdir(parents=True)
+        malformed_config.write_text("{broken")
+        run("--home", str(malformed_home), expected=2)
+        assert malformed_config.read_text() == "{broken"
+        assert not (malformed_home / ".knowledge").exists()
 
         codex_skill = target_home / ".codex" / "skills" / "knowledgetrees" / "SKILL.md"
         codex_config = target_home / ".codex" / "config.toml"
@@ -49,14 +78,23 @@ def main() -> None:
         agents_path = target_home / "AGENTS.md"
         agents_path.symlink_to(instructions.name)
 
-        run(*home_arguments)
+        opencode_config = target_home / ".config" / "opencode" / "opencode.json"
+        opencode_config.parent.mkdir(parents=True)
+        opencode_config.write_text(json.dumps({"model": "example/local-model", "permission": {
+            "skill": {"*": "deny"}, "read": {"*": "ask"}, "edit": {"*": "deny"}
+        }}))
+
+        installation = run(*home_arguments)
+        assert "WARNING" in installation.stdout and "WRITE" in installation.stdout
         knowledge = target_home / ".knowledge"
         canonical = knowledge / "how" / "to" / "use" / "knowledgetrees.md"
         shared_skill = target_home / ".agents" / "skills" / "knowledgetrees" / "SKILL.md"
         orientation = knowledge / "where" / "am" / "i.md"
         verifier = knowledge / ".tools" / "verify-knowledgetree-proofs"
 
-        assert orientation.read_bytes() == b""
+        assert "How to navigate this tree" in orientation.read_text()
+        for branch in ("how/", "what/", "where/", "why/"):
+            assert branch in orientation.read_text()
         assert canonical.is_file()
         assert "scope: personal global" in canonical.read_text()
         for leaf in knowledge.rglob("*.md"):
@@ -70,6 +108,11 @@ def main() -> None:
         assert canonical.stat().st_ino == shared_skill.stat().st_ino == codex_skill.stat().st_ino
         assert "fresh agent session" in canonical.read_text()
         assert "first move of every task" not in canonical.read_text()
+        assert "Observable lookup gates" in canonical.read_text()
+        assert "permission-denied" in canonical.read_text()
+        for name in ("how/to/add/knowledge/leaves.md", "how/to/maintain/a/knowledge/tree.md",
+                     "how/should/an/agent/traverse/a/knowledge/tree.md"):
+            assert (knowledge / name).is_file()
         assert len(list(knowledge.rglob("verify-knowledgetree-proofs"))) == 1
 
         assert agents_path.is_symlink()
@@ -82,9 +125,23 @@ def main() -> None:
         assert 'model = "example-model"' in config
         assert config.count(str(codex_skill)) == 1
         assert "enabled = true" in config
+        opencode = json.loads(opencode_config.read_text())
+        assert opencode["model"] == "example/local-model"
+        permissions = opencode["permission"]
+        assert permissions["read"]["*"] == "ask"
+        assert permissions["edit"]["*"] == "deny"
+        assert permissions["skill"]["*"] == "deny"
+        assert permissions["skill"]["knowledgetrees"] == "allow"
+        for name in (".knowledge", ".agents"):
+            pattern = str(target_home / name) + "/**"
+            assert permissions["read"][pattern] == "allow"
+            assert permissions["external_directory"][pattern] == "allow"
+        assert permissions["edit"][str(knowledge) + "/**"] == "allow"
+        assert permissions["edit"][str(target_home / ".agents") + "/**"] == "ask"
 
         orientation.write_text("Local environment orientation.\n")
-        run(*home_arguments)
+        rerun = run(*home_arguments, answer="")
+        assert "[n/Y]" not in rerun.stdout
         assert orientation.read_text() == "Local environment orientation.\n"
         assert agents_path.read_text().count(
             "BEGIN KNOWLEDGETREES BOOTSTRAP"

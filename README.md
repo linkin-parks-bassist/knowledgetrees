@@ -44,6 +44,10 @@ tools, operational boundaries, and the semantic routes an agent should try first
 Write enough that a fresh agent can orient without recursively inventorying the
 workspace.
 
+Describe what each branch holds and include real leaf paths, not just a branch
+list. Route planning to `how/to/make/a/plan.md`, for example, and clarification to
+`when/to/ask/clarification.md`.
+
 Keep the orientation current and useful, but do not put passwords, tokens, private
 keys, or other secrets in it. If the tree will be published, also remove personal or
 organization-specific details that should not become public.
@@ -330,6 +334,15 @@ links, normal version control, and ordinary tooling.
 Rigor belongs in the obligations. Flexibility belongs in the organization.
 
 ## Install
+
+The installer asks `[n/Y]` before configuring OpenCode permissions. The warning
+discloses automatic reads of `~/.knowledge/**` and `~/.agents/**`, automatic writes
+to `~/.knowledge/**`, and that read contents may reach the configured model
+provider. Edits to `~/.agents/**` still require approval. Declining cancels before
+any installation changes; an existing matching configuration needs no new grant.
+
+New installations get a navigation starter in `where/am/i.md`; add your verified
+local environment facts and concrete routes. Existing orientations are preserved.
 
 Run the installer from a clone:
 

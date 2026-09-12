@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T15:01:07+10:00'
+verified_at: '2026-09-12T16:59:59+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request and knowledgetrees operating procedure
@@ -27,3 +27,8 @@ review_when: Recheck when a step completes or the requested workflow changes.
     README explanation with what users observe after installation.
 
 The approved publication plan is complete.
+
+13. [x] Apply sanitized retrieval recommendations to example and installed global
+    knowledge; preserve the empty example orientation.
+14. [x] Add consent-before-write OpenCode integration and validate scoped permissions,
+    installer behavior, and all three proof sweeps.

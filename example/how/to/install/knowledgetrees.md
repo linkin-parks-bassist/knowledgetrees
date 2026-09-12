@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T14:54:05+10:00'
+verified_at: '2026-09-12T16:59:59+10:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: repository installer and current agent-harness discovery behavior
@@ -13,6 +13,13 @@ into `~/.knowledge` without installing the example's illustrative spine, preserv
 an existing `where/am/i.md`, installs one verifier at
 `~/.knowledge/.tools/verify-knowledgetree-proofs`, and asserts the mandatory
 bootstrap in `~/AGENTS.md`.
+
+For a new root, it seeds truthful generic navigation in `where/am/i.md`; add
+verified local environment facts. Before any writes, OpenCode configuration changes
+require informed `[n/Y]` consent: reads of `~/.knowledge/**` and `~/.agents/**`,
+writes to `~/.knowledge/**`, and possible model-provider exposure are disclosed.
+Edits to `.agents/**` remain approval-gated. Declining or EOF cancels without changes.
+Read `how/to/allow/knowledge-tree/access/in/opencode.md` for permission semantics.
 
 That bootstrap invokes the compatibility skill once at the start of a fresh agent
 session. The loaded procedure remains active across messages, turns, and tasks;

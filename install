@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 from pathlib import Path
@@ -142,6 +143,89 @@ def codex_config_text(current: str, skill_path: Path) -> str:
     return current + separator + block
 
 
+def opencode_config_text(current: str, target_home: Path) -> str:
+    config = json.loads(current) if current.strip() else {}
+    if not isinstance(config, dict):
+        raise ValueError("OpenCode configuration must be a JSON object")
+    original = copy.deepcopy(config)
+    permission = config.get("permission", {})
+    if isinstance(permission, str):
+        permission = {"*": permission}
+    if not isinstance(permission, dict):
+        raise ValueError("OpenCode permission must be an action or object")
+    config["permission"] = permission
+    paths = [str(target_home / name) + "/**" for name in (".knowledge", ".agents")]
+    defaults = {"read": "allow", "external_directory": "ask", "edit": "allow", "skill": "allow"}
+    for kind, default in defaults.items():
+        rules = permission.get(kind, {"*": permission.get("*", default)})
+        if isinstance(rules, str):
+            rules = {"*": rules}
+        if not isinstance(rules, dict):
+            raise ValueError(f"OpenCode {kind} permission must be an action or object")
+        if kind == "read" and kind not in permission and "*" not in permission:
+            rules.update({"*.env": "deny", "*.env.*": "deny", "*.env.example": "allow"})
+        additions = {"knowledgetrees": "allow"} if kind == "skill" else {
+            path: "ask" if kind == "edit" and path == paths[1] else "allow" for path in paths
+        }
+        for pattern, action in additions.items():
+            rules.pop(pattern, None)
+            rules[pattern] = action
+        permission[kind] = rules
+    # Rule order matters even when ordinary dictionary equality reports no change.
+    unchanged = json.dumps(config, ensure_ascii=False) == json.dumps(original, ensure_ascii=False)
+    return current if unchanged else json.dumps(config, indent=2, ensure_ascii=False) + "\n"
+
+
+def permission_consent(target_home: Path) -> bool:
+    print("WARNING: Installation will grant OpenCode agents automatic read access to:")
+    for name in (".knowledge", ".agents"):
+        print(f"  {target_home / name}/**")
+    print("Folder contents may be sent to your configured model/provider.")
+    print(f"Agents will also be allowed to WRITE to {target_home / '.knowledge'}/**.")
+    print("The knowledgetrees skill will be enabled; edits in .agents still require approval.")
+    while True:
+        try:
+            answer = input("Grant these permissions and continue installation? [n/Y] ").strip().lower()
+        except EOFError:
+            print("\nNo consent received; installation cancelled without changes.")
+            return False
+        if answer in ("", "y", "yes"):
+            return True
+        if answer in ("n", "no"):
+            print("Installation cancelled without changes.")
+            return False
+        print("Please answer n or Y.")
+
+
+def initial_orientation() -> bytes:
+    return b"""---
+verified_at: '2026-09-12T16:50:03+10:00'
+verified_by: codex /root
+scope: personal global
+source: installer orientation template
+verification: Reviewed reusable-corpus navigation; no host-specific facts are asserted.
+review_when: Add local environment facts and routes after installation.
+---
+
+This user-wide root stores reusable tooling and knowledge-tree procedures. Project
+and subsystem facts belong in their nearest local roots; private or restricted
+material must not be promoted into public exports.
+
+## How to navigate this tree
+
+- `how/` - procedures: `how/to/use/knowledgetrees.md`,
+  `how/should/an/agent/traverse/a/knowledge/tree.md`, `how/to/add/knowledge/leaves.md`.
+- `what/` - definitions and standing conditions: `what/is/a/knowledge/tree.md`.
+- `where/` - environment and tool locations; add actual local location answers as
+  they are verified. No host-specific location routes are recorded here yet.
+- `why/` - rationale: `why/do/knowledge/lookups/need/observable/gates.md`.
+- `when/` - decision conditions: `when/to/ask/clarification.md`.
+
+Describe your local environment here, including scope, topology, tools, boundaries,
+priorities, and concrete routes. Verify exemplar paths before adding them.
+"""
+
+
 def parser_for_cli() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -207,7 +291,8 @@ def main(arguments: list[str] | None = None) -> int:
         for destination in file_targets
         if path_exists(destination) and not destination.is_file()
     ]
-    for destination in (target_home / "AGENTS.md", target_home / ".codex" / "config.toml"):
+    opencode_config = target_home / ".config" / "opencode" / "opencode.json"
+    for destination in (target_home / "AGENTS.md", target_home / ".codex" / "config.toml", opencode_config):
         if path_exists(destination) and not destination.is_file():
             invalid_targets.append(destination)
     if invalid_targets:
@@ -240,6 +325,17 @@ def main(arguments: list[str] | None = None) -> int:
     config_current = config_storage.read_text() if config_storage.is_file() else ""
     config_updated = codex_config_text(config_current, skill_targets[1])
 
+    if not path_exists(opencode_config) and path_exists(opencode_config.with_suffix(".jsonc")):
+        print("error: OpenCode JSONC configuration exists; integrate its permissions manually before installation", file=sys.stderr)
+        return 2
+    opencode_storage = writable_target(opencode_config)
+    opencode_current = opencode_storage.read_text() if opencode_storage.is_file() else ""
+    try:
+        opencode_updated = opencode_config_text(opencode_current, target_home)
+    except (ValueError, TypeError) as error:
+        print(f"error: cannot safely merge OpenCode configuration: {error}", file=sys.stderr)
+        return 2
+
     if conflicts and not args.force:
         print("Refusing to overwrite differing installed content:", file=sys.stderr)
         for conflict in conflicts:
@@ -254,13 +350,19 @@ def main(arguments: list[str] | None = None) -> int:
             print(f"Would hard-link {destination} to {canonical_skill}")
         print(f"Would assert the bootstrap in {agents_path}")
         print(f"Would enable the Codex skill in {codex_config}")
+        if opencode_updated != opencode_current:
+            print(f"Would update {opencode_config} after a permission warning and [n/Y] consent.")
+            print(f"Would allow reads of {knowledge_root}/** and {target_home / '.agents'}/**, plus writes to {knowledge_root}/**.")
         return 0
+
+    if opencode_updated != opencode_current and not permission_consent(target_home):
+        return 2
 
     for branch in ("how", "what", "where", "why"):
         (knowledge_root / branch).mkdir(parents=True, exist_ok=True)
     orientation = knowledge_root / "where" / "am" / "i.md"
     if not path_exists(orientation):
-        atomic_write(orientation, b"", 0o644)
+        atomic_write(orientation, initial_orientation(), 0o644)
 
     for _source, destination, content in leaf_installs:
         if destination.is_symlink() or not same_bytes(destination, content):
@@ -297,6 +399,9 @@ def main(arguments: list[str] | None = None) -> int:
     if config_updated != config_current:
         mode = config_storage.stat().st_mode & 0o777 if config_storage.exists() else 0o600
         atomic_write(config_storage, config_updated.encode(), mode)
+    if opencode_updated != opencode_current:
+        mode = opencode_storage.stat().st_mode & 0o777 if opencode_storage.exists() else 0o600
+        atomic_write(opencode_storage, opencode_updated.encode(), mode)
 
     verifier_environment = os.environ.copy()
     verifier_environment["HOME"] = str(target_home)
@@ -314,6 +419,7 @@ def main(arguments: list[str] | None = None) -> int:
     print(f"Installed one verifier at {verifier_target}")
     print("Installed hard-linked compatibility skills for shared harnesses and Codex")
     print(f"Bootstrap asserted in {agents_path}")
+    print(f"OpenCode scoped knowledge-tree permissions configured in {opencode_config}")
     print(f"Next: describe the local environment in {orientation}")
     return 0
 
