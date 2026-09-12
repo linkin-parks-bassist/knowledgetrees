@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T15:33:08+10:00'
+verified_at: '2026-09-12T15:42:49+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: completed publication plan and current repository state
-verification: Confirmed proof outcome timestamps and sticky leaf falsification are implemented and tested; agentic repair is intentionally outside scope.
+verification: Confirmed the requested README tagline is incorporated and no repository follow-up is queued.
 review_when: Update whenever the next actionable step changes.
 ---
 

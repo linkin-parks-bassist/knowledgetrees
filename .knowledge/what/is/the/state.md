@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T15:33:08+10:00'
+verified_at: '2026-09-12T15:42:49+10:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
@@ -38,3 +38,6 @@ failed proof or malformed proof structure, and retains that flag until independe
 review clears it. Passing proofs never modify leaf verification metadata. Legacy
 markers, read-only mode, mixed outcomes, and hardlink preservation have dedicated
 integration coverage in `tests/test-proof-stamps.py`.
+
+The README opens with the requested tongue-in-cheek categorical-limit and skeptical
+intuitionistic sub-verification tagline.
