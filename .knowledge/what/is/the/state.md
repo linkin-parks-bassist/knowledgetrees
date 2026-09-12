@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T12:06:21+00:00'
+verified_at: '2026-09-12T12:21:21+00:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: direct filesystem, verifier, privacy scan, Git, and GitHub inspection
@@ -97,8 +97,13 @@ reminder delivery, not semantic capture verification. Python protocol tests and 
 mock OpenCode harness test cover failure context, successful-work thresholds,
 deduplication, session isolation, synthetic-loop prevention, and model/agent retention.
 Adapters are installed locally; fresh OpenCode configuration discovery includes
-the plugin. Codex trust still requires user review through `/hooks`. Live model
-behavior remains untested, and this implementation is awaiting publication review.
+the plugin. A live Codex test exposed stdout-only Bash hook transport, which lost
+silent failures. A guarded pre-tool bridge now records private exit-status receipts
+without altering stdout; live wrapped false delivered actual developer-context
+guidance and retained exit 1. Automatic wrapping requires trusting the new
+PreToolUse definition and is limited to already-bypassed sessions, avoiding approval
+bypass in other modes. OpenCode/Copilot model behavior remains untested, and this
+implementation is awaiting publication review.
 
 Installer leaf comparisons ignore only successful proof-marker timestamp refreshes,
 preventing a verifier-stamped leaf from conflicting on an idempotent reinstall.

@@ -412,11 +412,19 @@ The installer adds reminders for **Codex, OpenCode, and GitHub Copilot CLI**:
   follow-up. The agent checks existing owners and records missing discoveries,
   or reports that there is nothing new to retain.
 
-Codex uses `PostToolUse` and `Stop`; Copilot CLI uses `postToolUse`,
+Codex uses `PreToolUse`, `PostToolUse`, and `Stop`; Copilot CLI uses `postToolUse`,
 `postToolUseFailure`, and `agentStop`; OpenCode uses a local plugin and
 `session.idle`. Existing unrelated hooks are preserved. In Codex, open `/hooks`
 and review/trust the installed definitions; new hooks are skipped until trusted.
 Restart OpenCode to load its plugin, and start a new Copilot CLI session.
+
+This Codex release sends Bash output text without the exit code. Its pre-tool
+adapter records exit status privately while preserving stdout and the command's
+exit status. Codex requires an `allow` decision for rewrites, so automatic wrapping
+is restricted to sessions **already in bypass-permissions mode**. It never changes
+your mode or approves commands in approval-based sessions. Without structured
+status or this bridge, shell failure detection is limited; do not weaken permissions
+just to enable it. Review/trust the new `PreToolUse` definition in `/hooks`.
 
 Set `KT_HOOK_MIN_CALLS` in the harness environment to change the activity threshold.
 Session-isolated counters and hashed event receipts live under

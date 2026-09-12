@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import sqlite3
 import sys
 import time
@@ -66,7 +67,77 @@ def failed(value):
     return False
 
 
+def wrap_bash(payload):
+    # Codex requires allow for updatedInput. Never introduce approval bypass.
+    if os.name != "posix" or payload.get("permission_mode") != "bypassPermissions" or payload.get("tool_name") != "Bash":
+        return {}, 0
+    original = payload.get("tool_input", {})
+    if not isinstance(original, dict) or not isinstance(original.get("command"), str):
+        return {}, 0
+    command = original["command"]
+    if not command.strip() or command.startswith("# kt-status-carrier\n"):
+        return {}, 0
+    session = payload.get("session_id")
+    call = payload.get("tool_use_id")
+    if not isinstance(session, str) or not session or not isinstance(call, str) or not call:
+        return {}, 0
+    key = hashlib.sha256(f"codex:{session}".encode()).hexdigest()
+    receipt = hashlib.sha256(call.encode()).hexdigest()
+    # A subshell preserves cwd, shell variables/functions, exit/exec behavior and
+    # output. eval isolates syntax errors; the parent records status then exits alike.
+    wrapped = (f"# kt-status-carrier\n# kt-status-receipt {key} {receipt}\n"
+               "_kt_initial_flags=$-\nset +e\n(\n"
+               "  case \"$_kt_initial_flags\" in *e*) set -e ;; esac\n"
+               f"  eval -- {shlex.quote(command)}\n)\n"
+               "_kt_exit_status=$?\n"
+               f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).resolve()))} _record {key} {receipt} \"$_kt_exit_status\"\n"
+               "exit \"$_kt_exit_status\"")
+    return {"hookSpecificOutput": {"hookEventName": "PreToolUse",
+            "permissionDecision": "allow", "updatedInput": {**original, "command": wrapped}}}, 0
+
+
+def shell_failure(payload, response, connection=None):
+    command = payload.get("tool_input", {}).get("command", "") if isinstance(payload.get("tool_input"), dict) else ""
+    if command.startswith("# kt-status-carrier\n"):
+        token = re.search(r"(?m)^# kt-status-receipt ([a-f0-9]{64}) ([a-f0-9]{64})$", command)
+        session = payload.get("session_id")
+        if token and isinstance(session, str) and token[1] == hashlib.sha256(f"codex:{session}".encode()).hexdigest():
+            if connection is not None:
+                row = connection.execute("SELECT status FROM exit_status WHERE session = ? AND receipt = ?", (token[1], token[2])).fetchone()
+            else:
+                with sqlite3.connect(state_database(), timeout=3) as reader:
+                    reader.execute("CREATE TABLE IF NOT EXISTS exit_status (session TEXT, receipt TEXT, status INTEGER, touched REAL, PRIMARY KEY(session, receipt))")
+                    row = reader.execute("SELECT status FROM exit_status WHERE session = ? AND receipt = ?", (token[1], token[2])).fetchone()
+            if row:
+                return row[0] != 0
+    return failed(response)
+
+
+def state_database():
+    state = Path(os.environ.get("KT_HOOK_STATE_DIR",
+                 str(Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "knowledgetrees")))
+    state.mkdir(parents=True, exist_ok=True, mode=0o700)
+    database = state / "hooks.sqlite3"
+    descriptor = os.open(database, os.O_CREAT | os.O_WRONLY, 0o600)
+    os.close(descriptor)
+    os.chmod(database, 0o600)
+    return database
+
+
+def record_status(arguments):
+    if len(arguments) != 3 or not all(re.fullmatch(r"[a-f0-9]{64}", v) for v in arguments[:2]):
+        raise ValueError("invalid exit-status receipt")
+    status = int(arguments[2])
+    if not 0 <= status <= 255:
+        raise ValueError("invalid shell exit status")
+    with sqlite3.connect(state_database(), timeout=3) as connection:
+        connection.execute("CREATE TABLE IF NOT EXISTS exit_status (session TEXT, receipt TEXT, status INTEGER, touched REAL, PRIMARY KEY(session, receipt))")
+        connection.execute("INSERT OR REPLACE INTO exit_status VALUES (?, ?, ?, ?)", (*arguments[:2], status, time.time()))
+
+
 def handle(harness, event, payload):
+    if event == "before":
+        return wrap_bash(payload) if harness == "codex" else ({}, 0)
     session = payload.get("session_id") or payload.get("sessionId") or payload.get("sessionID")
     if not isinstance(session, str) or not session:
         raise ValueError("hook payload lacks a session id; refusing to mix sessions")
@@ -74,22 +145,17 @@ def handle(harness, event, payload):
     if minimum < 1:
         raise ValueError("KT_HOOK_MIN_CALLS must be positive")
     key = hashlib.sha256(f"{harness}:{session}".encode()).hexdigest()
-    state = Path(os.environ.get("KT_HOOK_STATE_DIR",
-                 str(Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "knowledgetrees")))
-    state.mkdir(parents=True, exist_ok=True, mode=0o700)
-    database = state / "hooks.sqlite3"
-    # Private local machine state, never knowledge-tree payload or public logs.
-    descriptor = os.open(database, os.O_CREAT | os.O_WRONLY, 0o600)
-    os.close(descriptor)
-    os.chmod(database, 0o600)
+    database = state_database()
     now = time.time()
     message = None
     with sqlite3.connect(database, timeout=3) as connection:
         connection.execute("CREATE TABLE IF NOT EXISTS sessions (key TEXT PRIMARY KEY, calls INTEGER, failures INTEGER, reviewing INTEGER, touched REAL)")
         connection.execute("CREATE TABLE IF NOT EXISTS events (session TEXT, receipt TEXT, touched REAL, PRIMARY KEY(session, receipt))")
+        connection.execute("CREATE TABLE IF NOT EXISTS exit_status (session TEXT, receipt TEXT, status INTEGER, touched REAL, PRIMARY KEY(session, receipt))")
         connection.execute("BEGIN IMMEDIATE")
         connection.execute("DELETE FROM sessions WHERE touched < ?", (now - 7 * 86400,))
         connection.execute("DELETE FROM events WHERE touched < ?", (now - 7 * 86400,))
+        connection.execute("DELETE FROM exit_status WHERE touched < ?", (now - 7 * 86400,))
         connection.execute("INSERT OR IGNORE INTO sessions VALUES (?, 0, 0, 0, ?)", (key, now))
         calls, failures, reviewing = connection.execute("SELECT calls, failures, reviewing FROM sessions WHERE key = ?", (key,)).fetchone()
         if event == "prompt":
@@ -107,7 +173,7 @@ def handle(harness, event, payload):
                 fresh = connection.execute("INSERT OR IGNORE INTO events VALUES (?, ?, ?)", (key, receipt, now)).rowcount
                 if fresh:
                     calls += 1
-                    if event == "failed" or failed(response):
+                    if event == "failed" or (shell_failure(payload, response, connection) if harness == "codex" else failed(response)):
                         failures += 1
                         message = FAILURE
         elif event == "stop":
@@ -129,9 +195,16 @@ def handle(harness, event, payload):
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "_record":
+        try:
+            record_status(sys.argv[2:])
+            return 0
+        except (OSError, ValueError, sqlite3.Error) as error:
+            print(f"kt-hooks: exit status unavailable: {error}", file=sys.stderr)
+            return 1
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("harness", choices=("codex", "copilot", "opencode"))
-    parser.add_argument("event", choices=("prompt", "after", "failed", "stop"))
+    parser.add_argument("event", choices=("prompt", "before", "after", "failed", "stop"))
     args = parser.parse_args()
     try:
         payload = json.load(sys.stdin)

@@ -10,6 +10,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+from unittest.mock import patch
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 HANDLER = REPOSITORY / "tools/kt-hooks"
@@ -17,6 +18,32 @@ HANDLER = REPOSITORY / "tools/kt-hooks"
 
 def main():
     failure = runpy.run_path(str(HANDLER))["failed"]
+    wrap = runpy.run_path(str(HANDLER))["wrap_bash"]
+    detect_shell = runpy.run_path(str(HANDLER))["shell_failure"]
+    def prepare(command, mode="bypassPermissions", session="carrier-fixture"):
+        return wrap({"tool_name": "Bash", "tool_use_id": "fixture", "permission_mode": mode,
+                     "session_id": session,
+                     "tool_input": {"command": command, "description": "preserved description"}})[0]
+    for mode in ("default", "acceptEdits", "dontAsk", "plan", None):
+        assert prepare("false", mode) == {}, "rewriting must never introduce permission bypass"
+    with tempfile.TemporaryDirectory(prefix="kt carrier test ") as temporary, patch.dict(os.environ, {"KT_HOOK_STATE_DIR": temporary}):
+        for command, expected in (("false", 1), ("true", 0), ("exit 7", 7),
+                                  ("exec bash -c 'exit 3'", 3), ("if", 2),
+                                  ("printf 'hello'; exit 4", 4),
+                                  ("printf '{\"json\":true}'", 0),
+                                  ("set -e; false; printf should-not-run", 1),
+                                  ("printf '%s' 'quote with apostrophe: '\"'\"'!'; exit 8 # comment", 8)):
+            prepared = prepare(command)["hookSpecificOutput"]
+            assert prepared["updatedInput"]["description"] == "preserved description"
+            carrier = prepared["updatedInput"]["command"]
+            result = subprocess.run(["bash", "-c", carrier], text=True, capture_output=True)
+            original = subprocess.run(["bash", "-c", command], text=True, capture_output=True)
+            assert result.returncode == expected, (command, result.stdout, result.stderr)
+            assert result.stdout == original.stdout, "carrier must preserve stdout byte-for-byte"
+            assert detect_shell({"session_id": "carrier-fixture", "tool_input": {"command": carrier}}, result.stdout) == (expected != 0)
+            assert prepare(carrier) == {}, "carrier must not be nested by duplicate hooks"
+            if "set -e" in command:
+                assert "should-not-run" not in result.stdout
     assert failure({"exit_code": 1}) and not failure({"exit_code": 0, "output": "Exit code: 1"})
     assert failure({"isError": True}) and failure({"resultType": "denied"})
     assert failure({"content": [{"type": "text", "text": "Process exited with code 7\n"}]})
@@ -60,6 +87,14 @@ def main():
             errors = run(harness, "failed", {"sessionID": "error-session", "callID": "error-one"},
                          expected=2 if harness == "copilot" else 0)
             assert errors
+        # Actual live Codex shape: Bash response is stdout text, not result JSON.
+        carrier = prepare("false", session="stdout-transport")["hookSpecificOutput"]["updatedInput"]["command"]
+        shell = subprocess.run(["bash", "-c", carrier], text=True, capture_output=True, env=env)
+        actual_shape = {"session_id": "stdout-transport", "tool_name": "Bash",
+                        "permission_mode": "bypassPermissions", "tool_use_id": "stdout-failure",
+                        "tool_input": {"command": carrier}, "tool_response": shell.stdout}
+        assert "additionalContext" in run("codex", "after", actual_shape)["hookSpecificOutput"]
+        assert run("codex", "stop", {"session_id": "stdout-transport"})["decision"] == "block"
         # Successful work needs the configured threshold; running shell yields do not count.
         assert run("codex", "after", {"session_id": "threshold", "tool_response": {"exit_code": None, "session_id": 123}}) == {}
         for number in range(2):

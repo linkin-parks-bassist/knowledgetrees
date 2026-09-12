@@ -221,13 +221,14 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
         raise ValueError("Codex hooks configuration must contain a hooks object")
     original = copy.deepcopy(config)
     hooks = config.setdefault("hooks", {})
-    for name, event in (("UserPromptSubmit", "prompt"), ("PostToolUse", "after"), ("Stop", "stop")):
+    for name, event in (("UserPromptSubmit", "prompt"), ("PreToolUse", "before"), ("PostToolUse", "after"), ("Stop", "stop")):
         groups = hooks.setdefault(name, [])
         if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
             raise ValueError(f"malformed Codex {name} hooks")
         command = f"python3 {shlex.quote(str(handler))} codex {event}"
         if not any(isinstance(h, dict) and h.get("command") == command for g in groups for h in g.get("hooks", [])):
-            groups.append({"hooks": [{"type": "command", "command": command,
+            groups.append({**({"matcher": "Bash"} if event == "before" else {}),
+                           "hooks": [{"type": "command", "command": command,
                             "timeout": 5, "statusMessage": "Knowledge-tree reminders"}]})
     codex_bytes = (current if config == original else json.dumps(config, indent=2) + "\n").encode()
     copilot = {"version": 1, "hooks": {name: [{"type": "command", "exec": "python3",

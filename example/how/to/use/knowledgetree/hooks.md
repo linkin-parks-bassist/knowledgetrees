@@ -1,9 +1,9 @@
 ---
-verified_at: '2026-09-12T12:06:21+00:00'
+verified_at: '2026-09-12T12:21:21+00:00'
 verified_by: codex /root
 scope: public knowledge-tree example
 source: repository handler and installer; official Codex hooks, OpenCode plugins, and GitHub Copilot hooks documentation
-verification: Reviewed reminder semantics and harness protocols; isolated Python and mock OpenCode adapter tests pass. Live model behavior and fresh-session adoption remain untested.
+verification: Reviewed protocols and tested the observed Codex stdout-only shape; live wrapped false delivered developer-context guidance without changing stdout or exit status. Automatic wrapping awaits new hook trust; OpenCode/Copilot model behavior remains untested.
 review_when: Recheck after harness hook-schema or lifecycle changes.
 ---
 
@@ -55,8 +55,18 @@ handler performs no model calls and never runs or writes leaf bodies.
 
 ## Harness contracts and activation
 
-Codex `PostToolUse` supplies tool responses, including nonzero Bash exits. The
-handler adds `hookSpecificOutput.additionalContext` without suppressing the original
+The observed Codex Bash `PostToolUse` payload contains stdout text, not an exit
+code; a silent failure therefore cannot be detected from that response alone.
+Its `PreToolUse` adapter runs the command once in a Bash subshell, records the exit
+status in a private hashed receipt, preserves stdout, and exits with the original
+status. The post-tool handler joins that receipt to detect silent failures.
+Quotes, syntax errors, `exit`, `exec`, and `set -e` have regression coverage.
+Because Codex requires `permissionDecision: allow` for `updatedInput`, wrapping
+runs only in sessions already reporting `bypassPermissions`. Approval-based
+sessions are never auto-approved; native structured failure detection remains
+available when provided. Do not weaken permissions just to enable the bridge.
+
+The handler adds `hookSpecificOutput.additionalContext` without suppressing the original
 result. `Stop` can request a continuation with `decision: block` and `reason`;
 this is not guaranteed pre-display gating. Use `/hooks` to review and trust new
 definitions: installation does not bypass that requirement.

@@ -101,6 +101,8 @@ def main() -> None:
         hooks = json.loads(codex_hooks.read_text())
         assert hooks["description"] == "existing hooks" and hooks["hooks"]["Stop"][0] == unrelated_hook
         assert len(hooks["hooks"]["Stop"]) == 2
+        assert hooks["hooks"]["PreToolUse"][0]["matcher"] == "Bash"
+        assert hooks["hooks"]["PreToolUse"][0]["hooks"][0]["command"].endswith("codex before")
         assert (knowledge / ".tools/kt-hooks").is_file()
         assert os.access(knowledge / ".tools/kt-hooks", os.X_OK)
         assert (target_home / ".config/opencode/plugins/knowledgetrees.js").read_bytes() == (REPOSITORY / "tools/kt-opencode.mjs").read_bytes()

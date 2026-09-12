@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T12:06:21+00:00'
+verified_at: '2026-09-12T12:21:21+00:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: user request and knowledgetrees operating procedure
@@ -41,3 +41,7 @@ The approved publication plan is complete.
 18. [x] Make weak-only kt results fail; document and install targeted infrastructure
     updates locally without replacing customized knowledge leaves.
 19. [ ] Review the local hook implementation commit and approve publication.
+20. [x] Diagnose live Codex stdout-only hook payloads; add a guarded exit-status
+    bridge and confirm developer-context delivery for a live wrapped failure.
+21. [ ] Trust the new Codex pre-tool definition and confirm automatic plain-command
+    failure handling in a fresh trust-loaded turn.

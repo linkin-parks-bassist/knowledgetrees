@@ -1,5 +1,5 @@
 ---
-verified_at: '2026-09-12T12:06:21+00:00'
+verified_at: '2026-09-12T12:21:21+00:00'
 verified_by: codex /root
 scope: knowledgetrees repository
 source: completed publication plan and current repository state
@@ -8,7 +8,9 @@ review_when: Update whenever the next actionable step changes.
 ---
 
 Review the hook implementation commit and approve publication. Locally, review
-and trust Codex definitions using `/hooks`, restart OpenCode to load its discovered
+and trust the new Codex PreToolUse definition using `/hooks`, then test plain false
+to verify automatic wrapping. The post-tool reminder has been delivered live for
+wrapped false. Restart OpenCode to load its discovered
 plugin, and start a new Copilot CLI session. Failure reminders and one-shot task-end
 capture review are implemented; isolated adapter tests do not establish actual model
 adoption or guarantee that knowledge was captured. Do not publish before approval.
