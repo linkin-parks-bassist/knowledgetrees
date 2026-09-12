@@ -1,8 +1,8 @@
-# Semantic Knowledge Trees
+# Knowledgetrees
 
 *Agentic knowledge as a categorical limit corpus with skeptical intuitionistic sub-verification*
 
-Semantic Knowledge Trees are a stateful, self-growing, self-healing filesystem for
+Knowledgetrees are a stateful, self-growing, self-healing filesystem for
 agent knowledge. They aim to replace the split between skills, documentation, code
 comments, project memory, plans, specifications, working policy, and operational
 notes with one canonical, agent-navigable substrate.
@@ -50,7 +50,7 @@ organization-specific details that should not become public.
 
 ## A filesystem that doubles as an ontology
 
-A Knowledge Tree is usually a `.knowledge/` directory. Its paths are not arbitrary
+A knowledgetree is usually a `.knowledge/` directory. Its paths are not arbitrary
 folders: they are meaningful questions and concepts. The structure itself helps an
 agent retrieve the answer.
 
@@ -113,7 +113,7 @@ scattered across giant instruction files, README pages, skill blobs, chat histor
 plans, notes, and source comments. Agents repeatedly load too much, miss the right
 thing, or rediscover facts that another run already worked out.
 
-Knowledge Trees change that trade-off:
+Knowledgetrees change that trade-off:
 
 - **Less prompt bloat.** Detailed knowledge can exist in abundance without being
   injected into every run. Its cost is paid only when needed.
@@ -139,7 +139,7 @@ The familiar stack is fragmented:
 | `plans/` and `specs/` | Current intent, often duplicated elsewhere |
 | notes and chat history | Discoveries mixed with obsolete chronology |
 
-A Knowledge Tree gives those concerns one distributed, versionable semantic
+A Knowledgetree gives those concerns one distributed, versionable semantic
 environment. The agent asks a question, retrieves the current answer, follows
 related leaves only when necessary, and preserves better knowledge when it learns
 something reusable.
@@ -283,9 +283,9 @@ independently and compose at the point of use.
 ## A self-improving documentation methodology
 
 Traditional documentation decays because writing it is a separate activity. A
-Knowledge Tree makes maintenance part of normal agent work.
+knowledgetree makes maintenance part of normal agent work.
 
-| Traditional pattern | Knowledge Tree pattern |
+| Traditional pattern | Knowledgetree pattern |
 | --- | --- |
 | Agent searches documents | Agent follows the semantic tree to the current answer |
 | Agent discovers a missing fact | Agent verifies and records it at the right scope |
@@ -310,7 +310,7 @@ links, normal version control, and ordinary tooling.
 
 ### Hard obligations
 
-- Use applicable Knowledge Trees during ordinary agent work.
+- Use applicable knowledgetrees during ordinary agent work.
 - Keep paths semantic and traversable.
 - Store useful answers, not merely directions to internal documents.
 - Maintain current truth instead of relying on chronology.
@@ -374,7 +374,7 @@ paths share one inode: there is no wrapper and no second body to drift.
 ### Is this just RAG with folders?
 
 No. RAG usually treats documents as the primary corpus and retrieves chunks from
-them. A Knowledge Tree makes the maintained semantic answer the primary artifact,
+them. A knowledgetree makes the maintained semantic answer the primary artifact,
 with the path participating in retrieval. Search remains a fallback.
 
 ### Does every fact need its own file?
@@ -390,7 +390,7 @@ remain important. The internal agent-facing source of reusable knowledge should 
 structured as knowledge first. Human presentations can be generated or frozen when
 needed.
 
-### Does a Knowledge Tree replace task management?
+### Does a knowledgetree replace task management?
 
 No. It provides knowledge continuity. Work still needs bounded objectives,
 authority, ownership, acceptance criteria, and runtime lifecycle.
@@ -403,7 +403,7 @@ failed implementation check does not automatically rewrite a requirement.
 
 ## Methodology provenance
 
-The visible `example/` tree is adapted from a working global Knowledge Tree. Host paths,
+The visible `example/` tree is adapted from a working global knowledgetree. Host paths,
 personal facts, private state, and local experiment history have deliberately been
 excluded. The planning, specification, update, and clarification leaves distill
 generally useful ideas from the MIT-licensed
@@ -433,7 +433,7 @@ python3 -B tests/test-install.py
 
 Make the filesystem remember what agents learn.
 
-A Semantic Knowledge Tree is a distributed, stateful knowledge environment in which
+A knowledgetree is a distributed, stateful knowledge environment in which
 paths encode meaning, agents discover current answers on demand, procedures and
 policy compose with project state, mechanically checkable facts can revalidate
 themselves, and every useful piece of work has the opportunity to make the next
