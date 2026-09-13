@@ -414,7 +414,12 @@ Codex uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, and `Stop`; Copilo
 `postToolUseFailure`, and `agentStop`; OpenCode uses a local plugin and
 `session.idle`. Existing unrelated hooks are preserved. In Codex, open `/hooks`
 and review/trust the installed definitions; new hooks are skipped until trusted.
-Restart OpenCode to load its plugin, and start a new Copilot CLI session.
+Fully quit and relaunch OpenCode to load its plugin. You can resume an existing
+session with `opencode --continue` or `opencode --session SESSION_ID`, including
+one started before installation. Hooks apply to subsequent activity; historical
+tool calls are not replayed. If you attach to a separate OpenCode server, restart
+that backend too. See the [OpenCode plugin](https://opencode.ai/docs/plugins/) and
+[CLI](https://opencode.ai/docs/cli/) documentation. Start a new Copilot CLI session.
 
 OpenCode's plugin also loads the canonical `how/to/use/knowledgetrees.md` directly
 into model system context before work. The agent does not need to select a bootstrap
@@ -582,6 +587,17 @@ piece of work easier.
 parent directories. Wider roots, including global knowledge, default to private
 (`ask`). Unapproved roots are excluded from searches and reads. The registry lives
 at `~/.knowledge/.tools/roots.json` and is preserved by installer updates.
+
+To allow your global tree from every project, run in your own terminal:
+
+```bash
+kt access global allow --scope all
+```
+
+Answer `y` at the `[y/N]` prompt. `y` or `yes` (case-insensitive) approves;
+Enter or any other response declines without saving a decision. Use
+`--scope project` instead to grant only the current project. Grants cover kt
+reading, capture, amendment, and proof execution.
 
 Register a shared tree, then approve it from a project in your own terminal:
 

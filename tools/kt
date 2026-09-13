@@ -214,7 +214,7 @@ def access_command(args):
         raise ValueError("--subdirectories applies only to persistent project approvals")
     print(f"Root: {root}\nScope: {args.scope}" + (f" ({project}" + (" and descendants)" if subdirectories else ")") if args.scope != "all" else " (all projects)"))
     print("Retrieved knowledge may be sent to the agent's configured model provider. This policy controls kt, not direct filesystem reads.")
-    if input(f"Save {args.decision!r} decision? Type yes: ").strip().lower() != "yes":
+    if input(f"Save {args.decision!r} decision? [y/N] ").strip().lower() not in ("y", "yes"):
         print("No access decision saved.")
         return 1
     if args.scope == "session":

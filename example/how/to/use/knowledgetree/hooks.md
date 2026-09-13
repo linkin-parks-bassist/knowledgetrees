@@ -96,7 +96,17 @@ OpenCode's adapter inspects shell result metadata and terminal tool-part events,
 queues failed-tool guidance into subsequent model context, and requests a synthetic
 capture-review prompt on `session.idle`. It preserves the selected agent/model
 when available and guards its follow-up cycle. Restart the harness to load the local
-plugin. Requests can fail if the session is unavailable or the model cannot run;
+plugin. After fully quitting OpenCode, relaunch with `opencode --continue` (last
+session) or `opencode --session SESSION_ID` (a specific session). The installed
+plugin applies to resumed sessions even if they predate installation: its hooks
+handle subsequent activity and its bootstrap is added to the next model request.
+It does not replay historical tool calls. If the TUI attaches to a separate
+`opencode serve` or `opencode web` process, restart that backend too; reconnecting
+the terminal alone does not reload its plugins. This follows the documented
+startup loading and CLI resume/attach behavior plus the adapter's per-request
+injection; a live pre-installation-session resume test remains unverified.
+[Official OpenCode CLI](https://opencode.ai/docs/cli/).
+Requests can fail if the session is unavailable or the model cannot run;
 errors are reported, not retried in a loop.
 [Official OpenCode plugins](https://opencode.ai/docs/plugins/).
 

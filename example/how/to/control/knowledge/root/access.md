@@ -26,8 +26,9 @@ open access; --scope session saves a session decision in private SQLite state.
 Session scope needs the same KT_SESSION_ID (or CODEX_THREAD_ID/OPENCODE_SESSION_ID)
 in the user's terminal and agent environment. Grants expire after seven days;
 distinct session identifiers isolate them. `deny`, `ask`, or `reset` replace or
-revoke decisions at the chosen scope. Mutation requires an interactive confirmation;
-noninteractive agent lookups never save approvals automatically. Agents must not
+revoke decisions at the chosen scope. Mutation requires an interactive `[y/N]` confirmation: `y` or `yes` (case-insensitive)
+approves; Enter or any other response declines. Noninteractive agent lookups never
+save approvals automatically. Agents must not
 supply that confirmation themselves. Retrieval can send content to the configured
 model provider. Policies govern kt and startup injection, not direct filesystem reads.
 

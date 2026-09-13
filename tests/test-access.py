@@ -44,8 +44,10 @@ def main():
                     return result.stdout + result.stderr
 
                 def decision(root, value, scope="project", response="yes", subdirectories=False):
-                    with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", return_value=response), patch("sys.stdout", new=io.StringIO()):
-                        return api["access_command"](argparse.Namespace(root=root, decision=value, scope=scope, subdirectories=subdirectories))
+                    with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", return_value=response) as confirmation, patch("sys.stdout", new=io.StringIO()):
+                        result = api["access_command"](argparse.Namespace(root=root, decision=value, scope=scope, subdirectories=subdirectories))
+                        confirmation.assert_called_once_with(f"Save {value!r} decision? [y/N] ")
+                        return result
 
                 assert "Public local answer" in run("what is local")
                 assert "confidential payload" not in run("find", "secretneedle", expected=1)
@@ -59,10 +61,13 @@ def main():
                 run("access", "global", "allow", expected=3)
                 assert (config.read_bytes() if config.exists() else None) == before
                 # Persistent project grant survives new processes and narrows to descendants.
-                decision("global", "allow", response="no")
-                run("open", "global:where/is/private.md", expected=3)
-                decision("global", "allow")
+                for response in ("", "n", "N", "no", "es"):
+                    assert decision("global", "allow", response=response) == 1
+                    assert (config.read_bytes() if config.exists() else None) == before
+                    run("open", "global:where/is/private.md", expected=3)
+                assert decision("global", "allow", response="y") == 0
                 assert "confidential payload" in run("open", "global:where/is/private.md")
+                assert decision("global", "allow", response=" Y ") == 0
                 assert "confidential payload" not in run("find", "secretneedle", cwd=other, expected=1)
                 nested = project / "src"
                 nested.mkdir()

@@ -281,3 +281,20 @@ The CLI command is now kt prove throughout implementation, help, tests and
 distributed/installed procedural leaves. The old proof subcommand is rejected.
 All seven integration suites passed; CLI copies are installed. Proof remains
 the noun for evidence and proof markers, not a renamed artifact type.
+
+## Access confirmation
+
+The access prompt uses `[y/N]`, accepts `y` or `yes` case-insensitively, and
+defaults to no. The access integration suite checks the prompt, short affirmative
+answers, empty/negative/invalid responses, and unchanged registry on refusal.
+The installed CLI is updated without changing access grants.
+
+OpenCode resume guidance is documented in the README and canonical hooks leaf.
+Official startup/CLI documentation and adapter code support activation after a
+full process restart, including older sessions; historical calls are not replayed.
+A separate backend must also restart. Live resume adoption remains unverified.
+The owner authorized committing and pushing the confirmation and documentation update.
+
+Access, CLI, and OpenCode adapter integration checks, project/example read-only
+proof sweeps, and diff whitespace validation pass for this update. Installed
+access and hooks documentation is updated without overwriting customizations.

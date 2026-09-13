@@ -52,3 +52,10 @@ and heuristic usability tuning. No Git dependency is introduced.
 
 The kt prove rename is implemented and installed. Continue ordinary-use
 privacy and heuristic tuning; restart clients to refresh injected procedure text.
+
+The access confirmation now uses standard `[y/N]`; the installed CLI is updated.
+The user has granted global access. No grant was saved by the agent.
+The owner-authorized confirmation and documentation update passed checks and is
+ready for publication; continue ordinary-use access and hook usability review.
+For live OpenCode verification, fully restart the process (and any separate backend),
+resume the existing session, and inspect subsequent hook delivery.
