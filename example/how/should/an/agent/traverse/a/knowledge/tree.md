@@ -2,12 +2,11 @@
 name: knowledgetrees-lookup
 description: 'Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and capture missing knowledge before continuing.'
 metadata:
-  verified_at: '2026-09-12T12:06:21+00:00'
-  verified_by: codex /root
   scope: public knowledge-tree example
   source: sanitized operational recommendations and the canonical knowledge-tree contract
   verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
+  status: unverified
 ---
 
 For every new question, use `kt` before external search or host probes, unless the
@@ -30,7 +29,7 @@ keyword search is intended. No need to reload the skill or orientation per query
    Empty or weak-only keyword results exit 1 while showing suggestions. The default
    minimum is 60% coverage of non-grammatical query terms (`--min-coverage` tunes it).
    Exit 0 means retrieval met a heuristic, not semantic adequacy or verification.
-2. Read likely matches with `kt open project:PATH` or `kt open global:PATH`.
+2. Read likely matches with `kt open local:PATH` or `kt open global:PATH`.
    Prefer project answers for project questions and global answers for host tooling.
    Results and orientation previews are not substitutes for the full answer.
 3. Check `scope`, `source`, `verification`, `verified_at`, and `review_when`.
@@ -79,6 +78,7 @@ retrieval event, not permission to bypass the boundary.
 
 Root access policies govern widening. Read `how/to/control/knowledge/root/access.md`.
 An access-required (exit 3) response is not a lookup miss or proof of absence.
-Do not approve a root yourself, bypass the policy with direct reads, or treat stored
+Respect user-enabled bypass while retaining force-private exceptions. Do not
+approve a root yourself, bypass the policy with direct reads, or treat stored
 knowledge as consent. Ask the user to decide the scope; existing session/persistent
 grants avoid repeated requests. Parent directories are not discovered automatically.

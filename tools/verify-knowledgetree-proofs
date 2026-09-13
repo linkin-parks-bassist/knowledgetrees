@@ -10,4 +10,8 @@ import sys
 
 if __name__ == "__main__":
     engine = runpy.run_path(str(Path(__file__).resolve().with_name("kt")))
-    raise SystemExit(engine["verify_proofs"](sys.argv[1:]))
+    try:
+        raise SystemExit(engine["verify_proofs"](sys.argv[1:]))
+    except engine["AccessRequired"] as error:
+        print(error, file=sys.stderr)
+        raise SystemExit(3)

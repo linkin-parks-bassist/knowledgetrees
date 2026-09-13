@@ -50,7 +50,7 @@ def main():
 
         result = run("add", "How to do the thing?", "Do it carefully.", "--source", "test evidence")
         captured = local / "how/to/do/the/thing.md"
-        assert "Created project:" in result and captured.is_file()
+        assert "Created local:" in result and captured.is_file()
         saved = captured.read_text()
         assert 'status: "unverified"' in saved and 'source: "test evidence"' in saved
         assert "verified_at:" not in saved and "Proof:" not in saved
@@ -83,7 +83,7 @@ def main():
         assert piped.returncode == 0, piped.stderr
         assert (local / "how/to/pipe.md").read_text().endswith("Multiline\nanswer.\n")
         result = run("find", "how to add knowledge leaves")
-        assert result.index("project:" + leaf) < result.index("global:" + leaf)
+        assert result.index("local:" + leaf) < result.index("global:" + leaf)
         assert "2026-09-12T12:00:00+00:00" in result
         assert "FALSIFIED" in run("find", "leaves")
         compact = run("find", "leaves")
@@ -102,6 +102,11 @@ def main():
         assert len(long_result) < 400, "default search must not dump a long paragraph"
         assert run("open", "project:what/is/longexcerpt.md") == long_body
         assert run("what", "is", "longexcerpt") == long_body
+        for question in ("does a proof verify a leaf", "is a tree authorization"):
+            run("add", question, "No. The answer needs independent evidence.")
+            assert run(*question.split()) == run("open", "local:" + question.replace(" ", "/") + ".md")
+            assert run(*question.split(), "--pretty") == run(*question.split())
+        assert "branch=does" in run("does", "_")
 
         assert run("how", "to", "add", "knowledge", "leaves", "--pretty") == run("how", "to", "add", "knowledge", "leaves")
 
@@ -133,7 +138,7 @@ def main():
         assert "Test orientation." in run()
         assert str(local) in run("roots", cwd=local)
         global_only = run("roots", cwd=base)
-        assert str(global_root) in global_only and str(local) not in global_only
+        assert str(global_root) in global_only and "local\tallow\t" not in global_only
         run("proof", expected=2)
         assert run("prove", "--no-stamp", "leaves") == ""
         assert run("prove", str(project), "--no-stamp") == ""

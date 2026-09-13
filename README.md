@@ -82,6 +82,10 @@ agent retrieve the answer.
 │   └── to/
 │       └── ask/
 │           └── clarification.md
+├── does/
+│   └── kt/prove/verify/an/entire/leaf.md
+├── is/
+│   └── a/knowledge/tree/a/source/of/authorization.md
 └── why/
     └── is/
         └── a/
@@ -383,6 +387,9 @@ Question prefixes make the directories active search boundaries:
 Otherwise, it walks matching directory words until the first mismatch and ranks
 the remaining keywords only among that branch's descendants. Weak matches cause
 it to climb one parent and search wider. `kt how to _` lists a procedure branch.
+Use `does/` and `is/` for direct yes/no questions, such as
+`kt does kt prove verify an entire leaf` or `kt is a knowledge tree a source of authorization`.
+Those answers start with yes/no and give qualifications where needed.
 Use `where/is/` for locations, `how/to/` for procedures, `when/to/` for triggers,
 `what/is/` for definitions/state, and `why/does/` or `why/is/` for rationale.
 `kt find` remains the deliberately broad search interface.
@@ -514,7 +521,7 @@ older descriptions or procedure content.
 ## A minimal adoption path
 
 1. Create `.knowledge/where/am/i.md` and the canonical `how/`, `what/`, `where/`,
-   and `why/` branches.
+   `why/`, `does/`, and `is/` branches.
 2. For repositories, create current-truth spine leaves for the spec, plan, state,
    and next action.
 3. Project frequently needed answers into paths that read as natural-language
@@ -598,70 +605,87 @@ piece of work easier.
 
 ### Root privacy and cross-project sharing
 
-`kt` uses your current directory's tree plus registered roots; it does not search
-parent directories. Wider roots, including global knowledge, default to private
-(`ask`). Unapproved roots are excluded from searches and reads. The registry lives
-at `~/.knowledge/.tools/roots.json` and is preserved by installer updates.
+`kt` discovers the exact local tree, the user-global tree, and explicitly registered
+roots. It never searches parent directories. Output labels are `local`, `global`,
+or full canonical root directory paths, avoiding collisions between folder names.
+`project:` and registered names remain input aliases; new captures default their
+scope metadata to the canonical identity. Use --local (--project is an alias),
+--global, or --root PATH to select capture destinations.
 
-To allow your global tree from every project, run in your own terminal:
+Wider roots default to ask. Ordinary ask/deny policies withhold leaf content;
+force-private also hides the root identity entirely outside exact local scope.
+The registry lives at ~/.knowledge/.tools/roots.json and installer upgrades preserve it.
 
-```bash
-kt access global allow --scope all
-```
-
-Answer `y` at the `[y/N]` prompt. `y` or `yes` (case-insensitive) approves;
-Enter or any other response declines without saving a decision. Use
-`--scope project` instead to grant only the current project. Grants cover kt
-reading, capture, amendment, and proof execution.
-
-Register a shared tree, then approve it from a project in your own terminal:
-
-```bash
+```sh
 kt register shared /path/to/shared/.knowledge
+kt access global allow --scope all
 kt access shared allow --scope project
 ```
 
-That approval persists for this exact project directory. Use `--subdirectories`
-only if you explicitly want descendant directories included. Without it, approval
-from your home directory does not authorize every repository below it.
+Access changes use an interactive [y/N] prompt: y or yes approves; Enter declines.
+Project grants cover the exact cwd; --subdirectories explicitly includes descendants.
+--scope session requires a shared session ID. Reset/revoke at the chosen scope.
 
-For an open-access tree, use `kt access shared allow --scope all`. To revoke a
-project grant, use `kt access shared reset --scope project`. `deny` blocks access.
-`--scope session` grants temporarily and requires the same session identifier in
-your terminal and the agent environment (`KT_SESSION_ID`, `CODEX_THREAD_ID`, or
-`OPENCODE_SESSION_ID`). Agents cannot approve through a noninteractive lookup.
+To persistently bypass ordinary ask/deny restrictions, enable once in your terminal:
 
-The registry is editable JSON, for example:
-
-```json
-{
-  "roots": {
-    "shared": {"path": "/path/to/shared/.knowledge", "access": "allow"},
-    "global": {"access": "ask"}
-  },
-  "projects": {}
-}
+```sh
+kt --dangerously-skip-permissions
+kt permissions          # inspect
+kt permissions --reset  # disable; preserve existing policies and grants
 ```
 
-`kt add --root /path/to/new/tree` registers an unfamiliar existing tree as private.
-A wider capture still needs approval before a leaf is written. Access-required
-operations exit with code 3; this is not a knowledge miss. Retrieved content may
-reach the configured model provider. These controls cover `kt` and startup hooks;
-they are not a substitute for filesystem permissions against direct reads.
+Force-private overrides bypass and grants:
+
+```sh
+kt access /path/to/private/.knowledge force-private
+```
+
+Such a root is omitted from generated root identities, leaf paths, snippets, and
+rankings, and cannot be read or mutated unless it is the exact local tree.
+Starting in a subdirectory does not expose its ancestor tree. Registered protected
+subtrees cannot leak through search, symlinks, maintenance, or proof checks.
+The shared startup loader suppresses force-private global procedure injection outside
+local scope. The legacy verifier also respects force-private. Remove/replace the
+exception with kt access ROOT reset --scope all or a different root-wide policy.
+Bypass neither discovers new roots nor grants broader host/harness permissions.
+Malformed configuration fails closed even when bypass is enabled.
+
+### Active leaf maintenance
+
+Read a revision with kt open ROOT:PATH --revision. Use its hash for removal or movement:
+
+```sh
+kt rm local:what/is/old.md --expect HASH --dry-run
+kt mv local:what/is/old.md local:what/is/new.md --expect HASH
+kt combine local:what/is/first.md local:what/is/second.md -o local:what/is/cohesive.md
+```
+
+Combine coalesces in input order and removes sources after saving successfully.
+An existing destination requires --expect HASH; if it is an input, it is retained.
+Dry-run changes nothing. Source provenance, unresolved blockers, and falsification
+survive; verification claims/proof stamps are reset for review. Sources changed
+during coalescing are retained. Multi-file cleanup is not transactional, so inspect
+partially completed cleanup before retrying. Moves refuse overwrites and preserve
+same-filesystem hardlinks; cross-filesystem moves copy before removing the source.
+Review scope, links, orientation, current state, and relevant proofs after maintenance.
+
+Lookup reuses root policies and lazily loaded text within each invocation; it does
+not create a persistent index/cache or index private roots. This removes repeated
+policy/discovery work on misses while keeping new invocations fresh.
 
 ### Amending an existing answer
 
 Read the current leaf and its revision:
 
 ```bash
-kt open project:how/to/build.md --revision
+kt open local:how/to/build.md --revision
 ```
 
 The text stays verbatim on stdout; stderr prints its SHA-256 revision. Submit a
 complete revised Markdown file (including its existing metadata):
 
 ```bash
-kt amend project:how/to/build.md --expect <revision> --body-file /tmp/revised.md
+kt amend local:how/to/build.md --expect <revision> --body-file /tmp/revised.md
 ```
 
 You can pipe the replacement through stdin instead, or add `--dry-run` to inspect

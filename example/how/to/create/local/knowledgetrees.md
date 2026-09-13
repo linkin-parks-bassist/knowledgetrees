@@ -6,7 +6,7 @@ review_when: Recheck when root creation or verifier conventions change.
 ---
 
 Create `<project>/.knowledge` when entering an active project whose reusable knowledge
-belongs locally. Immediately create `how/`, `what/`, `where/`, `why/`, and
+belongs locally. Immediately create `how/`, `what/`, `where/`, `why/`, `does/`, `is/`, and
 `where/am/i.md`. Repository roots also require `what/is/the/spec.md`,
 `what/is/the/plan.md`, `what/is/the/state.md`, and `what/is/next.md`; use truthful
 minimal or explicitly unresolved content rather than inventing answers.

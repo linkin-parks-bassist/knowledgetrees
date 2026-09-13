@@ -1,8 +1,6 @@
 ---
 status: unverified
 updated_at: '2026-09-12T12:34:09+00:00'
-verified_at: '2026-09-12T12:21:21+00:00'
-verified_by: codex /root
 scope: public knowledge-tree example
 source: repository handler and installer; official Codex hooks, OpenCode plugins, and GitHub Copilot hooks documentation
 verification: Tested diagnostic heuristics, explicit status precedence, failure bookkeeping, one-shot review, and retirement of the managed pre-tool wrapper. Live unwrapped diagnostic output delivered failure guidance; other harness model adoption remains unconfirmed.
@@ -172,3 +170,24 @@ tests/test-opencode-hooks.mjs. Relevant integration checks passed.
 Privacy boundary: automatic orientation injection is restricted to the supplied
 session directory. Parent/home orientations are never searched or used as fallback.
 The canonical global procedure remains loaded; this does not inject global orientation.
+
+## Review before commit or push
+
+A tool-before event can detect a pending shell command, but detection does not
+establish that a model reviewed knowledge before the command executes.
+Codex PreToolUse exposes tool_input and supports additionalContext without
+blocking, or permissionDecision=deny to reject the call. OpenCode's
+tool.execute.before exposes input/output.args; its documented rejection mechanism
+is throwing an error. It does not document a model-context return field for this
+before event. Queuing context through the existing system transform reaches a
+later model request and cannot guarantee review before the pending command.
+A guaranteed before-command review needs call rejection and an agent retry after
+review. No boundary-blocking mechanism is installed in this update.
+These are API capabilities and timing limits, not demonstrated model compliance.
+Sources: [Codex hooks](https://learn.chatgpt.com/docs/hooks#pretooluse) and
+[OpenCode plugins](https://opencode.ai/docs/plugins/), checked in this session.
+
+Startup reads the current access policy before injecting the global procedure.
+A force-private global root suppresses that injection outside its exact local
+scope; persistent bypass does not override it. Restart an OpenCode backend after
+updating its startup plugin/handler so newly resumed sessions use that behavior.

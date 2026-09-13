@@ -3,8 +3,10 @@
 
 import argparse
 import difflib
+import errno
 import fcntl
 from datetime import datetime
+from dataclasses import dataclass
 import json
 import hashlib
 import shlex
@@ -20,7 +22,7 @@ import sys
 import textwrap
 
 
-ACCESS_VALUES = {"allow", "ask", "deny"}
+ACCESS_VALUES = {"allow", "ask", "deny", "force-private"}
 PRETTY = False
 
 
@@ -32,6 +34,12 @@ class RevisionConflict(ValueError):
     pass
 
 
+# Root registry, identities, and access policy.
+
+def global_knowledge_root():
+    return Path(os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")).expanduser().resolve()
+
+
 def access_config_path():
     return Path(os.environ.get("KT_CONFIG", str(Path(os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")).expanduser() / ".tools/roots.json"))).expanduser()
 
@@ -39,42 +47,72 @@ def access_config_path():
 def access_config():
     path = access_config_path()
     if not path.exists():
-        return {"roots": {}, "projects": {}}
+        return {"roots": {}, "projects": {}, "dangerously_skip_permissions": False}
     value = json.loads(path.read_text())
     if not isinstance(value, dict) or not isinstance(value.get("roots", {}), dict) or not isinstance(value.get("projects", {}), dict):
         raise ValueError("invalid kt access configuration")
+    if not isinstance(value.get("dangerously_skip_permissions", False), bool):
+        raise ValueError("invalid kt permission bypass setting")
     for label, spec in value.get("roots", {}).items():
         if not isinstance(spec, dict) or spec.get("access", "ask") not in ACCESS_VALUES:
-            raise ValueError(f"invalid policy for root {label!r}")
-        if label not in ("project", "global") and not isinstance(spec.get("path"), str):
-            raise ValueError(f"configured root {label!r} needs a path")
+            raise ValueError("invalid configured root policy")
+        if label not in ("local", "project", "global") and not isinstance(spec.get("path"), str):
+            raise ValueError("configured root needs an absolute path")
         if "path" in spec and (not isinstance(spec["path"], str) or not Path(spec["path"]).expanduser().is_absolute()):
             raise ValueError("registered root paths must be absolute (tilde expansion is allowed)")
     for project, grants in value.get("projects", {}).items():
-        if not Path(project).is_absolute() or not isinstance(grants, dict) or any(not (v in ACCESS_VALUES if isinstance(v, str) else isinstance(v, dict) and v.get("access") in ACCESS_VALUES and isinstance(v.get("subdirectories", False), bool)) for v in grants.values()):
+        if not Path(project).is_absolute() or not isinstance(grants, dict) or any(not (v in ACCESS_VALUES - {"force-private"} if isinstance(v, str) else isinstance(v, dict) and v.get("access") in ACCESS_VALUES - {"force-private"} and isinstance(v.get("subdirectories", False), bool)) for v in grants.values()):
             raise ValueError("invalid project access grants")
     value.setdefault("roots", {})
     value.setdefault("projects", {})
     return value
 
 
+def local_root(cwd=None):
+    directory = Path(cwd or Path.cwd()).resolve()
+    return (directory if directory.name == ".knowledge" else directory / ".knowledge").resolve()
+
+
+def configured_root(name, spec, cwd=None):
+    if "path" in spec:
+        return Path(spec["path"]).expanduser().resolve()
+    if name in ("local", "project"):
+        return local_root(cwd)
+    return global_knowledge_root()
+
+
+def root_identity(root, cwd=None):
+    root = Path(root).resolve()
+    if root == local_root(cwd):
+        return "local"
+    if root == global_knowledge_root():
+        return "global"
+    return str(root)
+
+
 def discovered_roots(config=None, cwd=None):
     config = access_config() if config is None else config
-    cwd = Path(cwd or Path.cwd()).resolve()
-    global_root = Path(os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")).expanduser().resolve()
-    result = []
-    local = cwd if cwd.name == ".knowledge" else cwd / ".knowledge"
-    if local.is_dir():
-        result.append(("project", local.resolve()))
-    if global_root not in {root for _, root in result}:
-        result.append(("global", global_root))
-    for label, spec in config["roots"].items():
-        if label in ("project", "global"):
-            continue
-        root = Path(spec["path"]).expanduser().resolve()
-        if root not in {path for _, path in result}:
-            result.append((label, root))
-    return result
+    local = local_root(cwd)
+    global_root = global_knowledge_root()
+    paths = [local] if local.is_dir() else []
+    if global_root not in paths:
+        paths.append(global_root)
+    for name, spec in config["roots"].items():
+        root = configured_root(name, spec, cwd)
+        if root not in paths:
+            paths.append(root)
+    return [(root_identity(root, cwd), root) for root in paths]
+
+
+def root_aliases(config=None, cwd=None):
+    config = access_config() if config is None else config
+    aliases = dict(discovered_roots(config, cwd))
+    if local_root(cwd).is_dir():
+        aliases["local"] = aliases["project"] = local_root(cwd)
+    aliases["global"] = global_knowledge_root()
+    for name, spec in config["roots"].items():
+        aliases.setdefault(name, configured_root(name, spec, cwd))
+    return aliases
 
 
 def access_session():
@@ -95,23 +133,21 @@ def root_access(root, label=None, cwd=None, config=None):
     config = access_config() if config is None else config
     cwd = Path(cwd or Path.cwd()).resolve()
     root = Path(root).resolve()
-    # Default implicit trust applies only to a tree actually inside the explicit cwd.
-    local = cwd if cwd.name == ".knowledge" else cwd / ".knowledge"
-    default = "allow" if root == local.resolve() and root.is_relative_to(cwd) else "ask"
-    policies = [spec.get("access", "ask") for name, spec in config["roots"].items()
-                if (name == label and name in ("project", "global")) or
-                (isinstance(spec.get("path"), str) and Path(spec["path"]).expanduser().resolve() == root)]
-    policy = "deny" if "deny" in policies else "allow" if default == "allow" or "allow" in policies else policies[-1] if policies else default
-    for name, spec in config["roots"].items():
-        if spec.get("access") != "deny":
-            continue
-        denied = spec.get("path")
-        if denied is None and name == "global":
-            denied = os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")
-        if isinstance(denied, str) and root.is_relative_to(Path(denied).expanduser().resolve()):
-            return "deny"
-    if policy == "deny":
+    local = local_root(cwd)
+    policies = [(configured_root(name, spec, cwd), spec.get("access", "ask"))
+                for name, spec in config["roots"].items()]
+    # Forced privacy is checked before bypass or grants and inherited by subtrees.
+    if root != local and any(policy == "force-private" and root.is_relative_to(path)
+                             for path, policy in policies):
+        return "force-private"
+    if config.get("dangerously_skip_permissions", False):
+        return "allow"
+    if any(policy == "deny" and root.is_relative_to(path) for path, policy in policies):
         return "deny"
+    matching = [policy for path, policy in policies if path == root]
+    policy = "allow" if root == local or "allow" in matching else matching[-1] if matching else "ask"
+    if policy == "force-private":
+        policy = "allow"  # Only an exact local tree reaches this branch.
     # Exact pairwise scope by default; inheritance must be explicitly approved.
     projects = sorted(((Path(path), grants) for path, grants in config["projects"].items()
                        if cwd.is_relative_to(Path(path))), key=lambda item: len(item[0].parts), reverse=True)
@@ -141,7 +177,9 @@ def require_root(root, label=None):
         label = next((name for name, path in discovered_roots() if path == Path(root).resolve()), None)
     policy = root_access(root, label)
     if policy != "allow":
-        name = label or str(root)
+        if policy == "force-private":
+            raise AccessRequired("kt: requested root is unavailable")
+        name = root_identity(root)
         message = f"kt: root {name!r} is denied" if policy == "deny" else f"kt: root {name!r} requires approval; in your terminal run: kt access {shlex.quote(name)} allow --scope project"
         raise AccessRequired(message)
 
@@ -156,6 +194,27 @@ def roots():
         else:
             result.append((label, root))
     return result
+
+
+def owning_root(path):
+    path = Path(path).resolve()
+    owners = [(label, root) for label, root in discovered_roots() if path.is_relative_to(root)]
+    return max(owners, key=lambda pair: len(pair[1].parts), default=None)
+
+
+def leaf_allowed(path):
+    owner = owning_root(path)
+    return owner is not None and root_access(owner[1], owner[0]) == "allow"
+
+
+
+def require_leaf_root(path):
+    owner = owning_root(path)
+    if owner is None:
+        raise AccessRequired("kt: leaf is outside configured knowledge roots")
+    require_root(owner[1], owner[0])
+    return owner
+
 
 
 def save_access_config(config):
@@ -182,7 +241,7 @@ def register_root(root, name=None):
     if not root.is_dir():
         raise ValueError("register an existing knowledge-root directory")
     name = name or "root-" + hashlib.sha256(str(root).encode()).hexdigest()[:12]
-    if name in ("project", "global") or name in config["roots"] or not re.fullmatch(r"[a-z][a-z0-9-]*", name):
+    if name in ("local", "project", "global") or name in config["roots"] or not re.fullmatch(r"[a-z][a-z0-9-]*", name):
         raise ValueError("choose a unique root name using lowercase words and hyphens")
     config["roots"][name] = {"path": str(root), "access": "ask"}
     save_access_config(config)
@@ -191,8 +250,8 @@ def register_root(root, name=None):
 
 def access_command(args):
     config = access_config()
-    available = discovered_roots(config)
-    root = next((path for label, path in available if label == args.root), None)
+    available = list(root_aliases(config).items())
+    root = dict(available).get(args.root)
     label = args.root
     if root is None:
         if not Path(args.root).expanduser().is_absolute():
@@ -201,9 +260,16 @@ def access_command(args):
         if not root.is_dir():
             raise ValueError("knowledge root does not exist")
         label = next((name for name, path in available if path == root), "root-" + hashlib.sha256(str(root).encode()).hexdigest()[:12])
+    current = root_access(root, label, config=config)
+    label = root_identity(root)
     if args.decision is None:
-        print(f"{label}: {root_access(root, label)}\nConfiguration: {access_config_path()}")
+        if current == "force-private":
+            print("force-private")
+            return 0
+        print(f"{label}: {current}\nConfiguration: {access_config_path()}")
         return 0
+    if args.decision == "force-private":
+        args.scope = "all"
     session = access_session()
     if args.scope == "session" and not session:
         raise ValueError("session scope requires KT_SESSION_ID (or CODEX_THREAD_ID/OPENCODE_SESSION_ID); use the same identifier in the agent environment")
@@ -213,7 +279,7 @@ def access_command(args):
     subdirectories = getattr(args, "subdirectories", False)
     if subdirectories and args.scope != "project":
         raise ValueError("--subdirectories applies only to persistent project approvals")
-    print(f"Root: {root}\nScope: {args.scope}" + (f" ({project}" + (" and descendants)" if subdirectories else ")") if args.scope != "all" else " (all projects)"))
+    print(f"Root: {root if current != 'force-private' else '(force-private)'}\nScope: {args.scope}" + (f" ({project}" + (" and descendants)" if subdirectories else ")") if args.scope != "all" else " (all projects)"))
     print("Retrieved knowledge may be sent to the agent's configured model provider. This policy controls kt, not direct filesystem reads.")
     if input(f"Save {args.decision!r} decision? [y/N] ").strip().lower() not in ("y", "yes"):
         print("No access decision saved.")
@@ -229,10 +295,14 @@ def access_command(args):
                 connection.execute("INSERT OR REPLACE INTO grants VALUES (?,?,?,?,?)", (key, project, str(root), args.decision, time.time()))
     else:
         if args.scope == "all":
+            matching = [name for name, spec in config["roots"].items()
+                        if configured_root(name, spec) == root]
             if args.decision == "reset":
-                config["roots"].pop(label, None)
+                for name in matching:
+                    del config["roots"][name]
             else:
-                config["roots"][label] = {"path": str(root), "access": args.decision}
+                for name in matching or [label]:
+                    config["roots"][name] = {"path": str(root), "access": args.decision}
         else:
             grants = config["projects"].setdefault(project, {})
             if args.decision == "reset":
@@ -242,9 +312,31 @@ def access_command(args):
                 if label not in dict(available):
                     config["roots"][label] = {"path": str(root), "access": "ask"}
         save_access_config(config)
-    print(f"Saved {args.decision} for {label} ({args.scope}).")
+    private = root_access(root, label, config=config) == "force-private"
+    print(f"Saved {args.decision}" + ("." if private else f" for {label} ({args.scope})."))
     return 0
 
+
+def permissions_command(args):
+    config = access_config()
+    if not args.dangerously_skip_permissions and not args.reset:
+        print("dangerously_skip_permissions=" + str(config.get("dangerously_skip_permissions", False)).lower())
+        return 0
+    if not sys.stdin.isatty():
+        raise AccessRequired("kt: permission settings require confirmation in your own interactive terminal; no setting was saved")
+    enabled = args.dangerously_skip_permissions
+    print("Permanently bypass kt ask/deny policies; force-private remains enforced." if enabled
+          else "Restore normal kt access policy checks.")
+    if input("Save permission setting? [y/N] ").strip().lower() not in ("y", "yes"):
+        print("No permission setting saved.")
+        return 1
+    config["dangerously_skip_permissions"] = enabled
+    save_access_config(config)
+    print("dangerously_skip_permissions=" + str(enabled).lower())
+    return 0
+
+
+# Lookup ranking and compact/pretty rendering.
 
 def paint(value, color):
     if PRETTY and sys.stdout.isatty() and "NO_COLOR" not in os.environ and os.environ.get("TERM") != "dumb":
@@ -258,7 +350,7 @@ def leaf_parts(text):
     match = re.match(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", text, re.S)
     if match:
         body = text[match.end():]
-        for key in ("verified_at", "falsified_at", "status"):
+        for key in ("verified_at", "falsified_at", "status", "blocker", "next_check"):
             value = re.search(rf"^\s*{key}:\s*([^\n]+)", match[1], re.M)
             if value:
                 metadata[key] = value[1].strip().strip("\"'")
@@ -277,48 +369,79 @@ def coverage(terms, haystack):
     return sum(t in haystack for t in meaningful) / len(meaningful) if meaningful else 1.0
 
 
-def leaf_allowed(path):
-    path = Path(path).resolve()
-    owners = [(label, root) for label, root in discovered_roots() if path.is_relative_to(root)]
-    if not owners:
-        return False
-    label, owner = max(owners, key=lambda pair: len(pair[1].parts))
-    return root_access(owner, label) == "allow"
+
+@dataclass(frozen=True)
+class RootAccessView:
+    roots: tuple
+    policies: dict
+
+    @classmethod
+    def load(cls):
+        config = access_config()
+        catalog = tuple(discovered_roots(config))
+        policies = {root: root_access(root, label, config=config) for label, root in catalog}
+        return cls(catalog, policies)
+
+    def allowed_roots(self):
+        return [(label, root) for label, root in self.roots if self.policies[root] == "allow"]
+
+    def allows(self, path):
+        canonical = Path(path).resolve()
+        owner = max((root for _, root in self.roots if canonical.is_relative_to(root)),
+                    key=lambda root: len(root.parts), default=None)
+        return owner is not None and self.policies[owner] == "allow"
 
 
-def leaves(root):
+class LookupContext:
+    """Lazy, invocation-only access and text reuse; no private-root indexing."""
+    def __init__(self):
+        self.access = RootAccessView.load()
+        self.contents = {}
+
+    def read(self, path):
+        if path not in self.contents:
+            if not self.access.allows(path):
+                raise AccessRequired("kt: requested leaf is unavailable")
+            text = path.read_text()
+            metadata, body = leaf_parts(text)
+            self.contents[path] = (text, metadata, body)
+        return self.contents[path]
+
+
+def leaves(root, access=None):
     if not root.is_dir():
         return
+    access = access or RootAccessView.load()
     for directory, directories, files in os.walk(root, followlinks=False):
-        directories[:] = sorted(d for d in directories if not d.startswith(".") and leaf_allowed(Path(directory) / d))
+        directories[:] = sorted(d for d in directories if not d.startswith(".") and access.allows(Path(directory) / d))
         for name in sorted(files):
             path = Path(directory) / name
-            if name.endswith(".md") and not path.is_symlink() and leaf_allowed(path):
+            if name.endswith(".md") and not path.is_symlink() and access.allows(path):
                 yield path
 
 
-def find(args, branches=None, browse=False):
+def find(args, branches=None, browse=False, context=None):
     terms = words(" ".join(args.terms))
     if not terms and not browse:
         print("kt: supply at least one word to search", file=sys.stderr)
         return 2
+    context = context or LookupContext()
     if branches is None:
-        allowed = roots()
+        allowed = context.access.allowed_roots()
         if not allowed:
             raise AccessRequired("kt: no accessible knowledge roots; review kt access policies")
         branches = [(label, root, root) for label, root in allowed]
     results = []
     for precedence, (label, root, branch) in enumerate(
             branches):
-        for path in leaves(branch):
+        for path in leaves(branch, context.access):
             try:
-                text = path.read_text()
+                text, metadata, body = context.read(path)
             except (OSError, UnicodeError) as error:
                 print(f"kt: skipped {path}: {error}", file=sys.stderr)
                 continue
             relative = path.relative_to(root).as_posix()
             route = relative.removesuffix(".md").casefold()
-            metadata, body = leaf_parts(text)
             lower = body.casefold()
             head = "\n".join(body.splitlines()[:20]).casefold()
             score = sum(4 if t in route else 2 if t in head else 1 if t in lower else 0 for t in terms)
@@ -376,14 +499,14 @@ def find(args, branches=None, browse=False):
         if excerpt:
             print(textwrap.fill(excerpt, width=width, initial_indent="   ", subsequent_indent="   "))
         print()
-    print("Read verbatim: kt open project:<path> or kt open global:<path>")
+    print("Read verbatim: kt open ROOT:<path> (local, global, or canonical root path)")
     print("Check relevant proofs before relying on claims; search scores are not confidence.")
     if not adequate:
         print("Check alternate terms and scoped paths; if no leaf exists, investigate and capture the answer.")
     return 0 if adequate else 1
 
 
-QUESTION_STARTS = {"how", "where", "when", "what", "why", "who", "which"}
+QUESTION_STARTS = {"how", "where", "when", "what", "why", "who", "which", "does", "is"}
 
 
 def question(arguments):
@@ -403,14 +526,15 @@ def question(arguments):
     browse = bool(components and components[-1] == "_")
     if browse:
         components.pop()
-    available = roots()
+    context = LookupContext()
+    available = context.access.allowed_roots()
     if not available:
         raise AccessRequired("kt: no accessible knowledge roots")
     # Try the full sentence path without scanning any directory contents.
     if components and not browse:
         for label, root in available:
             candidate = root.joinpath(*components).with_suffix(".md")
-            if candidate.is_file() and not candidate.is_symlink() and candidate.resolve().is_relative_to(root) and leaf_allowed(candidate):
+            if candidate.is_file() and not candidate.is_symlink() and candidate.resolve().is_relative_to(root) and context.access.allows(candidate):
                 print(f"kt: exact {label}:{candidate.relative_to(root)}; check relevant proofs before reliance", file=sys.stderr)
                 sys.stdout.write(candidate.read_text())
                 return 0
@@ -438,9 +562,9 @@ def question(arguments):
         relevant = browse or not terms
         if not relevant:
             for _, _, branch in branches:
-                for path in leaves(branch):
+                for path in leaves(branch, context.access):
                     try:
-                        _, body = leaf_parts(path.read_text())
+                        _, _, body = context.read(path)
                     except (OSError, UnicodeError):
                         continue
                     haystack = path.relative_to(branch).as_posix().casefold() + "\n" + body.casefold()
@@ -456,47 +580,61 @@ def question(arguments):
                 print(paint("Search branch", "1") + f": {prefix}\n")
             args.branch = prefix
             args.terms = terms
-            return find(args, branches=branches, browse=browse or not terms)
+            return find(args, branches=branches, browse=browse or not terms, context=context)
         depth -= 1
         if PRETTY:
             print(f"kt: weak keyword coverage; widening to {'/'.join(components[:depth]) or 'whole roots'}", file=sys.stderr)
     return 1
 
 
+# Leaf addressing, revisions, and maintenance operations.
+
+def qualified_leaf(value):
+    aliases = root_aliases()
+    # Longest-prefix matching permits colons in external root directory names.
+    qualifier = next((alias for alias in sorted(aliases, key=len, reverse=True)
+                      if value.startswith(alias + ":")), None)
+    return (aliases[qualifier], value[len(qualifier) + 1:]) if qualifier is not None else None
+
+
+
 def resolve_leaf(value, writable=False):
     available = roots()
+    qualified = qualified_leaf(value)
+    if qualified is not None:
+        root, relative = qualified
+        require_root(root)
+        available = [(root_identity(root), root)]
+        if Path(relative).is_absolute():
+            raise ValueError("leaf path must be relative to its selected root")
+    elif not Path(value).expanduser().is_absolute() and ":" in value:
+        raise ValueError("unknown root label")
+    else:
+        relative = value
     path = Path(value).expanduser()
-    if writable and path.is_absolute() and any(p.is_symlink() for p in (path, *path.parents)):
-        raise ValueError("cannot amend through a symlink")
-    if path.is_absolute():
+    if qualified is None and path.is_absolute():
+        if writable and any(p.is_symlink() for p in (path, *path.parents)):
+            raise ValueError("cannot amend through a symlink")
         resolved = path.resolve()
-        owners = [(name, root) for name, root in discovered_roots() if resolved.is_relative_to(root)]
-        if not owners:
-            raise AccessRequired("kt: absolute leaf is outside configured knowledge roots; register/approve its root first")
-        name, root = max(owners, key=lambda pair: len(pair[1].parts))
-        require_root(root, name)
+        require_leaf_root(resolved)
         candidates = [resolved] if path.suffix == ".md" else []
     else:
-        label, separator, relative = value.partition(":")
-        if separator:
-            if label not in dict(discovered_roots()):
-                raise ValueError(f"unknown root label: {label}")
-            require_root(dict(discovered_roots())[label], label)
-            available = [(name, root) for name, root in available if name == label]
-        else:
-            relative = value
         candidates = []
         for _, root in available:
             for suffix in ("", ".md"):
                 raw = root / (relative + suffix)
+                candidate = raw.resolve()
+                owner = owning_root(candidate)
+                if owner is not None:
+                    require_root(owner[1], owner[0])
+                if not candidate.is_relative_to(root) or candidate.suffix != ".md":
+                    continue
                 if writable and any(p.is_symlink() for p in (raw, *raw.parents)):
                     raise ValueError("cannot amend through a symlink")
-                candidate = raw.resolve()
-                if candidate.is_relative_to(root) and candidate.suffix == ".md":
-                    candidates.append(candidate)
+                candidates.append(candidate)
     path = next((p for p in candidates if p.is_file()), None)
     if path is None:
-        raise ValueError(f"no such leaf: {value}")
+        raise ValueError("no such leaf")
     if not leaf_allowed(path):
         raise AccessRequired("kt: leaf is inside a restricted registered root")
     return path
@@ -512,6 +650,34 @@ def open_leaf(value, with_revision=False):
 
 def revision(data):
     return hashlib.sha256(data).hexdigest()
+
+
+@dataclass(frozen=True)
+class LeafSnapshot:
+    data: bytes
+    digest: str
+    device: int
+    inode: int
+
+
+def snapshot_from_stream(stream):
+    stream.seek(0)
+    data = stream.read()
+    stat = os.fstat(stream.fileno())
+    return LeafSnapshot(data, revision(data), stat.st_dev, stat.st_ino)
+
+
+def read_leaf_snapshot(path):
+    with path.open("rb") as stream:
+        return snapshot_from_stream(stream)
+
+
+def check_leaf_snapshot(path, snapshot, stream=None, expected_revision=None, message="kt: leaf changed; source retained"):
+    current = snapshot_from_stream(stream) if stream is not None else read_leaf_snapshot(path)
+    stat = path.stat()
+    identity = (snapshot.device, snapshot.inode)
+    if current.digest != (expected_revision or snapshot.digest) or (current.device, current.inode) != identity or (stat.st_dev, stat.st_ino) != identity:
+        raise RevisionConflict(message)
 
 
 def proof_records(text):
@@ -620,8 +786,9 @@ def amend(args):
     descriptor = os.open(path, os.O_RDWR | os.O_NOFOLLOW)
     with os.fdopen(descriptor, "r+b") as stream:
         fcntl.flock(stream, fcntl.LOCK_EX)
-        original_bytes = stream.read()
-        if revision(original_bytes) != args.expect:
+        snapshot = snapshot_from_stream(stream)
+        original_bytes = snapshot.data
+        if snapshot.digest != args.expect:
             raise RevisionConflict("kt: leaf changed; reread with kt open --revision and merge before amending")
         original = original_bytes.decode("utf-8")
         if replacement == original and not args.source:
@@ -629,6 +796,8 @@ def amend(args):
             return 0
         _, old_records = proof_records(original)
         previous = {identity: marker for _, identity, marker in old_records if identity is not None}
+        if getattr(args, "reset_proofs", False):
+            previous = {}
         new_lines, new_records = proof_records(replacement)
         invalidated = 0
         for index, identity, _ in new_records:
@@ -644,9 +813,8 @@ def amend(args):
             return 0
         # Never replace the inode: installer-created SKILL.md hardlinks stay intact.
         # Recheck after preparing output to detect ordinary non-locking intervening edits.
-        stream.seek(0)
-        if stream.read() != original_bytes or path.stat().st_ino != os.fstat(stream.fileno()).st_ino:
-            raise RevisionConflict("kt: leaf changed during amendment; reread and merge")
+        check_leaf_snapshot(path, snapshot, stream,
+                            message="kt: leaf changed during amendment; reread and merge")
         stream.seek(0)
         stream.write(updated.encode("utf-8"))
         stream.truncate()
@@ -658,6 +826,236 @@ def amend(args):
     return 0
 
 
+
+def destination_leaf(value):
+    qualified = qualified_leaf(value)
+    if qualified is not None:
+        root, relative = qualified
+        require_root(root)
+        if Path(relative).is_absolute() or any(part in (".", "..") for part in relative.split("/")):
+            raise ValueError("destination must stay inside its selected root")
+        raw = root / relative
+    elif Path(value).expanduser().is_absolute():
+        raw = Path(value).expanduser().absolute()
+    else:
+        if ":" in value or any(part in (".", "..") for part in value.split("/")):
+            raise ValueError("invalid destination leaf")
+        available = roots()
+        if not available:
+            raise AccessRequired("kt: no accessible destination root")
+        raw = available[0][1] / value
+    path = raw.resolve()
+    name, root = require_leaf_root(path)
+    if path.suffix != ".md" or "_" in path.relative_to(root).as_posix():
+        raise ValueError("destination must be a sentence-derived Markdown leaf without underscores")
+    if any(part.is_symlink() for part in (raw, *raw.parents)):
+        raise ValueError("cannot move through a symlink")
+    return path
+
+
+def leaf_address(path):
+    name, root = require_leaf_root(path)
+    return f"{name}:{path.relative_to(root)}"
+
+
+def relocate_leaf(args):
+    path = resolve_leaf(args.path, writable=True)
+    if not re.fullmatch(r"[0-9a-fA-F]{64}", args.expect):
+        raise ValueError("--expect must be a SHA-256 revision from kt open --revision")
+    destination = destination_leaf(args.destination) if args.command == "mv" else None
+    with path.open("rb") as stream:
+        fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+        snapshot = snapshot_from_stream(stream)
+        data = snapshot.data
+        if snapshot.digest != args.expect.lower():
+            raise RevisionConflict("kt: revision mismatch; reread before removing or moving")
+        if destination is not None and destination == path:
+            print(f"Unchanged {leaf_address(path)}")
+            return 0
+        if destination is not None and (destination.exists() or destination.is_symlink()):
+            raise ValueError("destination already exists; no files changed")
+        source = leaf_address(path)
+        target = leaf_address(destination) if destination else None
+        if args.dry_run:
+            print(f"Would move {source} -> {target}" if destination else f"Would remove {source}")
+            return 0
+        check_leaf_snapshot(path, snapshot, stream)
+        if destination is not None:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                os.link(path, destination, follow_symlinks=False)
+            except OSError as error:
+                if error.errno != errno.EXDEV:  # Copy exclusively across filesystems.
+                    raise
+                with destination.open("xb") as output:
+                    output.write(data)
+                    output.flush()
+                    os.fsync(output.fileno())
+                shutil.copystat(path, destination, follow_symlinks=False)
+            check_leaf_snapshot(path, snapshot, stream,
+                                message="kt: source changed; source retained and destination created; inspect both")
+        path.unlink()
+    print(f"Moved {source} -> {target} review=scope,links,proofs" if destination
+          else f"Removed {source} review=links,orientation")
+    return 0
+
+
+def combine_leaves(args):
+    destination = destination_leaf(args.output)
+    sources = [resolve_leaf(value, writable=True) for value in args.paths]
+    bodies, provenance, falsified, unresolved = [], [], None, False
+    snapshots, blockers, next_checks = {}, [], []
+    for source in sources:
+        snapshot = read_leaf_snapshot(source)
+        data = snapshot.data
+        snapshots[source] = snapshot
+        metadata, body = leaf_parts(data.decode("utf-8"))
+        # Verification happened in a source scope, not in the combined answer.
+        lines, records = proof_records(body)
+        for index, _, _ in records:
+            lines[index] = "Proof: (verified at _)" + ("\n" if lines[index].endswith("\n") else "")
+        body = "".join(lines)
+        bodies.append(body.strip("\r\n"))
+        provenance.append(f"{leaf_address(source)} revision={revision(data)}")
+        falsified = falsified or metadata.get("falsified_at")
+        unresolved = unresolved or metadata.get("status") == "unresolved"
+        if metadata.get("blocker"):
+            blockers.append(metadata["blocker"])
+        if metadata.get("next_check"):
+            next_checks.append(metadata["next_check"])
+    # Abort before saving if any input changed while preparing the answer.
+    for source, snapshot in snapshots.items():
+        check_leaf_snapshot(source, snapshot,
+                            message="kt: combine input changed; no output saved; reread inputs")
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    metadata = {"status": "unresolved" if unresolved else "unverified", "updated_at": now, "scope": root_identity(require_leaf_root(destination)[1]),
+        "source": "Combined in input order: " + "; ".join(provenance)}
+    if falsified:
+        metadata["falsified_at"] = falsified
+    if unresolved:
+        metadata.update(blocker="; ".join(blockers) or "One or more input leaves are unresolved.",
+                        next_check="; ".join(next_checks) or "Establish the unresolved combined answer before validation.")
+    content = "---\n" + "".join(f"{key}: {json.dumps(value, ensure_ascii=False)}\n" for key, value in metadata.items())
+    content += "---\n\n" + "\n\n".join(bodies) + "\n"
+    if destination.exists():
+        if not args.expect:
+            raise ValueError("existing destination requires --expect from kt open --revision")
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".md") as body_file:
+            body_file.write(content)
+            body_file.flush()
+            amend(argparse.Namespace(path=str(destination), expect=args.expect,
+                body_file=body_file.name, source=metadata["source"], dry_run=args.dry_run, reset_proofs=True))
+        if args.dry_run:
+            print("Would remove source leaves except the destination.", file=sys.stderr)
+            return 0
+    else:
+        if args.expect:
+            raise RevisionConflict("kt: expected destination does not exist")
+        if args.dry_run:
+            print(f"Would coalesce {len(sources)} leaves -> {leaf_address(destination)} and remove sources", file=sys.stderr)
+            sys.stdout.write(content)
+            return 0
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("x", encoding="utf-8") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+    destination_revision = revision(destination.read_bytes())
+    removed = 0
+    for source, snapshot in snapshots.items():
+        if source == destination:
+            continue
+        # Saving in place changes input hardlink aliases to the destination too.
+        expected_revision = destination_revision if source.samefile(destination) else snapshot.digest
+        resolve_leaf(str(source), writable=True)
+        with source.open("rb") as stream:
+            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+            check_leaf_snapshot(source, snapshot, stream, expected_revision,
+                                message="kt: input changed; combined destination saved, changed source retained; inspect both")
+            source.unlink()
+        removed += 1
+    print(f"Combined {len(sources)} leaves -> {leaf_address(destination)} removed={removed} status={leaf_parts(destination.read_text())[0].get('status', 'unverified')} review=links,scope,proofs")
+    return 0
+
+
+
+def capture(args):
+    """Create only: existing owners (including hardlinked skills) are never replaced."""
+    if any(c in args.question for c in ("/", "\\", "_")) or any(
+            ord(c) < 32 for c in args.question):
+        raise ValueError("supply a natural-language question; use hyphens, not slashes or underscores")
+    components = re.findall(r"[^\W_]+(?:-[^\W_]+)*", args.question.casefold())
+    if not components:
+        raise ValueError("question must contain words")
+    available = roots()
+    if args.root:
+        root = root_aliases().get(args.root, Path(args.root).expanduser().absolute())
+        label = root_identity(root)
+    elif args.project or args.global_root:
+        label = "local" if args.project else "global"
+        root = root_aliases().get(label)
+        if root is None:
+            raise ValueError("no project knowledge root; establish one or select --root")
+    else:
+        if not available:
+            raise AccessRequired("kt: no accessible knowledge root for capture")
+        label, root = available[0]
+    if not args.dry_run and root.is_dir() and not any(isinstance(spec.get("path"), str) and Path(spec["path"]).expanduser().resolve() == root.resolve() for spec in access_config()["roots"].values()):
+        register_root(root)
+    require_root(root)
+    if not root.is_dir():
+        raise ValueError(f"knowledge root does not exist: {root}")
+    # Reject symlink roots/ancestors before any directory or file mutation.
+    for ancestor in (root, *root.parents):
+        if ancestor.is_symlink():
+            raise ValueError(f"symlink in capture root: {ancestor}")
+    path = root.joinpath(*components).with_suffix(".md")
+    require_leaf_root(path)
+    for ancestor in path.relative_to(root).parents:
+        if (root / ancestor).is_symlink():
+            raise ValueError("symlink in leaf path")
+    if path.exists() or path.is_symlink():
+        raise ValueError(f"leaf already exists: {path}; read its owner and amend deliberately")
+    if args.answer == "-":
+        if sys.stdin.isatty():
+            raise ValueError("pipe the answer on stdin when using -")
+        answer = sys.stdin.read()
+    else:
+        answer = args.answer
+    if not answer.strip():
+        raise ValueError("answer must not be empty")
+    if re.match(r"\A\s*---\s*\n", answer):
+        raise ValueError("supply the Markdown body, not a second frontmatter block")
+    if args.unresolved and (not args.blocker or not args.next_check):
+        raise ValueError("--unresolved requires --blocker and --next-check")
+    if not args.unresolved and (args.blocker or args.next_check):
+        raise ValueError("--blocker and --next-check require --unresolved")
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    metadata = {"status": "unresolved" if args.unresolved else "unverified",
+                "created_at": now, "scope": args.scope or root_identity(root),
+                "source": args.source or "caller-supplied answer; evidence not recorded"}
+    if args.unresolved:
+        metadata.update(checked_at=now, blocker=args.blocker, next_check=args.next_check)
+    content = "---\n" + "".join(f"{k}: {json.dumps(v, ensure_ascii=False)}\n"
+                                 for k, v in metadata.items()) + "---\n\n" + answer.rstrip() + "\n"
+    if args.dry_run:
+        print(f"Would create {label}:{path.relative_to(root)}", file=sys.stderr)
+        sys.stdout.write(content)
+        return 0
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Exclusive creation protects an existing leaf even if it appeared after preflight.
+    with path.open("x", encoding="utf-8") as handle:
+        handle.write(content)
+    print(paint("Created", "32") + f" {label}:{path.relative_to(root)}" +
+          ("" if PRETTY else f" status={metadata['status']}"))
+    if PRETTY:
+        print(f"  {path}")
+        print("  Unresolved record saved." if args.unresolved else
+              "  Unverified: independently review the leaf; check eligible proofs before reliance.")
+    return 0
+
+
+# Built-in proof parsing, execution, and outcome stamping.
 
 PROOF_FENCES = {
     "```bash": "bash",
@@ -921,6 +1319,11 @@ def verify_proofs(arguments=None):
                 print(f"ERROR {error}", file=sys.stderr)
             return 1
 
+    # The legacy entry point may skip ordinary policies, never forced privacy.
+    if root_access(root) == "force-private" or any(
+            other != root and other.is_relative_to(root) and root_access(other, label) == "force-private"
+            for label, other in discovered_roots()):
+        raise AccessRequired("kt: requested proof scope is unavailable")
     leaves, other_files = tree_files(root)
     selected = [(relative, path) for relative, path in leaves
                 if path_matches(relative, tokens)]
@@ -1019,151 +1422,25 @@ def prove(arguments):
     return verify_proofs(arguments)
 
 
-def capture(args):
-    """Create only: existing owners (including hardlinked skills) are never replaced."""
-    if any(c in args.question for c in ("/", "\\", "_")) or any(
-            ord(c) < 32 for c in args.question):
-        raise ValueError("supply a natural-language question; use hyphens, not slashes or underscores")
-    components = re.findall(r"[^\W_]+(?:-[^\W_]+)*", args.question.casefold())
-    if not components:
-        raise ValueError("question must contain words")
-    available = roots()
-    if args.root:
-        label, root = "explicit", Path(args.root).expanduser().absolute()
-    elif args.project or args.global_root:
-        label = "project" if args.project else "global"
-        root = next((p for name, p in available if name == label), None)
-        if root is None:
-            raise ValueError("no project knowledge root; establish one or select --root")
-    else:
-        if not available:
-            raise AccessRequired("kt: no accessible knowledge root for capture")
-        label, root = available[0]
-    if not args.dry_run and root.is_dir() and not any(isinstance(spec.get("path"), str) and Path(spec["path"]).expanduser().resolve() == root.resolve() for spec in access_config()["roots"].values()):
-        register_root(root)
-    require_root(root, None if label == "explicit" else label)
-    if not root.is_dir():
-        raise ValueError(f"knowledge root does not exist: {root}")
-    # Reject symlink roots/ancestors before any directory or file mutation.
-    for ancestor in (root, *root.parents):
-        if ancestor.is_symlink():
-            raise ValueError(f"symlink in capture root: {ancestor}")
-    path = root.joinpath(*components).with_suffix(".md")
-    for ancestor in path.relative_to(root).parents:
-        if (root / ancestor).is_symlink():
-            raise ValueError("symlink in leaf path")
-    if path.exists() or path.is_symlink():
-        raise ValueError(f"leaf already exists: {path}; read its owner and amend deliberately")
-    if args.answer == "-":
-        if sys.stdin.isatty():
-            raise ValueError("pipe the answer on stdin when using -")
-        answer = sys.stdin.read()
-    else:
-        answer = args.answer
-    if not answer.strip():
-        raise ValueError("answer must not be empty")
-    if re.match(r"\A\s*---\s*\n", answer):
-        raise ValueError("supply the Markdown body, not a second frontmatter block")
-    if args.unresolved and (not args.blocker or not args.next_check):
-        raise ValueError("--unresolved requires --blocker and --next-check")
-    if not args.unresolved and (args.blocker or args.next_check):
-        raise ValueError("--blocker and --next-check require --unresolved")
-    now = datetime.now().astimezone().isoformat(timespec="seconds")
-    metadata = {"status": "unresolved" if args.unresolved else "unverified",
-                "created_at": now, "scope": args.scope or {"project": "nearest project", "global": "personal global", "parent": "approved parent root", "explicit": "explicitly selected knowledge root"}[label],
-                "source": args.source or "caller-supplied answer; evidence not recorded"}
-    if args.unresolved:
-        metadata.update(checked_at=now, blocker=args.blocker, next_check=args.next_check)
-    content = "---\n" + "".join(f"{k}: {json.dumps(v, ensure_ascii=False)}\n"
-                                 for k, v in metadata.items()) + "---\n\n" + answer.rstrip() + "\n"
-    if args.dry_run:
-        print(f"Would create {label}:{path.relative_to(root)}", file=sys.stderr)
-        sys.stdout.write(content)
-        return 0
-    path.parent.mkdir(parents=True, exist_ok=True)
-    # Exclusive creation protects an existing leaf even if it appeared after preflight.
-    with path.open("x", encoding="utf-8") as handle:
-        handle.write(content)
-    print(paint("Created", "32") + f" {label}:{path.relative_to(root)}" +
-          ("" if PRETTY else f" status={metadata['status']}"))
-    if PRETTY:
-        print(f"  {path}")
-        print("  Unresolved record saved." if args.unresolved else
-              "  Unverified: independently review the leaf; check eligible proofs before reliance.")
+# CLI argument schema and command dispatch.
+
+def open_command(args):
+    return open_leaf(args.path, args.revision)
+
+
+def register_command(args):
+    register_root(args.path, args.name)
+    root = Path(args.path).expanduser().resolve()
+    print("Registered." if root_access(root) == "force-private"
+          else f"Registered {root_identity(root)}.")
     return 0
 
 
-def main():
-    global PRETTY
-    arguments = sys.argv[1:]
-    # Allow --pretty before the command or among its options, respecting --.
-    boundary = arguments.index("--") if "--" in arguments else len(arguments)
-    PRETTY = "--pretty" in arguments[:boundary]
-    arguments = [arg for arg in arguments[:boundary] if arg != "--pretty"] + arguments[boundary:]
-    if arguments and arguments[0] == "prove":
-        return prove(arguments[1:])
-    if arguments and arguments[0].split() and arguments[0].split()[0].casefold() in QUESTION_STARTS:
-        return question(arguments)
-    parser = argparse.ArgumentParser(description=__doc__, epilog="Questions: kt where is vivado; kt how to _ (list a branch).")
-    parser.add_argument("--pretty", action="store_true", help="human-oriented layout and terminal colors (default: compact plain text)")
-    commands = parser.add_subparsers(dest="command")
-    search = commands.add_parser("find", help="rank keyword matches across project and global roots")
-    search.add_argument("--pretty", action="store_true", help="human-oriented layout")
-    search.add_argument("terms", nargs="+", help="words or a quoted question")
-    search.add_argument("--limit", type=int, default=10)
-    search.add_argument("--min-coverage", type=float, default=0.6)
-    opening = commands.add_parser("open", help="print a leaf verbatim, including metadata")
-    opening.add_argument("path", help="relative path, project:path, global:path, or absolute .md path")
-    opening.add_argument("--revision", action="store_true", help="print SHA-256 revision on stderr; stdout stays verbatim")
-    amending = commands.add_parser("amend", help="replace an existing leaf with revision conflict protection")
-    amending.add_argument("path")
-    amending.add_argument("--expect", required=True, help="SHA-256 revision returned by open --revision")
-    amending.add_argument("--body-file", default="-", help="complete replacement Markdown file, or - for stdin")
-    amending.add_argument("--source", help="actual evidence for the revised answer")
-    amending.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
-    adding = commands.add_parser("capture", aliases=["add"], help="create a question-derived leaf in one call")
-    adding.add_argument("question", help="quoted full question; preserve multi-word components with hyphens")
-    adding.add_argument("answer", help="Markdown answer, or - to read stdin")
-    scope = adding.add_mutually_exclusive_group()
-    scope.add_argument("--global", dest="global_root", action="store_true")
-    scope.add_argument("--project", action="store_true")
-    scope.add_argument("--root", help="existing knowledge root (for example, example/)")
-    adding.add_argument("--scope", help="scope description; defaults to the selected root category")
-    adding.add_argument("--source", help="actual evidence/provenance supplied by the caller")
-    adding.add_argument("--dry-run", action="store_true", help="preview path and complete leaf without writing")
-    adding.add_argument("--unresolved", action="store_true")
-    adding.add_argument("--blocker")
-    adding.add_argument("--next-check")
-    commands.add_parser("roots", help="show root policies without reading their contents")
-    register = commands.add_parser("register", help="register an existing root as private (ask)")
-    register.add_argument("name")
-    register.add_argument("path")
-    access = commands.add_parser("access", help="inspect, approve, deny, or revoke root access")
-    access.add_argument("root", help="root label or absolute root path")
-    access.add_argument("decision", nargs="?", choices=["allow", "deny", "ask", "reset"])
-    access.add_argument("--scope", choices=["session", "project", "all"], default="project")
-    access.add_argument("--subdirectories", action="store_true", help="explicitly extend a project approval to descendant directories")
-    commands.add_parser("prove", help="check marked proofs: [directory] [tokens] [options]")
-    args = parser.parse_args(arguments)
-    if args.command == "find":
-        if args.limit < 1:
-            parser.error("--limit must be positive")
-        if not 0 < args.min_coverage <= 1:
-            parser.error("--min-coverage must be greater than zero and at most one")
-        return find(args)
-    if args.command == "open":
-        return open_leaf(args.path, args.revision)
-    if args.command == "amend":
-        return amend(args)
-    if args.command in ("capture", "add"):
-        return capture(args)
-    if args.command == "register":
-        print(f"Registered {register_root(args.path, args.name)} as private (ask).")
-        return 0
-    if args.command == "access":
-        return access_command(args)
+def roots_command(args):
     for label, root in discovered_roots():
         policy = root_access(root, label)
+        if policy == "force-private":
+            continue
         if PRETTY:
             print(f"[{policy}] {paint(label.ljust(7), '36')}  {root if policy == 'allow' else '(restricted)'}")
         else:
@@ -1179,7 +1456,7 @@ def main():
             else:
                 print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
         if not PRETTY:
-            print("commands: find | QUESTION | open | add | amend | prove | roots | register | access; --help; --pretty")
+            print("commands: find | QUESTION | open | add | amend | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
             return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
@@ -1189,6 +1466,102 @@ def main():
         print("kt prove [directory] [tokens] [--no-stamp]")
         print('kt add "how to do the thing" "The answer." --source "checked evidence"')
     return 0
+
+
+def command_parser():
+    parser = argparse.ArgumentParser(description=__doc__, epilog="Questions: kt where is vivado; kt how to _ (list a branch).")
+    parser.set_defaults(handler=roots_command)
+    parser.add_argument("--pretty", action="store_true", help="human-oriented layout and terminal colors (default: compact plain text)")
+    parser.add_argument("--dangerously-skip-permissions", action="store_true", help="persistently bypass ask/deny after user confirmation; force-private remains enforced")
+    commands = parser.add_subparsers(dest="command")
+    search = commands.add_parser("find", help="rank keyword matches across project and global roots")
+    search.set_defaults(handler=find)
+    search.add_argument("--pretty", action="store_true", help="human-oriented layout")
+    search.add_argument("terms", nargs="+", help="words or a quoted question")
+    search.add_argument("--limit", type=int, default=10)
+    search.add_argument("--min-coverage", type=float, default=0.6)
+    opening = commands.add_parser("open", help="print a leaf verbatim, including metadata")
+    opening.set_defaults(handler=open_command)
+    opening.add_argument("path", help="relative path, project:path, global:path, or absolute .md path")
+    opening.add_argument("--revision", action="store_true", help="print SHA-256 revision on stderr; stdout stays verbatim")
+    amending = commands.add_parser("amend", help="replace an existing leaf with revision conflict protection")
+    amending.set_defaults(handler=amend)
+    amending.add_argument("path")
+    amending.add_argument("--expect", required=True, help="SHA-256 revision returned by open --revision")
+    amending.add_argument("--body-file", default="-", help="complete replacement Markdown file, or - for stdin")
+    amending.add_argument("--source", help="actual evidence for the revised answer")
+    amending.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
+    for name in ("rm", "mv"):
+        maintenance = commands.add_parser(name, help="remove a leaf" if name == "rm" else "move a leaf without overwriting")
+        maintenance.set_defaults(handler=relocate_leaf)
+        maintenance.add_argument("path", help="source leaf address")
+        if name == "mv":
+            maintenance.add_argument("destination", help="destination Markdown leaf address")
+        maintenance.add_argument("--expect", required=True, help="source SHA-256 from kt open --revision")
+        maintenance.add_argument("--dry-run", action="store_true")
+    combining = commands.add_parser("combine", help="combine ordered Markdown bodies into one leaf")
+    combining.set_defaults(handler=combine_leaves)
+    combining.add_argument("paths", nargs="+", help="source leaf addresses in order")
+    combining.add_argument("-o", "--output", required=True, help="destination Markdown leaf address")
+    combining.add_argument("--expect", help="destination SHA-256 required when replacing an existing leaf")
+    combining.add_argument("--dry-run", action="store_true")
+    adding = commands.add_parser("capture", aliases=["add"], help="create a question-derived leaf in one call")
+    adding.set_defaults(handler=capture)
+    adding.add_argument("question", help="quoted full question; preserve multi-word components with hyphens")
+    adding.add_argument("answer", help="Markdown answer, or - to read stdin")
+    scope = adding.add_mutually_exclusive_group()
+    scope.add_argument("--global", dest="global_root", action="store_true")
+    scope.add_argument("--local", "--project", dest="project", action="store_true")
+    scope.add_argument("--root", help="existing knowledge root (for example, example/)")
+    adding.add_argument("--scope", help="scope description; defaults to the selected root category")
+    adding.add_argument("--source", help="actual evidence/provenance supplied by the caller")
+    adding.add_argument("--dry-run", action="store_true", help="preview path and complete leaf without writing")
+    adding.add_argument("--unresolved", action="store_true")
+    adding.add_argument("--blocker")
+    adding.add_argument("--next-check")
+    commands.add_parser("roots", help="show root policies without reading their contents")
+    register = commands.add_parser("register", help="register an existing root as private (ask)")
+    register.set_defaults(handler=register_command)
+    register.add_argument("name")
+    register.add_argument("path")
+    access = commands.add_parser("access", help="inspect, approve, deny, or revoke root access")
+    access.set_defaults(handler=access_command)
+    access.add_argument("root", help="root label or absolute root path")
+    access.add_argument("decision", nargs="?", choices=["allow", "deny", "ask", "force-private", "reset"])
+    access.add_argument("--scope", choices=["session", "project", "all"], default="project")
+    access.add_argument("--subdirectories", action="store_true", help="explicitly extend a project approval to descendant directories")
+    permissions = commands.add_parser("permissions", help="inspect or persist user permission bypass")
+    permissions.set_defaults(handler=permissions_command)
+    settings = permissions.add_mutually_exclusive_group()
+    settings.add_argument("--dangerously-skip-permissions", action="store_true")
+    settings.add_argument("--reset", action="store_true")
+    commands.add_parser("prove", help="check marked proofs: [directory] [tokens] [options]")
+    return parser
+
+
+def main():
+    global PRETTY
+    arguments = sys.argv[1:]
+    # Allow --pretty before the command or among its options, respecting --.
+    boundary = arguments.index("--") if "--" in arguments else len(arguments)
+    PRETTY = "--pretty" in arguments[:boundary]
+    arguments = [arg for arg in arguments[:boundary] if arg != "--pretty"] + arguments[boundary:]
+    if arguments and arguments[0] == "prove":
+        return prove(arguments[1:])
+    if arguments and arguments[0].split() and arguments[0].split()[0].casefold() in QUESTION_STARTS:
+        return question(arguments)
+    parser = command_parser()
+    args = parser.parse_args(arguments)
+    if args.command != "permissions" and args.dangerously_skip_permissions:
+        code = permissions_command(argparse.Namespace(dangerously_skip_permissions=True, reset=False))
+        if code or args.command is None:
+            return code
+    if args.command == "find":
+        if args.limit < 1:
+            parser.error("--limit must be positive")
+        if not 0 < args.min_coverage <= 1:
+            parser.error("--min-coverage must be greater than zero and at most one")
+    return args.handler(args)
 
 
 if __name__ == "__main__":

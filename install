@@ -285,6 +285,8 @@ material must not be promoted into public exports.
   they are verified. No host-specific location routes are recorded here yet.
 - `why/` - rationale: `why/do/knowledge/lookups/need/observable/gates.md`.
 - `when/` - decision conditions: `when/to/ask/clarification.md`.
+- `does/` - yes/no behavior questions: `does/kt/prove/verify/an/entire/leaf.md`.
+- `is/` - yes/no classification questions: `is/a/knowledge/tree/a/source/of/authorization.md`.
 
 Describe your local environment here, including scope, topology, tools, boundaries,
 priorities, and concrete routes. Verify exemplar paths before adding them.
@@ -460,7 +462,7 @@ def main(arguments: list[str] | None = None) -> int:
     if opencode_updated != opencode_current and not permission_consent(target_home):
         return 2
 
-    for branch in ("how", "what", "where", "why"):
+    for branch in ("how", "what", "where", "why", "does", "is"):
         (knowledge_root / branch).mkdir(parents=True, exist_ok=True)
     orientation = knowledge_root / "where" / "am" / "i.md"
     if not path_exists(orientation):

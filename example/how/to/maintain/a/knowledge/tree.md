@@ -15,7 +15,7 @@ scopes, not parallel monolithic documentation authorities.
 
 ## Establish and orient active roots
 
-Every required root contains `how/`, `what/`, `where/`, `why/`, and `where/am/i.md`.
+Every required root contains `how/`, `what/`, `where/`, `why/`, `does/`, `is/`, and `where/am/i.md`.
 Repair missing components immediately when permitted. Any directory can own a local
 root; use the nearest applicable root and broader roots only for shared context.
 Project leaves must be portable across machines and checkout locations.
@@ -100,3 +100,32 @@ and missing leaves were added (or left with truthful unresolved records/scoped h
 Also check that scope and provenance are truthful, roots are canonical, payloads are leaves,
 and a representative sentence-derived route works. Do not turn gardening judgments,
 atomicity, cohesion, or leaf length into automatic rewrite rules.
+
+## Remove, move, and coalesce leaves
+
+Read a source revision with `kt open local:what/is/old.md --revision`.
+Use the hash printed on stderr for destructive single-leaf changes:
+
+```sh
+kt rm local:what/is/old.md --expect HASH --dry-run
+kt mv local:what/is/old.md local:what/is/new.md --expect HASH
+kt combine local:what/is/first.md local:what/is/second.md -o local:what/is/cohesive.md
+```
+
+Combine coalesces destructively: Markdown bodies are concatenated in input order
+under one destination header, then source names are removed only after a successful
+save. If output is an existing leaf, supply its --expect revision. An input that is
+the destination is retained; other inputs are removed. `--dry-run` writes/removes
+nothing. Sources are revision/inode checked before saving and removal; detected
+concurrent changes are retained. Cleanup across multiple files is not transactional:
+interruption or a conflict can leave sources beside the saved destination. Inspect
+that state before retrying so content is not duplicated. Source/revision provenance,
+unresolved blockers, and sticky falsification survive; inherited proof stamps and
+whole-leaf verification are reset for review.
+
+Move refuses an existing destination and preserves bytes. Same-filesystem moves
+preserve hardlink identity; cross-filesystem moves copy exclusively before removing
+the source. Removing a name leaves other hardlinks intact. No command prunes empty
+canonical branches or updates links automatically. Review scope metadata, links,
+orientation, current-state projections, and affected proofs after maintenance.
+All operations enforce source/destination access and force-private boundaries.

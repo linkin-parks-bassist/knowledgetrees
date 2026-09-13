@@ -72,7 +72,17 @@ weak suggestions; heuristic success never certifies knowledge correctness.
 
 ## Root access policies
 
-User-global registry; private-by-default wider roots; persistent pairwise approvals and open-access overrides; no automatic parent discovery. Exact project directory approvals by default, optional explicit descendant inheritance. Enforce access on search/read/capture/proof and startup injection.
+Use a user-global registry and no automatic parent discovery. Wider roots default
+to ask, with existing pairwise and session grants preserved. Add a persistent,
+user-confirmed dangerously-skip-permissions setting that ignores ordinary ask/deny
+restrictions. Force-private overrides bypass and all grants: such roots are absent
+from kt output and inaccessible unless they are the exact local tree. Registered
+private subtrees must not leak through broader roots or proof execution.
+
+Root identities in output and default capture metadata are global, local, or the
+full canonical root directory path. Full paths avoid collisions for external trees.
+Keep project and registered names as compatibility input aliases. Startup policy
+loading must use the same persistent bypass and force-private rules as the CLI.
 
 Amendment must accept a complete replacement through a file or stdin, require an
 expected content revision, preserve hardlinks and root access policies, invalidate
@@ -84,3 +94,32 @@ Default CLI output must be compact plain text intended for agents, especially
 non-exact lookups. Provide `--pretty` for the human-oriented layout. Preserve
 retrieval ordering, explicit weak/falsified status, root-qualified leaf addresses,
 verbatim exact reads, and exit-status semantics while reducing decorative output.
+
+## Yes/no branches
+
+Every knowledge root has canonical `does/` and `is/` branches alongside how,
+what, where, and why. The CLI accepts does/is question prefixes. Their leaves
+answer yes/no directly with needed conditions and evidence. Installer/bootstrap,
+root creation, and orientation guidance include both branches and actual routes.
+
+## Leaf removal and movement
+
+Add kt rm and kt mv to simplify maintenance. Both require the source revision
+from kt open --revision, support dry-run, and enforce access/force-private on
+source and destination. Move refuses overwrites, preserves bytes and same-filesystem
+hardlink identity, and handles cross-filesystem moves by exclusive copy before
+removing the source. Neither command prunes canonical directories or silently
+updates references; maintenance includes reviewing links, orientation, scope, and
+proofs after relocation. Stale-source conflicts leave the source intact.
+
+
+kt combine SOURCE... -o DESTINATION concatenates Markdown bodies in input order
+under one unverified destination metadata header with source/revision provenance.
+It removes sources only after the destination is saved successfully, retaining
+the destination when it is an input. It resets inherited proof stamps and retains
+falsification and unresolved blockers. Source revisions are checked before saving
+and deletion; concurrent edits are retained. Multi-file deletion is not transactional
+and interrupted cleanup may leave source leaves alongside the saved answer.
+Existing destination replacement requires --expect and uses amendment conflict
+checks/hardlink preservation. Creation refuses overwrites; dry-run writes nothing.
+All inputs and output enforce access and forced privacy.

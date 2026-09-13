@@ -2,12 +2,11 @@
 name: knowledgetrees-capture
 description: 'Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs.'
 metadata:
-  verified_at: '2026-09-12T11:50:55+00:00'
-  verified_by: codex /root
   scope: public knowledge-tree example
   source: sanitized operational recommendations and the canonical knowledge-tree contract
   verification: Reviewed the complete capture contract and tested single-call creation, metadata, scope selection, stdin, dry runs, unresolved records, overwrite protection, and path rejection in isolated roots; installer and proof-stamp suites pass.
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
+  status: unverified
 ---
 
 Capture an established reusable answer before the next unrelated tool call or
@@ -39,7 +38,7 @@ kt add "how to prepare the demo" "Run the project's documented demo command." --
 ```
 
 `capture` is an alias for `add`. The nearest project root is the default, falling
-back to global; choose `--global`, `--project`, or `--root example` explicitly when
+back to global; choose `--global`, `--local` (`--project` is an alias), or `--root example` explicitly when
 scope matters. `--scope` supplies a scope description. `--dry-run` previews without
 writing. Pass `-` as the answer to read multiline Markdown from stdin.
 The command preserves repeated words and hyphenated components, creates metadata,
@@ -115,3 +114,6 @@ the agent remains responsible. Read maintenance before repairing a falsified lea
 
 For an existing owner, use the revision-checked read/revise/submit loop in
 `how/to/amend/a/knowledge/leaf.md`; creation still refuses overwriting existing leaves.
+
+Use canonical `does/` and `is/` branches for yes/no answers. Capture scope defaults
+to local, global, or the full canonical root path; --scope overrides that metadata.

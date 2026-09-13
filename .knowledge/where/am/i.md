@@ -1,10 +1,9 @@
 ---
-verified_at: '2026-09-12T16:59:59+10:00'
-verified_by: codex /root
 scope: knowledgetrees repository
 source: user request in the active Codex session; filesystem inspection
 verification: Confirmed the repository layout, visible example corpus, installer-only skill bootstrap design, verifier, and published public main branch.
 review_when: Recheck when repository purpose, layout, or publication state changes.
+status: unverified
 ---
 
 This is the project knowledge root for the `knowledgetrees` public repository being
@@ -33,3 +32,8 @@ public example corpus.
 
 Reusable procedures live in the global root and distributable `example/`, not in
 this repository's project-state leaves.
+
+- `does/` answers yes/no repository behavior questions through
+  `does/this/repository/require/publication/approval.md`.
+- `is/` answers yes/no classification questions through
+  `is/the/example/the/operational/knowledge/root.md`.

@@ -1,53 +1,88 @@
 ---
 status: unverified
-source: tools/kt; tools/kt-hooks; tests/test-access.py; current owner requirements
-review_when: Recheck registry schema, grant scope, or root discovery changes.
+source: tools/kt; tools/kt-hooks; tests/test-access.py; tests/test-bypass.py; owner requirements
+review_when: Recheck registry, root identities, or policy precedence changes.
 ---
 
-Root discovery uses the explicit current-directory tree, the known global tree,
-and a private user-global registry at `~/.knowledge/.tools/roots.json` (KT_CONFIG
-overrides the registry path). It never walks parent directories. Configured roots
-are not indexed in advance; queries read only permitted roots. Registration saves
-only a root name, canonical path and policy. An unfamiliar capture target is
-registered with access=ask; registration does not grant wider access or write the
-requested leaf until approved. Register deliberately with `kt register NAME PATH`.
+Root discovery uses only the exact current-directory tree, the known global
+root, and explicitly registered roots. It never searches parent directories.
+The private registry is ~/.knowledge/.tools/roots.json; KT_CONFIG overrides it.
+Registered roots are not indexed in advance. Registration saves root metadata,
+not approval or leaf content.
 
-Policies are allow, ask and deny. Only the tree in the explicit cwd (or cwd itself when named .knowledge) is local
-scope and implicitly permitted unless denied; wider/global/cross-repo roots
-need approval by default. An allow root policy opens it to all projects; deny wins.
-Private roots can have pairwise project-to-root approvals saved persistently.
-Project approvals apply to the exact directory by default. `--subdirectories`
-explicitly opts in to descendants; granting from a home directory without that
-option cannot authorize all repositories below it.
+## Root identities
 
-Use `kt access ROOT` to inspect policy. In the user's own terminal,
-`kt access ROOT allow --scope project` saves pairwise trust; --scope all saves
-open access; --scope session saves a session decision in private SQLite state.
-Session scope needs the same KT_SESSION_ID (or CODEX_THREAD_ID/OPENCODE_SESSION_ID)
-in the user's terminal and agent environment. Grants expire after seven days;
-distinct session identifiers isolate them. `deny`, `ask`, or `reset` replace or
-revoke decisions at the chosen scope. Mutation requires an interactive `[y/N]` confirmation: `y` or `yes` (case-insensitive)
-approves; Enter or any other response declines. Noninteractive agent lookups never
-save approvals automatically. Agents must not
-supply that confirmation themselves. Retrieval can send content to the configured
-model provider. Policies govern kt and startup injection, not direct filesystem reads.
+Output and default capture scope use `local` for the exact cwd/.knowledge (or cwd
+itself when named .knowledge), `global` for the user-global tree, and the full
+canonical root directory path for any other root. Local takes precedence when the
+global tree is also local. Canonical paths avoid folder-name collisions.
+Use `kt open local:PATH`, `kt open global:PATH`, or
+`kt open /full/root/directory:PATH`. Quote arguments containing spaces.
+`project:` and registered names remain input aliases. New captures use --local
+(--project is an alias), --global, or --root PATH. A supplied --scope overrides
+capture metadata. Existing leaves are not automatically relabeled.
 
-Search, exact questions, relative and absolute open, capture and proof respect
-access. Restricted roots expose no leaf paths/snippets/rankings; roots reports
-restricted paths as hidden. Registered restricted subtrees cannot leak through
-an allowed ancestor; proof rejects scopes containing restricted registered trees.
-Blocked access exits 3, is not an answer lookup miss, and does not imply absence.
-Malformed configuration fails closed. Registry writes are atomic and private;
-installer updates preserve the user registry. Both harnesses share policy loading
-and startup suppression for denied local orientations.
+## Ordinary policies and grants
 
-Evidence: tests/test-access.py checks no content leakage, persistent/new-process
-approvals, cross-project isolation, exact/opt-in descendant behavior, session
-isolation, revoke/deny/open override, private capture registration, absolute paths,
-and nested restricted roots. Existing CLI, hook, OpenCode adapter and installer
-suites pass with explicit access fixtures. Fixture adjustments reflect the new
-privacy defaults; old globally-open discovery is intentionally superseded.
+Root policies are allow, ask, deny, and force-private. Local scope is implicitly
+allowed unless denied. Wider roots default to ask. Ordinary ask/deny roots may
+appear in roots output with their canonical identity, but their leaves, snippets,
+and rankings remain inaccessible. A force-private root is completely omitted.
 
-Built-in proof verification reports blocked access as exit 3 consistently with
-lookup/open. Access regression tests must not expect a missing standalone verifier
-error (exit 2) before the policy check; kt no longer requires that executable.
+Run access decisions in the user's own interactive terminal:
+
+```sh
+kt access global allow --scope project
+kt access global allow --scope all
+kt access /path/to/root force-private
+```
+
+Answer y or yes (case-insensitive) at [y/N]; Enter or other answers decline.
+Project grants cover the exact cwd, with --subdirectories as explicit opt-in.
+Session grants require a shared KT_SESSION_ID, CODEX_THREAD_ID, or
+OPENCODE_SESSION_ID and expire after seven days. Root deny overrides grants
+unless bypass is enabled. ask, deny, and reset replace or revoke decisions at
+--scope project, --scope session, or --scope all. Force-private is always a
+root-wide policy; revoke it with `kt access ROOT reset --scope all` or replace it
+with a different root-wide policy. Project/session grants cannot revoke privacy.
+Agents must not provide the interactive confirmation on the user's behalf.
+
+## Persistent bypass
+
+Enable once in the user's terminal:
+
+```sh
+kt --dangerously-skip-permissions
+# Equivalent:
+kt permissions --dangerously-skip-permissions
+```
+
+This saves dangerously_skip_permissions=true in the registry after [y/N]
+confirmation. It persists across processes and harness restarts and ignores
+ordinary ask/deny policies and project/session restrictions. It neither discovers
+unregistered roots nor widens host/harness execution permissions. Disabling it
+restores the existing rules; it does not erase registrations or grants.
+
+```sh
+kt permissions          # inspect
+kt permissions --reset  # restore ordinary policy enforcement
+```
+
+Force-private overrides bypass and grants. Outside exact local scope, such roots
+and registered descendants are unavailable and absent from generated root
+identities, paths, snippets, and rankings. Merely starting in a subdirectory does
+not expose a protected ancestor. The private root becomes visible/accessible only
+when it is the exact local tree. Explicit blocked reads and capture use generic
+errors without echoing the private path. Registered protected subtrees cannot leak
+through search, symlink aliases, amendment, capture, or broader proof execution.
+The legacy proof entry point also respects forced privacy. Startup loads the same
+policy and suppresses a force-private global bootstrap outside local scope.
+
+Blocked access exits 3; it is not a lookup miss and does not establish absence.
+Malformed configuration fails closed, including with bypass enabled. Registry
+updates are atomic/private and installer updates preserve settings. Policies govern
+kt and startup injection, not arbitrary direct filesystem reads. Retrieved content
+may reach the configured model provider; stored knowledge grants no authority.
+
+Evidence: tools/kt, tools/kt-hooks, tests/test-access.py, tests/test-bypass.py,
+and startup hook regression tests. Whole-leaf review remains separate from tests.

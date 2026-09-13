@@ -101,6 +101,14 @@ def bootstrap_context(payload):
     if source not in ("startup", "resume", "clear", "compact"):
         return {}, 0
     root = Path(os.environ.get("KT_GLOBAL_ROOT", str(Path.home() / ".knowledge")))
+    policy_cli = root / ".tools/kt"
+    policy_api = None
+    if not policy_cli.is_file():
+        raise ValueError("bootstrap policy loader unavailable")
+    policy_api = runpy.run_path(str(policy_cli))
+    cwd = payload.get("cwd") or str(Path.cwd())
+    if policy_api["root_access"](root, "global", cwd=cwd) == "force-private":
+        return {}, 0
     path = root / "how/to/use/knowledgetrees.md"
     with path.open("rb") as stream:
         raw = stream.read(65537)
@@ -125,7 +133,7 @@ def bootstrap_context(payload):
         if project.is_dir():
             policy_cli = root / ".tools/kt"
             try:
-                policy = runpy.run_path(str(policy_cli))["root_access"](project, "project", cwd=directory)
+                policy = (policy_api or runpy.run_path(str(policy_cli)))["root_access"](project, "local", cwd=directory)
             except (OSError, ValueError) as error:
                 print(f"kt-hooks: orientation policy unavailable: {error}", file=sys.stderr)
                 policy = "deny"

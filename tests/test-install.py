@@ -117,7 +117,7 @@ def main() -> None:
         verifier = knowledge / ".tools" / "verify-knowledgetree-proofs"
 
         assert "How to navigate this tree" in orientation.read_text()
-        for branch in ("how/", "what/", "where/", "why/"):
+        for branch in ("how/", "what/", "where/", "why/", "does/", "is/"):
             assert branch in orientation.read_text()
         assert canonical.is_file()
         assert "scope: personal global" in canonical.read_text()

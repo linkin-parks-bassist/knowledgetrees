@@ -15,7 +15,7 @@ or semantic similarity. `kt where is _` lists location leaves without a query.
 Exact question-path hits return full contents, frontmatter included; they do not
 run proofs or establish correctness. Use `kt open` to read fallback list results.
 
-Conventions: `where/is/` answers locations, `how/to/` procedures, `when/to/`
+Conventions: `does/` and `is/` answer yes/no questions; `where/is/` answers locations, `how/to/` procedures, `when/to/`
 decision triggers, `what/is/` definitions/state, and `why/does/` or `why/is/`
 rationale. Other complete question prefixes can be navigated under these starters.
 
@@ -31,14 +31,15 @@ leaf. Preserve the established answer before the next unrelated tool call or
 completion. Add a truthful unresolved record if blocked; forbidden writes require
 a scoped handoff. Do not silently move on or create a duplicate from a lexical miss.
 
-`kt roots` lists the explicit current-directory project root, the global root,
+`kt roots` labels the exact current-directory tree local, the user-global tree global,
+and other roots by full canonical root directory path. It lists the local/global trees
 and registered roots without duplicates. Wider roots default to private; use
 `kt access` for user-approved sharing. `KT_GLOBAL_ROOT` can override the global
-root. Root discovery never walks parent directories; restricted roots expose no
-paths or snippets.
+root. Root discovery never walks parent directories. Ordinary restricted roots expose
+no leaf paths/snippets; force-private roots expose no generated root identity either.
 
 `kt open global:how/to/add/knowledge/leaves.md` selects a global leaf explicitly;
-`project:` selects the project tree. An unqualified relative path tries project
+`local:` selects the exact local tree; `project:` is a compatibility alias. An unqualified relative path tries project
 then global. Absolute Markdown leaf paths also work. Content and frontmatter are
 returned verbatim. Relative paths cannot escape the selected root.
 
@@ -67,3 +68,45 @@ Empty or weak-only keyword matches exit 1; blocked root access exits 3.
 Results distinguish leaf-review timestamps from proof verification and retain
 explicit falsification flags. Check relevant proofs before reliance.
 The installer puts the script in the global `.tools/kt` and links `~/.local/bin/kt`.
+
+## Persistent access settings
+
+`kt --dangerously-skip-permissions` (or `kt permissions --dangerously-skip-permissions`)
+saves a persistent bypass after user-terminal [y/N] confirmation. Inspect with
+`kt permissions`; disable with `kt permissions --reset`. Bypass ignores ordinary
+ask/deny and grants, but not force-private. Set a root-wide private exception with
+`kt access /path/to/root force-private`; it is hidden/unavailable outside exact local
+scope. See [root access](../control/knowledge/root/access.md) for precedence and aliases.
+
+Lookup loads root access once and lazily reuses leaf text only within that lookup.
+No persistent cache/index is created, and private roots are never indexed. Every
+new invocation sees current configuration and filesystem changes.
+
+## Remove, move, and coalesce leaves
+
+Read a source revision with `kt open local:what/is/old.md --revision`.
+Use the hash printed on stderr for destructive single-leaf changes:
+
+```sh
+kt rm local:what/is/old.md --expect HASH --dry-run
+kt mv local:what/is/old.md local:what/is/new.md --expect HASH
+kt combine local:what/is/first.md local:what/is/second.md -o local:what/is/cohesive.md
+```
+
+Combine coalesces destructively: Markdown bodies are concatenated in input order
+under one destination header, then source names are removed only after a successful
+save. If output is an existing leaf, supply its --expect revision. An input that is
+the destination is retained; other inputs are removed. `--dry-run` writes/removes
+nothing. Sources are revision/inode checked before saving and removal; detected
+concurrent changes are retained. Cleanup across multiple files is not transactional:
+interruption or a conflict can leave sources beside the saved destination. Inspect
+that state before retrying so content is not duplicated. Source/revision provenance,
+unresolved blockers, and sticky falsification survive; inherited proof stamps and
+whole-leaf verification are reset for review.
+
+Move refuses an existing destination and preserves bytes. Same-filesystem moves
+preserve hardlink identity; cross-filesystem moves copy exclusively before removing
+the source. Removing a name leaves other hardlinks intact. No command prunes empty
+canonical branches or updates links automatically. Review scope metadata, links,
+orientation, current-state projections, and affected proofs after maintenance.
+All operations enforce source/destination access and force-private boundaries.

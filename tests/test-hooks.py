@@ -18,7 +18,12 @@ HANDLER = REPOSITORY / "tools/kt-hooks"
 
 def main():
     handle = runpy.run_path(str(HANDLER))["handle"]
-    with patch.dict(os.environ, {"KT_GLOBAL_ROOT": str(REPOSITORY / "example")}):
+    with tempfile.TemporaryDirectory(prefix="kt bootstrap ") as initial, patch.dict(os.environ, {"KT_GLOBAL_ROOT": str(Path(initial) / ".knowledge"), "KT_CONFIG": str(Path(initial) / "config.json")}):
+        initial_root = Path(initial) / ".knowledge"
+        (initial_root / ".tools").mkdir(parents=True)
+        (initial_root / ".tools/kt").write_bytes((REPOSITORY / "tools/kt").read_bytes())
+        (initial_root / "how/to/use").mkdir(parents=True)
+        (initial_root / "how/to/use/knowledgetrees.md").write_bytes((REPOSITORY / "example/how/to/use/knowledgetrees.md").read_bytes())
         for source in ("startup", "resume", "clear", "compact"):
             output, code = handle("codex", "start", {"source": source})
             assert code == 0
@@ -69,6 +74,31 @@ def main():
         Path(os.environ["KT_CONFIG"]).write_text(json.dumps({"roots": {"blocked": {"path": str(nearer), "access": "deny"}}}))
         result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
         assert "Nested orientation" not in result["additionalContext"]
+        policy = {"dangerously_skip_permissions": True, "roots": {"blocked": {"path": str(nearer), "access": "deny"}}}
+        Path(os.environ["KT_CONFIG"]).write_text(json.dumps(policy))
+        result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
+        assert "Nested orientation" in result["additionalContext"]
+        policy["roots"]["blocked"]["access"] = "force-private"
+        Path(os.environ["KT_CONFIG"]).write_text(json.dumps(policy))
+        result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
+        assert "Nested orientation" in result["additionalContext"], "exact local force-private exception"
+        policy["roots"]["global"] = {"access": "force-private"}
+        Path(os.environ["KT_CONFIG"]).write_text(json.dumps(policy))
+        for harness in ("codex", "opencode"):
+            result, _ = handle(harness, "start", {"source": "startup", "cwd": str(nested)})
+            assert result == {}, "force-private global bootstrap must not leak"
+            result, _ = handle(harness, "start", {"source": "resume", "cwd": str(fixture_global)})
+            assert result == {}, "starting inside an arbitrary root is not local .knowledge scope"
+        exact_home = Path(temporary) / "exact-home"
+        exact_root = exact_home / ".knowledge"
+        (exact_root / ".tools").mkdir(parents=True)
+        (exact_root / ".tools/kt").write_bytes((REPOSITORY / "tools/kt").read_bytes())
+        (exact_root / "how/to/use").mkdir(parents=True)
+        (exact_root / "how/to/use/knowledgetrees.md").write_bytes((REPOSITORY / "example/how/to/use/knowledgetrees.md").read_bytes())
+        os.environ["KT_GLOBAL_ROOT"] = str(exact_root)
+        Path(os.environ["KT_CONFIG"]).write_text(json.dumps({"roots": {"global": {"access": "force-private"}}}))
+        result, _ = handle("opencode", "start", {"source": "resume", "cwd": str(exact_home)})
+        assert "already loaded" in result["additionalContext"], "global is accessible when it is the exact local tree"
     failure = runpy.run_path(str(HANDLER))["failed"]
     for mode in ("default", "bypassPermissions", "plan", None):
         assert handle("codex", "before", {"permission_mode": mode}) == ({}, 0)
