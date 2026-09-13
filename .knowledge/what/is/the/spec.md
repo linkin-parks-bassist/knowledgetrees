@@ -1,10 +1,9 @@
 ---
-verified_at: '2026-09-12T12:06:21+00:00'
-verified_by: codex /root
 scope: knowledgetrees repository
-source: user request in the active Codex session
-verification: Reconciled requested deliverables and local hook scope, soft reminder semantics, trust and permissions, session-boundary bootstrap, public safety, and publication approval.
+source: "Owner requirements and final CLI/privacy/maintenance contracts; previous review predates amendments"
 review_when: Recheck when the requested contents or publication workflow changes.
+status: "unverified"
+updated_at: "2026-09-13T13:52:11+10:00"
 ---
 
 The repository must be a local Git repository connected to its intended public

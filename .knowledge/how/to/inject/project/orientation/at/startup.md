@@ -1,7 +1,8 @@
 ---
-status: unverified
-source: shared startup loader and Python/OpenCode integration tests
+status: "unverified"
+source: "tools/kt-hooks bootstrap_context; tests/test-hooks.py; final privacy implementation"
 review_when: Recheck startup interfaces or root discovery rules.
+updated_at: "2026-09-13T13:51:54+10:00"
 ---
 
 Codex SessionStart and OpenCode system-context bootstrap share the Python startup
@@ -24,4 +25,7 @@ tests/test-opencode-hooks.mjs. Relevant integration checks passed.
 
 Privacy boundary: automatic orientation injection is restricted to the supplied
 session directory. Parent/home orientations are never searched or used as fallback.
-The canonical global procedure remains loaded; this does not inject global orientation.
+The canonical global procedure is injected only when its root is not force-private
+outside exact local scope. The shared loader checks current root policy before
+reading it; bypass cannot override force-private. When permitted, it does not
+inject global orientation.

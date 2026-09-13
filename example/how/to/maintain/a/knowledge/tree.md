@@ -2,9 +2,10 @@
 name: knowledgetrees-maintenance
 description: 'Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed.'
 metadata:
-  status: unverified
+  updated_at: "2026-09-13T13:52:11+10:00"
+  status: "unverified"
   scope: public knowledge-tree example
-  source: sanitized operational recommendations and the canonical knowledge-tree contract
+  source: "tools/kt local_root/discovered_roots; exact-directory discovery contract"
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
@@ -17,7 +18,8 @@ scopes, not parallel monolithic documentation authorities.
 
 Every required root contains `how/`, `what/`, `where/`, `why/`, `does/`, `is/`, and `where/am/i.md`.
 Repair missing components immediately when permitted. Any directory can own a local
-root; use the nearest applicable root and broader roots only for shared context.
+root; kt discovers the exact current-directory tree and explicitly registered
+roots, not parents. Use broader roots only within their access policy.
 Project leaves must be portable across machines and checkout locations.
 
 Orientation is a truthful README-like projection, not a thin link catalog. Describe

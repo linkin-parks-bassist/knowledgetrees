@@ -1,8 +1,9 @@
 ---
-status: unverified
+status: "unverified"
 scope: knowledgetrees repository
-source: repository implementation, installed infrastructure, regression suites, owner requirements
+source: "Read-only local source-byte, launcher, hook-output, skill-inode and registry checks; final captured-knowledge audit"
 review_when: Update after material repository changes.
+updated_at: "2026-09-13T13:52:27+10:00"
 ---
 
 The public repository's operational root is .knowledge/. The visible example/
@@ -84,3 +85,13 @@ verifier, and shared hook handler are deployed with identical source bytes; the
 access registry was unchanged. The owner-authorized implementation update was committed and pushed to main
 as 8e7a24b. A native rewrite remains a possible future optimization, contingent
 on larger-corpus and warm/cold timing measurements.
+
+Final local installation audit: PATH launcher resolves to the installed kt; kt,
+the compatibility verifier and handler match repository bytes and are executable.
+OpenCode plugin bytes and every managed Codex/Copilot hook definition match the
+installer output. The five procedure leaves retain both harness skill hardlinks;
+canonical branches and the home AGENTS bootstrap are present. Persistent bypass
+is disabled. This verifies on-disk installation, not whether an existing OpenCode
+backend has reloaded its plugin or a model will comply. The final knowledge audit
+corrected old verifier guidance, startup privacy wording, and installed skill scope
+labels; changed leaves remain unverified pending independent whole-leaf review.
