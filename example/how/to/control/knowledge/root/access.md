@@ -1,7 +1,8 @@
 ---
-status: unverified
-source: tools/kt; tools/kt-hooks; tests/test-access.py; tests/test-bypass.py; owner requirements
+status: "unverified"
+source: "tools/kt prove access checks; tools/kt-hooks startup policy"
 review_when: Recheck registry, root identities, or policy precedence changes.
+updated_at: "2026-09-13T13:54:52+10:00"
 ---
 
 Root discovery uses only the exact current-directory tree, the known global
@@ -75,7 +76,7 @@ not expose a protected ancestor. The private root becomes visible/accessible onl
 when it is the exact local tree. Explicit blocked reads and capture use generic
 errors without echoing the private path. Registered protected subtrees cannot leak
 through search, symlink aliases, amendment, capture, or broader proof execution.
-The legacy proof entry point also respects forced privacy. Startup loads the same
+Startup loads the same
 policy and suppresses a force-private global bootstrap outside local scope.
 
 Blocked access exits 3; it is not a lookup miss and does not establish absence.

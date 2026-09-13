@@ -14,4 +14,4 @@ Keep the roots distinct: `.knowledge/` is this repository's actual operational
 knowledge root; `example/` is a public distributable specimen. Do not copy
 repository-specific state into `example/` or use the example as a substitute for
 project orientation. Validate the example separately with
-`tools/verify-knowledgetree-proofs --root example` when changing it.
+`kt prove --root example` when changing it.

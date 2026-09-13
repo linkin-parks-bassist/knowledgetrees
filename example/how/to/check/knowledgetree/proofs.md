@@ -1,8 +1,9 @@
 ---
-status: unverified
+status: "unverified"
 scope: public knowledge-tree procedure
-source: tools/kt; tools/verify-knowledgetree-proofs; tests/test-kt.py; tests/test-proof-stamps.py
-review_when: Recheck proof engine, compatibility entry point, or access enforcement changes.
+source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
+review_when: Recheck proof engine or access enforcement changes.
+updated_at: "2026-09-13T13:54:30+10:00"
 ---
 
 Use `kt prove` to check marked proofs. Verification is built into kt; it does
@@ -19,11 +20,6 @@ Before installation, use `tools/kt prove` from the checkout. Root access checks
 apply before proof execution, including restrictions on registered nested trees.
 `kt prove --help` lists verification options without requiring root access.
 
-The old `verify-knowledgetree-proofs` executable is a small compatibility entry
-point into the same kt proof engine, not another implementation. It preserves
-legacy standalone root selection, which does not enforce kt access policies;
-new agent and harness integrations should use `kt prove`. Existing standalone
-scripts continue to work when the compatibility entry point and kt are together.
 
 Each positional token must match an exact directory component or filename stem;
 multiple tokens select their disjunction. Use `-r PATH` or `--root PATH` to select a

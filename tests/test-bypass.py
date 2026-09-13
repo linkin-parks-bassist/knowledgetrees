@@ -44,9 +44,8 @@ with tempfile.TemporaryDirectory(prefix="kt-bypass-") as temporary:
     try:
         os.chdir(project)
         with patch.dict(os.environ, environment):
-            def run(*args, expected=0, cwd=project, legacy=False):
-                command = REPO / "tools/verify-knowledgetree-proofs" if legacy else CLI
-                result = subprocess.run([sys.executable, str(command), *args], cwd=cwd,
+            def run(*args, expected=0, cwd=project):
+                result = subprocess.run([sys.executable, str(CLI), *args], cwd=cwd,
                                         capture_output=True, text=True)
                 assert result.returncode == expected, (args, result.stdout, result.stderr)
                 return result.stdout + result.stderr
@@ -97,9 +96,6 @@ with tempfile.TemporaryDirectory(prefix="kt-bypass-") as temporary:
             assert not (private / "what/is/hidden.md").exists()
             assert not (nested / "hidden/new.md").exists()
             assert str(private) not in run("access", "secret-alias")
-            for root in (private, local):
-                output = run("--root", str(root), "--no-stamp", expected=3, legacy=True)
-                assert str(private) not in output and str(nested) not in output
             # Only exact local scope exposes the private tree; descendants do not.
             assert "classifiedneedle" in run("open", "local:where/is/answer.md", cwd=private)
             assert "local\tallow" in run("roots", cwd=private)

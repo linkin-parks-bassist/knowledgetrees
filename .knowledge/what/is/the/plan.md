@@ -1,15 +1,16 @@
 ---
-status: unverified
+status: "unverified"
 scope: knowledgetrees repository
-source: owner requirements and implemented repository workflow
+source: "Owner sole kt prove requirement; validated installation and tests"
 review_when: Update when task scope or completion changes.
+updated_at: "2026-09-13T13:56:19+10:00"
 ---
 
 The original knowledge-first installation/publication, proof stamping, retrieval,
 hooks, root-access registry, and standalone amendment work is complete. The
 repository owner authorizes committing/pushing this session's CLI improvements.
 
-1. [x] Integrate verification into kt and compact default lookup output with --pretty.
+1. [x] Expose verification only through kt prove and compact lookup output with --pretty.
 2. [x] Add persistent user-confirmed bypass with force-private precedence/invisibility.
 3. [x] Use local/global/canonical-path identities and preserve input aliases/grants.
 4. [x] Add does/is branches to lookup, installer, and canonical procedures.

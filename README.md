@@ -15,8 +15,7 @@ This repository contains:
 
 - a visible, self-describing public corpus in [`example/`](example/where/am/i.md);
 - the knowledge-first [`install`](install) script;
-- the proof engine built into [`kt`](tools/kt), with a
-  [`verify-knowledgetree-proofs`](tools/verify-knowledgetree-proofs) compatibility entry point; and
+- the proof engine built into [`kt`](tools/kt), accessed through `kt prove`; and
 - selected planning and specification practices distilled into semantic leaves,
   without inheriting an inflexible skill-driven workflow.
 
@@ -229,11 +228,8 @@ or compound conclusions.
 
 Use `kt prove` for access-controlled proof verification. The proof engine is
 built into kt; no separate verifier process or installation is needed.
-`kt prove --help` lists options. The old `verify-knowledgetree-proofs` script is
-only a compatibility entry point into that same engine. It retains legacy
-standalone root selection without kt access enforcement, so new integrations
-should use `kt prove` for approved roots. The compatibility commands below also
-work for checking the public example before installation.
+`kt prove --help` lists options. Before installation, run `tools/kt prove`
+from the checkout. Explicit roots require the same access approval as retrieval.
 
 **Agents run the verifier before relying on proof-backed knowledge.** They check the
 active root during bootstrap and when entering a new scope, then relevant semantic
@@ -255,16 +251,22 @@ is separate and changes only after an independent review of the whole leaf; the
 verifier does not infer whether every statement is covered by proofs. Use
 `--no-stamp` when a read-only check is needed.
 
-Run every marked proof in this repository with:
+To check the public example, first approve its root in your own terminal:
 
 ```bash
-tools/verify-knowledgetree-proofs --root example
+tools/kt access "$PWD/example" allow --scope project
+```
+
+Then run every marked proof in that tree with:
+
+```bash
+tools/kt prove --root example
 ```
 
 Run a semantic slice by passing exact path-component tokens:
 
 ```bash
-tools/verify-knowledgetree-proofs --root example knowledge-tree proofs
+tools/kt prove --root example knowledge-tree proofs
 ```
 
 Multiple tokens select their disjunction. Use `--verbose` for per-leaf diagnostics.
@@ -362,8 +364,7 @@ Run the installer from a clone:
 
 The installer is knowledge-first. It safely merges the reusable leaves from
 `example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
-kt CLI with built-in proof verification and a legacy verifier compatibility entry
-point under `~/.knowledge/.tools/`, and adds the
+kt CLI with built-in proof verification under `~/.knowledge/.tools/`, and adds the
 mandatory once-per-session bootstrap to `~/AGENTS.md`. The loaded procedure remains
 active across messages and tasks; it is not reinvoked on every turn. The installer
 refuses to overwrite differing knowledge unless `--force` is supplied explicitly.
@@ -581,7 +582,7 @@ The installer is covered by an isolated-home integration test. It verifies that:
 - an existing orientation, `AGENTS.md`, and Codex configuration are preserved;
 - repeated installation is idempotent;
 - differing knowledge is rejected before overwrite unless `--force` is explicit;
-- built-in verification and the legacy compatibility entry point run successfully; and
+- built-in verification through `kt prove` runs successfully; and
 - both compatibility `SKILL.md` paths have the same device and inode as the
   canonical installed procedure.
 
@@ -645,7 +646,7 @@ rankings, and cannot be read or mutated unless it is the exact local tree.
 Starting in a subdirectory does not expose its ancestor tree. Registered protected
 subtrees cannot leak through search, symlinks, maintenance, or proof checks.
 The shared startup loader suppresses force-private global procedure injection outside
-local scope. The legacy verifier also respects force-private. Remove/replace the
+local scope. Remove/replace the
 exception with kt access ROOT reset --scope all or a different root-wide policy.
 Bypass neither discovers new roots nor grants broader host/harness permissions.
 Malformed configuration fails closed even when bypass is enabled.

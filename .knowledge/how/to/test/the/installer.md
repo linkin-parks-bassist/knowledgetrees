@@ -1,10 +1,9 @@
 ---
-verified_at: '2026-09-12T12:06:21+00:00'
-verified_by: codex /root
 scope: knowledgetrees repository
-source: tests/test-install.py and tools/verify-knowledgetree-proofs
-verification: Ran installer, shared-hook, and mock OpenCode adapter checks; reviewed successful proof-stamp normalization and protected falsification/content differences.
+source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
 review_when: Recheck when installer behavior, target paths, or test coverage changes.
+status: "unverified"
+updated_at: "2026-09-13T13:54:30+10:00"
 ---
 
 Run `python3 -B tests/test-install.py`. The test uses temporary target homes and

@@ -1,8 +1,9 @@
 ---
-status: unverified
+status: "unverified"
 scope: public knowledge-tree example
-source: Python kt implementation and isolated CLI integration tests
+source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
 review_when: Recheck after changes to the kt CLI or root discovery.
+updated_at: "2026-09-13T13:54:30+10:00"
 ---
 
 Use `kt where is vivado` or `kt how to make a plan` for branch-directed lookup.
@@ -46,8 +47,7 @@ returned verbatim. Relative paths cannot escape the selected root.
 `kt prove --no-stamp leaves` checks exact semantic-component tokens in the active
 root. `kt prove /path/to/project --no-stamp` selects that project's `.knowledge`;
 explicit `--root ROOT` and other proof options are parsed by the built-in engine.
-No separately installed verifier is required. The old standalone command is only
-a compatibility entry point; new integrations use access-controlled `kt prove`. Default proof
+Verification uses access-controlled `kt prove`. Default proof
 checks may stamp outcomes; lookup and open do not verify or stamp proofs.
 
 Default output is compact plain text for agents. Non-exact searches print one

@@ -2,10 +2,10 @@
 name: knowledgetrees-maintenance
 description: 'Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed.'
 metadata:
-  updated_at: "2026-09-13T13:52:11+10:00"
+  updated_at: "2026-09-13T13:54:30+10:00"
   status: "unverified"
   scope: public knowledge-tree example
-  source: "tools/kt local_root/discovered_roots; exact-directory discovery contract"
+  source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
@@ -51,7 +51,7 @@ infrastructure directory `.tools/`; scripts otherwise belong outside the tree.
 ## Proof checks and falsification
 
 Call `kt prove`, which runs the proof engine built into the installed kt CLI.
-The old standalone verifier is a compatibility entry point only. Prefer `kt prove --root ROOT TOKEN`
+Prefer `kt prove --root ROOT TOKEN`
 for scoped checks, or `kt prove --root ROOT --no-stamp` for a read-only sweep.
 Use `--root ROOT` for an explicit root. Check every active root during bootstrap
 and on entry into a new scope. Before consequential use, after proof changes, when

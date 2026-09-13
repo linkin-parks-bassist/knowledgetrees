@@ -1,9 +1,9 @@
 ---
 status: "unverified"
 scope: knowledgetrees repository
-source: "Read-only local source-byte, launcher, hook-output, skill-inode and registry checks; final captured-knowledge audit"
+source: "tools/kt; installer; owner single-command verification requirement"
 review_when: Update after material repository changes.
-updated_at: "2026-09-13T13:52:27+10:00"
+updated_at: "2026-09-13T13:54:52+10:00"
 ---
 
 The public repository's operational root is .knowledge/. The visible example/
@@ -40,9 +40,7 @@ sources. Multi-file cleanup is nontransactional and partial cleanup needs inspec
 
 Shared root ownership/address helpers serve lookup and mutation. LeafSnapshot and
 check_leaf_snapshot centralize revision/inode checks. The CLI schema is separate
-from handler dispatch; the built-in proof engine is a contiguous section. The
-legacy verifier is only a compatibility entry point into that engine and also
-respects force-private.
+from handler dispatch; the built-in proof engine is a contiguous section. Verification is exposed only through kt prove and respects force-private.
 
 Lookup uses an invocation-only access view and lazy leaf-text reuse. No persistent
 index/cache or LLM is introduced. A profiled absent question improved from about
@@ -78,20 +76,27 @@ Diagnostic heuristics can miss silent failures and misread diagnostic examples.
 Live model compliance/resume behavior remains less established than protocol tests.
 
 Regression suites cover CLI, access, bypass/privacy identities, amendment,
-maintenance/coalescing, installer, shared hooks, OpenCode adapter, and both proof
-entry points. All suites passed after the refactor. Read-only proof sweeps passed
-for the project, installed global root, and public example. The CLI, compatibility
-verifier, and shared hook handler are deployed with identical source bytes; the
+maintenance/coalescing, installer, shared hooks, OpenCode adapter, and the built-in proof engine. All suites passed after the refactor. Read-only proof sweeps passed
+for the project, installed global root, and public example. The CLI and shared hook handler are deployed with identical source bytes; the
 access registry was unchanged. The owner-authorized implementation update was committed and pushed to main
 as 8e7a24b. A native rewrite remains a possible future optimization, contingent
 on larger-corpus and warm/cold timing measurements.
 
-Final local installation audit: PATH launcher resolves to the installed kt; kt,
-the compatibility verifier and handler match repository bytes and are executable.
+Final local installation audit: PATH launcher resolves to the installed kt; kt
+and the handler match repository bytes and are executable.
 OpenCode plugin bytes and every managed Codex/Copilot hook definition match the
 installer output. The five procedure leaves retain both harness skill hardlinks;
 canonical branches and the home AGENTS bootstrap are present. Persistent bypass
 is disabled. This verifies on-disk installation, not whether an existing OpenCode
 backend has reloaded its plugin or a model will comply. The final knowledge audit
-corrected old verifier guidance, startup privacy wording, and installed skill scope
+corrected proof-command guidance, startup privacy wording, and installed skill scope
 labels; changed leaves remain unverified pending independent whole-leaf review.
+
+Proof verification is now exposed only by kt prove. Installer code deploys only
+kt and its hook handler, then checks installed knowledge through kt prove. Tests
+and active documentation use that command. All regression suites passed. Project and installed-global proof sweeps passed
+through kt prove; the full public specimen passed in an isolated local fixture
+without saving a root grant. Local deployment matches source, both known local
+copies of the separate script are removed, and the old Bash lookup prototype
+delegates its proof call to kt prove. Active source/documentation references are
+removed; registry bytes were unchanged.

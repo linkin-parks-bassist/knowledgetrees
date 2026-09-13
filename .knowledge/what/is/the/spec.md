@@ -1,9 +1,9 @@
 ---
 scope: knowledgetrees repository
-source: "Owner requirements and final CLI/privacy/maintenance contracts; previous review predates amendments"
+source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
 review_when: Recheck when the requested contents or publication workflow changes.
 status: "unverified"
-updated_at: "2026-09-13T13:52:11+10:00"
+updated_at: "2026-09-13T13:54:30+10:00"
 ---
 
 The repository must be a local Git repository connected to its intended public
@@ -12,8 +12,7 @@ GitHub repository. It must contain:
 - `README.md`, adapting `~/Downloads/knowledge_trees_pitch.html` into readable
   Markdown;
 - the canonical `knowledgetrees` procedure in the visible example corpus;
-- distributable proof verification built into kt outside `.knowledge`, with a legacy
-  standalone compatibility entry point;
+- distributable proof verification built into kt outside `.knowledge`, exposed only through `kt prove`;
 - its own canonical `.knowledge` root;
 - a visible `example/` corpus containing all global knowledge that pertains directly
   and only to knowledge trees, with an empty `example/where/am/i.md` that adopters

@@ -1319,7 +1319,7 @@ def verify_proofs(arguments=None):
                 print(f"ERROR {error}", file=sys.stderr)
             return 1
 
-    # The legacy entry point may skip ordinary policies, never forced privacy.
+    # Keep the execution engine guarded against forced-private roots as well.
     if root_access(root) == "force-private" or any(
             other != root and other.is_relative_to(root) and root_access(other, label) == "force-private"
             for label, other in discovered_roots()):

@@ -8,8 +8,7 @@ import subprocess
 import tempfile
 
 TOOLS = Path(__file__).resolve().parents[1] / "tools"
-COMMAND = ([str(TOOLS / "kt"), "prove"] if os.environ.get("KT_TEST_BUILTIN_PROOFS")
-           else [str(TOOLS / "verify-knowledgetree-proofs")])
+COMMAND = [str(TOOLS / "kt"), "prove"]
 
 
 def run(root, *arguments, expected=0):

@@ -114,7 +114,6 @@ def main() -> None:
         canonical = knowledge / "how" / "to" / "use" / "knowledgetrees.md"
         shared_skill = target_home / ".agents" / "skills" / "knowledgetrees" / "SKILL.md"
         orientation = knowledge / "where" / "am" / "i.md"
-        verifier = knowledge / ".tools" / "verify-knowledgetree-proofs"
 
         assert "How to navigate this tree" in orientation.read_text()
         for branch in ("how/", "what/", "where/", "why/", "does/", "is/"):
@@ -124,7 +123,6 @@ def main() -> None:
         for leaf in knowledge.rglob("*.md"):
             assert "scope: public knowledge-tree example" not in leaf.read_text()
         assert not (knowledge / "what" / "is" / "the" / "spec.md").exists()
-        assert os.access(verifier, os.X_OK)
         assert os.access(knowledge / ".tools/kt", os.X_OK)
         assert (target_home / ".local/bin/kt").is_symlink()
         assert (target_home / ".local/bin/kt").samefile(knowledge / ".tools/kt")
@@ -141,7 +139,7 @@ def main() -> None:
         for name in ("how/to/add/knowledge/leaves.md", "how/to/maintain/a/knowledge/tree.md",
                      "how/should/an/agent/traverse/a/knowledge/tree.md"):
             assert (knowledge / name).is_file()
-        assert len(list(knowledge.rglob("verify-knowledgetree-proofs"))) == 1
+        assert {p.name for p in (knowledge / ".tools").iterdir()} == {"kt", "kt-hooks"}
 
         assert agents_path.is_symlink()
         agents = agents_path.read_text()
@@ -237,12 +235,12 @@ def main() -> None:
         assert "Customized content" not in changed_leaf.read_text()
         assert canonical.stat().st_ino == shared_skill.stat().st_ino == codex_skill.stat().st_ino
 
-        verifier_environment = os.environ.copy()
-        verifier_environment["HOME"] = str(target_home)
+        proof_environment = os.environ.copy()
+        proof_environment["HOME"] = str(target_home)
         subprocess.run(
-            [str(verifier), "--root", str(knowledge)],
+            [str(knowledge / ".tools/kt"), "prove", "--root", str(knowledge)],
             cwd=target_home,
-            env=verifier_environment,
+            env=proof_environment,
             check=True,
         )
 

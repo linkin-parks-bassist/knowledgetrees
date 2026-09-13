@@ -1,16 +1,16 @@
 ---
-status: unverified
+status: "unverified"
 scope: public knowledge-tree example
-source: repository installer and current agent-harness discovery behavior
+source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
 review_when: Recheck when installer behavior or harness skill discovery changes.
+updated_at: "2026-09-13T13:54:30+10:00"
 ---
 
 From a complete repository checkout, run `./install`. Preview the targets without
 writing with `./install --dry-run`. The installer merges reusable example leaves
 into `~/.knowledge` without installing the example's illustrative spine, preserves
 an existing `where/am/i.md`, installs the unified CLI at
-`~/.knowledge/.tools/kt` (including `kt prove`) and the legacy
-`verify-knowledgetree-proofs` compatibility entry point, and asserts the mandatory
+`~/.knowledge/.tools/kt` (including `kt prove`), and asserts the mandatory
 bootstrap in `~/AGENTS.md`.
 
 For a new root, it seeds truthful generic navigation in `where/am/i.md`; add
