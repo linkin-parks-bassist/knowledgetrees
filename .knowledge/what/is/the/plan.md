@@ -18,7 +18,7 @@ repository owner authorizes committing/pushing this session's CLI improvements.
 7. [x] Profile miss latency and remove repeated policy/discovery work without a persistent cache.
 8. [x] Check hook API feasibility and capture the before-command review timing limit.
 9. [x] Finish final documentation validation, regression/proof checks, and deployment.
-10. Publish the owner-authorized prepared update as the completion step.
+10. [x] Commit and push the owner-authorized update (8e7a24b).
 
 Retain private operational knowledge in its scope; keep example/ public-safe and
 its orientation empty. Do not automatically enable bypass or supply terminal

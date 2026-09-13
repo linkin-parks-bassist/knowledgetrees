@@ -81,6 +81,6 @@ maintenance/coalescing, installer, shared hooks, OpenCode adapter, and both proo
 entry points. All suites passed after the refactor. Read-only proof sweeps passed
 for the project, installed global root, and public example. The CLI, compatibility
 verifier, and shared hook handler are deployed with identical source bytes; the
-access registry was unchanged. This owner-authorized update is prepared for
-publication. A native rewrite remains a possible future optimization, contingent
+access registry was unchanged. The owner-authorized implementation update was committed and pushed to main
+as 8e7a24b. A native rewrite remains a possible future optimization, contingent
 on larger-corpus and warm/cold timing measurements.
