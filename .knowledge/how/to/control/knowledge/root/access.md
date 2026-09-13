@@ -47,3 +47,7 @@ isolation, revoke/deny/open override, private capture registration, absolute pat
 and nested restricted roots. Existing CLI, hook, OpenCode adapter and installer
 suites pass with explicit access fixtures. Fixture adjustments reflect the new
 privacy defaults; old globally-open discovery is intentionally superseded.
+
+Built-in proof verification reports blocked access as exit 3 consistently with
+lookup/open. Access regression tests must not expect a missing standalone verifier
+error (exit 2) before the policy check; kt no longer requires that executable.

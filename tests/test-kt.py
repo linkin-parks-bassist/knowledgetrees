@@ -34,9 +34,6 @@ def main():
         (global_root / "how/to/explain/empty-topic").mkdir()
         (global_root / "how/to/recover.md").write_text("Recover with amber diagnostics.\n")
         (global_root / ".tools").mkdir()
-        verifier = global_root / ".tools/verify-knowledgetree-proofs"
-        verifier.write_text("#!/usr/bin/env python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n")
-        verifier.chmod(0o755)
         nested = project / "sub/folder"
         nested.mkdir(parents=True)
         config = base / "config.json"
@@ -89,25 +86,44 @@ def main():
         assert result.index("project:" + leaf) < result.index("global:" + leaf)
         assert "2026-09-12T12:00:00+00:00" in result
         assert "FALSIFIED" in run("find", "leaves")
+        compact = run("find", "leaves")
+        pretty = run("find", "leaves", "--pretty")
+        assert len(compact) < len(pretty)
+        compact_paths = [line.split("\t")[0] for line in compact.splitlines()[1:]]
+        pretty_paths = [line.split()[1] for line in pretty.splitlines() if line[:1].isdigit() and ". " in line]
+        assert compact_paths == pretty_paths, (compact_paths, pretty_paths)
+        assert run("--pretty", "find", "leaves") == pretty
+        assert "Read verbatim:" not in compact and "Read verbatim:" in pretty
+        long_leaf = local / "what/is/longexcerpt.md"
+        long_leaf.parent.mkdir(parents=True, exist_ok=True)
+        long_body = "longexcerpt " + "useful context " * 1000
+        long_leaf.write_text(long_body)
+        long_result = run("find", "longexcerpt")
+        assert len(long_result) < 400, "default search must not dump a long paragraph"
+        assert run("open", "project:what/is/longexcerpt.md") == long_body
+        assert run("what", "is", "longexcerpt") == long_body
+
+        assert run("how", "to", "add", "knowledge", "leaves", "--pretty") == run("how", "to", "add", "knowledge", "leaves")
+
         weak = run("find", "compiler", "unfindablezzz", expected=1)
-        assert "No sufficiently good matches" in weak and "weak suggestion" in weak
+        assert "adequate=0" in weak and " weak\t" in weak
         assert "compiler.md" in weak
-        assert "keyword coverage 50%" in run("find", "compiler", "unfindablezzz", "--min-coverage", "0.5")
+        assert "coverage=50%" in run("find", "compiler", "unfindablezzz", "--min-coverage", "0.5")
         run("find", "compiler", "--min-coverage", "0", expected=2)
-        assert "No sufficiently good matches" in run("where", "is", "compiler", "unfindablezzz", expected=1)
+        assert "adequate=0" in run("where", "is", "compiler", "unfindablezzz", expected=1)
         assert run("where", "is", "compiler") == (global_root / "where/is/compiler.md").read_text()
         assert run("where is compiler") == (global_root / "where/is/compiler.md").read_text()
         scoped = run("where", "is", "violet")
-        assert "Search branch: where/is" in scoped
+        assert "branch=where/is" in scoped
         assert "global:where/is/gpu.md" in scoped and "how/to/" not in scoped
         listed = run("how", "to", "_", "--limit", "100")
         assert "global:how/to/" in listed and "global:where/is/" not in listed
         widened = run("how", "to", "explain", "empty-topic", "amber")
-        assert "Search branch: how/to" in widened and "global:how/to/recover.md" in widened
+        assert "branch=how/to" in widened and "global:how/to/recover.md" in widened
         assert "where/is" not in widened
-        assert "No matches" in run("where", "is", "unfindablezzz", expected=1)
+        assert "no_matches" in run("where", "is", "unfindablezzz", expected=1)
         run("how", "_", "to", expected=2)
-        assert "No matches" in run("find", "zzzzunfindable", expected=1)
+        assert "no_matches" in run("find", "zzzzunfindable", expected=1)
         assert run("open", "global:" + leaf) == content
         assert run("open", leaf).startswith("---")
         assert "Project: capture" in run("open", "project:" + leaf)
@@ -119,9 +135,20 @@ def main():
         global_only = run("roots", cwd=base)
         assert str(global_root) in global_only and str(local) not in global_only
         run("proof", expected=2)
-        assert json.loads(run("prove", "--no-stamp", "leaves")) == ["--root", str(local), "--no-stamp", "leaves"]
-        assert json.loads(run("prove", str(project), "--no-stamp")) == ["--root", str(local), "--no-stamp"]
-        assert json.loads(run("prove", "--root", str(global_root), "--no-stamp")) == ["--root", str(global_root), "--no-stamp"]
+        assert run("prove", "--no-stamp", "leaves") == ""
+        assert run("prove", str(project), "--no-stamp") == ""
+        assert run("prove", "--root", str(global_root), "--no-stamp", "leaves") == ""
+        assert "--timeout" in run("prove", "--help")
+        proof = local / "what/is/proven.md"
+        proof.parent.mkdir(parents=True, exist_ok=True)
+        proof.write_text("Passing.\n\nProof: (verified at _)\n\n```bash\ntest 1 -eq 1\n```\n")
+        assert run("prove", "--no-stamp", "proven") == ""
+        assert "verified at _" in proof.read_text()
+        run("prove", "proven")
+        assert "verified at _" not in proof.read_text()
+        proof.write_text("Failing.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
+        run("prove", "--no-stamp", "proven", expected=1)
+        assert "falsified_at:" not in proof.read_text()
     print("kt integration checks passed")
 
 

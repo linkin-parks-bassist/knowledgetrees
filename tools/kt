@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dependency-free knowledge-tree lookup and capture. Search is lexical."""
+"""Dependency-free knowledge-tree lookup, capture, amendment, and proof verification."""
 
 import argparse
 import difflib
@@ -21,6 +21,7 @@ import textwrap
 
 
 ACCESS_VALUES = {"allow", "ask", "deny"}
+PRETTY = False
 
 
 class AccessRequired(ValueError):
@@ -246,7 +247,7 @@ def access_command(args):
 
 
 def paint(value, color):
-    if sys.stdout.isatty() and "NO_COLOR" not in os.environ and os.environ.get("TERM") != "dumb":
+    if PRETTY and sys.stdout.isatty() and "NO_COLOR" not in os.environ and os.environ.get("TERM") != "dumb":
         return f"\033[{color}m{value}\033[0m"
     return str(value)
 
@@ -327,17 +328,37 @@ def find(args, branches=None, browse=False):
                 score += 8
             if terms and words(route) == terms:
                 score += 20
-            lines = [line.strip() for line in body.splitlines() if line.strip()]
-            excerpt = max(lines, key=lambda line: sum(t in line.casefold() for t in terms), default="")
+            paragraphs = [" ".join(paragraph.split()) for paragraph in re.split(r"\n\s*\n", body) if paragraph.strip()]
+            excerpt = max(paragraphs, key=lambda paragraph: sum(t in paragraph.casefold() for t in terms), default="")
             results.append((-score, precedence, relative, label, path, metadata, excerpt,
                             coverage(terms, route + "\n" + lower)))
     results.sort(key=lambda row: (not browse and row[-1] < args.min_coverage, *row[:3]))
     if not results:
+        if not PRETTY:
+            print("no_matches; retry synonyms/scoped paths; private roots excluded")
+            return 1
         print(paint("No matches", "33") + f" for {' '.join(args.terms)!r}.")
         print("This is keyword search; a miss does not establish that the answer is absent.")
         print("Check alternate terms and permitted scoped paths. Private roots are excluded; use kt roots to inspect policies.")
         return 1
     adequate = browse or any(row[-1] >= args.min_coverage for row in results)
+    shown = results[:args.limit]
+    if not PRETTY:
+        count = sum(row[-1] >= args.min_coverage for row in results) if not browse else len(results)
+        branch = f" branch={args.branch}" if getattr(args, "branch", None) else ""
+        print(f"{'leaves' if browse else 'matches'}={len(shown)}/{len(results)} adequate={count}{branch} coverage=lexical")
+        for _, _, relative, label, _, metadata, excerpt, matched in shown:
+            status = ("FALSIFIED:" + metadata["falsified_at"] if metadata.get("falsified_at")
+                      else metadata.get("status") or ("reviewed:" + metadata["verified_at"]
+                           if metadata.get("verified_at") else "unverified"))
+            fields = [f"{label}:{relative}"]
+            if terms:
+                fields.append(f"coverage={matched:.0%}" + (" weak" if matched < args.min_coverage else ""))
+            fields.append(status)
+            if excerpt:
+                fields.append(textwrap.shorten(excerpt, width=160, placeholder=" …"))
+            print("\t".join(fields))
+        return 0 if adequate else 1
     if not adequate:
         print(paint("No sufficiently good matches", "33") + "; weak suggestions follow.\n")
     shown = results[:args.limit]
@@ -367,6 +388,7 @@ QUESTION_STARTS = {"how", "where", "when", "what", "why", "who", "which"}
 
 def question(arguments):
     parser = argparse.ArgumentParser(prog="kt", description="Walk question words, then search the nearest relevant branch.")
+    parser.add_argument("--pretty", action="store_true", help="human-oriented layout")
     parser.add_argument("question", nargs="+")
     parser.add_argument("--limit", type=int, default=10)
     parser.add_argument("--min-coverage", type=float, default=0.6, help="minimum non-grammatical keyword coverage (default: 0.6)")
@@ -430,11 +452,14 @@ def question(arguments):
                     break
         if relevant or depth == 0:
             prefix = "/".join(components[:depth]) or "(whole roots)"
-            print(paint("Search branch", "1") + f": {prefix}\n")
+            if PRETTY:
+                print(paint("Search branch", "1") + f": {prefix}\n")
+            args.branch = prefix
             args.terms = terms
             return find(args, branches=branches, browse=browse or not terms)
         depth -= 1
-        print(f"kt: weak keyword coverage; widening to {'/'.join(components[:depth]) or 'whole roots'}", file=sys.stderr)
+        if PRETTY:
+            print(f"kt: weak keyword coverage; widening to {'/'.join(components[:depth]) or 'whole roots'}", file=sys.stderr)
     return 1
 
 
@@ -628,17 +653,347 @@ def amend(args):
         stream.flush()
         os.fsync(stream.fileno())
     print(f"Amended {args.path}. Revision: {revision(updated.encode('utf-8'))}")
-    print(f"Whole-leaf review invalidated; {invalidated} new/changed proofs need checking.")
+    print(f"Whole-leaf review invalidated; {invalidated} new/changed proofs need checking." if PRETTY
+          else f"status={leaf_parts(updated)[0].get('status', 'unverified')} proofs_to_check={invalidated}")
     return 0
 
 
 
+PROOF_FENCES = {
+    "```bash": "bash",
+    "```sh": "sh",
+    "```python": "python3",
+    "```python3": "python3",
+}
+OUTPUT_LIMIT = 4096
+PROOF_MARKER = re.compile(r"^Proof:(?: \((verified|falsified) at ([^)]+)\))?$")
+
+
+def discover_knowledge_root(directory):
+    if directory.name == ".knowledge" and directory.is_dir():
+        return directory
+    knowledge = directory / ".knowledge"
+    if knowledge.is_dir():
+        return knowledge
+    raise FileNotFoundError(
+        f"working directory is not a knowledge root and contains no .knowledge: {directory}")
+
+
+def semantic_components(relative):
+    return tuple(part.casefold() for part in (*relative.parts[:-1], relative.stem))
+
+
+def validate_tokens(tokens, parser):
+    normalized = []
+    for token in tokens:
+        if not token or token in {".", ".."} or "/" in token or "\\" in token:
+            parser.error(f"semantic token must be one path component: {token!r}")
+        normalized.append(token.casefold())
+    return tuple(normalized)
+
+
+def path_matches(relative, tokens):
+    components = semantic_components(relative)
+    return not tokens or any(token in components for token in tokens)
+
+
+def tree_files(root):
+    leaves = []
+    other_files = []
+    for directory, names, files in os.walk(root):
+        base = Path(directory)
+        ignored = {".git"}
+        if base == root and root == Path.home() / ".knowledge":
+            ignored.add(".tools")
+        names[:] = sorted(name for name in names if name not in ignored)
+        for name in sorted(files):
+            path = base / name
+            relative = path.relative_to(root)
+            if path.suffix == ".md":
+                leaves.append((relative, path))
+            else:
+                other_files.append(relative)
+    return leaves, other_files
+
+
+def previous_content_line(lines, index):
+    candidate = index - 1
+    while candidate >= 0 and not lines[candidate].strip():
+        candidate -= 1
+    return candidate
+
+
+def next_content_line(lines, index):
+    candidate = index + 1
+    while candidate < len(lines) and not lines[candidate].strip():
+        candidate += 1
+    return candidate
+
+
+def closing_fence(lines, index):
+    candidate = index + 1
+    while candidate < len(lines):
+        if lines[candidate] == "```":
+            return candidate
+        candidate += 1
+    return None
+
+
+def parse_proofs(path):
+    original = path.read_text()
+    lines = original.splitlines()
+    proofs = []
+    errors = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if line.startswith("```"):
+            closing = closing_fence(lines, index)
+            if closing is None:
+                errors.append((index + 1, "unclosed fenced block"))
+                break
+            index = closing + 1
+            continue
+        marker = PROOF_MARKER.fullmatch(line)
+        if marker is None:
+            if line.startswith("Proof:"):
+                errors.append((index + 1, "malformed proof verification marker"))
+            index += 1
+            continue
+        stamp = marker.group(2)
+        if stamp not in (None, "_"):
+            try:
+                parsed = datetime.fromisoformat(stamp)
+                if parsed.utcoffset() is None:
+                    raise ValueError("timezone required")
+            except ValueError:
+                errors.append((index + 1, "proof timestamp must be ISO 8601 with timezone"))
+
+        previous = previous_content_line(lines, index)
+        if previous < 0 or lines[previous].startswith("```"):
+            errors.append((index + 1, "Proof: lacks a preceding assertion"))
+
+        fence = next_content_line(lines, index)
+        if fence >= len(lines) or lines[fence] not in PROOF_FENCES:
+            errors.append((index + 1, "Proof: lacks a supported executable fence"))
+            index += 1
+            continue
+
+        closing = closing_fence(lines, fence)
+        if closing is None:
+            errors.append((fence + 1, "unclosed proof fence"))
+            break
+        script = "\n".join(lines[fence + 1:closing])
+        if not script.strip():
+            errors.append((fence + 1, "proof script is empty"))
+        else:
+            proofs.append((index, fence + 1, PROOF_FENCES[lines[fence]], script))
+        index = closing + 1
+    return original, proofs, errors
+
+
+def stamp_proofs(path, original, markers, falsified):
+    lines = original.splitlines(keepends=True)
+    timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
+    for index, passed in markers:
+        ending = "\r\n" if lines[index].endswith("\r\n") else "\n" if lines[index].endswith("\n") else ""
+        status = "verified" if passed else "falsified"
+        lines[index] = f"Proof: ({status} at {timestamp}){ending}"
+    updated = "".join(lines)
+    if falsified:
+        updated = falsify_leaf(updated, timestamp)
+    # Write through existing links: atomic replacement would detach hardlinks.
+    with path.open("r+") as stream:
+        if stream.read() != original:
+            raise OSError("leaf changed during verification; refusing to overwrite")
+        stream.seek(0)
+        stream.write(updated)
+        stream.truncate()
+
+
+def falsify_leaf(text, timestamp):
+    if not text.startswith("---\n"):
+        return f"---\nfalsified_at: '{timestamp}'\n---\n\n{text}"
+    finish = text.find("\n---", 4)
+    if finish == -1:
+        raise OSError("cannot mark falsification: unclosed metadata front matter")
+    header = text[4:finish]
+    nested = re.search(r"(?m)^metadata:\s*$", header) is not None
+    indent = "  " if nested else ""
+    field = re.compile(rf"(?m)^{indent}falsified_at:.*$")
+    value = f"{indent}falsified_at: '{timestamp}'"
+    if field.search(header):
+        header = field.sub(value, header)
+    elif nested:
+        header = re.sub(r"(?m)^metadata:\s*$", f"metadata:\n{value}", header, count=1)
+    else:
+        header += "\n" + value
+    return "---\n" + header + text[finish:]
+
+
+def clipped(value):
+    if isinstance(value, bytes):
+        value = value.decode(errors="replace")
+    value = value.strip()
+    if len(value) <= OUTPUT_LIMIT:
+        return value
+    return value[:OUTPUT_LIMIT] + "\n... output truncated"
+
+
+def run_proof(command, script, directory, timeout):
+    argv = [command, "-c", script]
+    if command == "bash":
+        argv = ["bash", "-euo", "pipefail", "-c", script]
+    elif command == "sh":
+        argv = ["sh", "-eu", "-c", script]
+    try:
+        result = subprocess.run(
+            argv,
+            cwd=directory,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=timeout,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        return False, f"timed out after {timeout:g}s", error.stdout or "", error.stderr or ""
+    except OSError as error:
+        return False, f"could not execute proof: {error}", "", ""
+    return result.returncode == 0, f"exit {result.returncode}", result.stdout, result.stderr
+
+
+def positive_timeout(value):
+    timeout = float(value)
+    if timeout <= 0:
+        raise argparse.ArgumentTypeError("timeout must be positive")
+    return timeout
+
+
+def proof_parser_for_cli():
+    parser = argparse.ArgumentParser(prog="kt prove", description="Run marked proofs in a knowledge tree, optionally filtered by tokens.")
+    parser.add_argument(
+        "tokens",
+        nargs="*",
+        metavar="TOKEN",
+        help="select leaves matching any exact semantic path component",
+    )
+    parser.add_argument(
+        "-r", "--root",
+        type=Path,
+        help="knowledge root to check instead of discovering one from the working directory",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=positive_timeout,
+        default=10.0,
+        help="maximum seconds for each proof (default: 10)",
+    )
+    parser.add_argument(
+        "--no-stamp",
+        action="store_true",
+        help="check without writing proof timestamps or leaf falsification metadata",
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="print selected leaves, proof results, errors, and summary",
+    )
+    return parser
+
+
+def verify_proofs(arguments=None):
+    parser = proof_parser_for_cli()
+    args = parser.parse_args(arguments)
+    tokens = validate_tokens(args.tokens, parser)
+    directory = Path.cwd().resolve()
+    if args.root is not None:
+        root = args.root.expanduser().resolve()
+        if not root.is_dir():
+            if args.verbose:
+                print(f"ERROR knowledge root is not a directory: {root}", file=sys.stderr)
+            return 1
+    else:
+        try:
+            root = discover_knowledge_root(directory)
+        except FileNotFoundError as error:
+            if args.verbose:
+                print(f"ERROR {error}", file=sys.stderr)
+            return 1
+
+    leaves, other_files = tree_files(root)
+    selected = [(relative, path) for relative, path in leaves
+                if path_matches(relative, tokens)]
+    selected_other = [relative for relative in other_files
+                      if path_matches(relative, tokens)]
+    failed = 0
+    failed_paths = set()
+    proof_count = 0
+    for relative in selected_other:
+        failed += 1
+        failed_paths.add(relative)
+        if args.verbose:
+            print(f"ERROR {relative}: non-Markdown file inside knowledge tree")
+
+    proof_directory = root.parent
+    for relative, path in selected:
+        original, proofs, errors = parse_proofs(path)
+        results = []
+        leaf_falsified = bool(errors)
+        header = original.split("\n---", 1)[0] if original.startswith("---\n") else ""
+        if re.search(r"(?m)^\s{0,2}falsified_at:", header):
+            failed += 1
+            failed_paths.add(relative)
+            if args.verbose:
+                print("  ERROR leaf remains falsified pending independent review")
+        if args.verbose:
+            print(f"LEAF {relative} proofs={len(proofs)}")
+        for line, message in errors:
+            failed += 1
+            failed_paths.add(relative)
+            if args.verbose:
+                print(f"  ERROR line={line} {message}")
+        for marker, line, command, script in proofs:
+            proof_count += 1
+            passed, detail, stdout, stderr = run_proof(
+                command, script, proof_directory, args.timeout)
+            results.append((marker, passed))
+            if passed:
+                if args.verbose:
+                    print(f"  PASS line={line} language={command}")
+                continue
+            failed += 1
+            leaf_falsified = True
+            failed_paths.add(relative)
+            if args.verbose:
+                print(f"  FAIL line={line} language={command} {detail}")
+                for label, output in (("stdout", stdout), ("stderr", stderr)):
+                    output = clipped(output)
+                    if output:
+                        print(f"    {label}: {output}")
+        if (results or leaf_falsified) and not args.no_stamp:
+            try:
+                stamp_proofs(path, original, [] if errors else results, leaf_falsified)
+            except OSError as error:
+                failed += 1
+                failed_paths.add(relative)
+                if args.verbose:
+                    print(f"  ERROR stamping proofs: {error}")
+
+    if args.verbose:
+        print(
+            f"SUMMARY root={root} leaves={len(selected)} proofs={proof_count} "
+            f"failures={failed}")
+    if failed:
+        for relative in sorted(failed_paths, key=str):
+            print(relative, file=sys.stderr)
+    return 1 if failed else 0
+
+
 def prove(arguments):
-    global_root = Path(os.environ.get("KT_GLOBAL_ROOT", "~/.knowledge")).expanduser().resolve()
-    verifier = global_root / ".tools/verify-knowledgetree-proofs"
-    if not verifier.is_file() or not os.access(verifier, os.X_OK):
-        raise ValueError(f"verifier not found or not executable: {verifier}")
     arguments = list(arguments)
+    if "--help" in arguments or "-h" in arguments:
+        return verify_proofs(arguments)
     if arguments and not arguments[0].startswith("-") and Path(arguments[0]).expanduser().is_dir():
         root = Path(arguments.pop(0)).expanduser().resolve()
         if root.name != ".knowledge" and (root / ".knowledge").is_dir():
@@ -661,7 +1016,7 @@ def prove(arguments):
     require_root(selected, next((label for label, root in discovered_roots() if root == selected), None))
     if any(root != selected and root.is_relative_to(selected) and root_access(root, label) != "allow" for label, root in discovered_roots()):
         raise AccessRequired("kt: proof scope contains a restricted registered subtree; narrow the scope or approve it first")
-    return subprocess.run([str(verifier), *arguments], check=False).returncode
+    return verify_proofs(arguments)
 
 
 def capture(args):
@@ -729,22 +1084,31 @@ def capture(args):
     # Exclusive creation protects an existing leaf even if it appeared after preflight.
     with path.open("x", encoding="utf-8") as handle:
         handle.write(content)
-    print(paint("Created", "32") + f" {label}:{path.relative_to(root)}")
-    print(f"  {path}")
-    print("  Unresolved record saved." if args.unresolved else
-          "  Unverified: independently review the leaf; check eligible proofs before reliance.")
+    print(paint("Created", "32") + f" {label}:{path.relative_to(root)}" +
+          ("" if PRETTY else f" status={metadata['status']}"))
+    if PRETTY:
+        print(f"  {path}")
+        print("  Unresolved record saved." if args.unresolved else
+              "  Unverified: independently review the leaf; check eligible proofs before reliance.")
     return 0
 
 
 def main():
-    # Forward verifier options unchanged instead of trying to reproduce its parser.
-    if len(sys.argv) > 1 and sys.argv[1] == "prove":
-        return prove(sys.argv[2:])
-    if len(sys.argv) > 1 and sys.argv[1].split() and sys.argv[1].split()[0].casefold() in QUESTION_STARTS:
-        return question(sys.argv[1:])
+    global PRETTY
+    arguments = sys.argv[1:]
+    # Allow --pretty before the command or among its options, respecting --.
+    boundary = arguments.index("--") if "--" in arguments else len(arguments)
+    PRETTY = "--pretty" in arguments[:boundary]
+    arguments = [arg for arg in arguments[:boundary] if arg != "--pretty"] + arguments[boundary:]
+    if arguments and arguments[0] == "prove":
+        return prove(arguments[1:])
+    if arguments and arguments[0].split() and arguments[0].split()[0].casefold() in QUESTION_STARTS:
+        return question(arguments)
     parser = argparse.ArgumentParser(description=__doc__, epilog="Questions: kt where is vivado; kt how to _ (list a branch).")
+    parser.add_argument("--pretty", action="store_true", help="human-oriented layout and terminal colors (default: compact plain text)")
     commands = parser.add_subparsers(dest="command")
     search = commands.add_parser("find", help="rank keyword matches across project and global roots")
+    search.add_argument("--pretty", action="store_true", help="human-oriented layout")
     search.add_argument("terms", nargs="+", help="words or a quoted question")
     search.add_argument("--limit", type=int, default=10)
     search.add_argument("--min-coverage", type=float, default=0.6)
@@ -779,8 +1143,8 @@ def main():
     access.add_argument("decision", nargs="?", choices=["allow", "deny", "ask", "reset"])
     access.add_argument("--scope", choices=["session", "project", "all"], default="project")
     access.add_argument("--subdirectories", action="store_true", help="explicitly extend a project approval to descendant directories")
-    commands.add_parser("prove", help="forward [directory] [tokens] [options] to the verifier")
-    args = parser.parse_args()
+    commands.add_parser("prove", help="check marked proofs: [directory] [tokens] [options]")
+    args = parser.parse_args(arguments)
     if args.command == "find":
         if args.limit < 1:
             parser.error("--limit must be positive")
@@ -800,14 +1164,23 @@ def main():
         return access_command(args)
     for label, root in discovered_roots():
         policy = root_access(root, label)
-        print(f"[{policy}] {paint(label.ljust(7), '36')}  {root if policy == 'allow' else '(restricted)'}")
+        if PRETTY:
+            print(f"[{policy}] {paint(label.ljust(7), '36')}  {root if policy == 'allow' else '(restricted)'}")
+        else:
+            print(f"{label}\t{policy}\t{root if policy == 'allow' else '(restricted)'}")
     if args.command is None:
         allowed = roots()
         entry = allowed[0][1] / "where/am/i.md" if allowed else None
         if entry is not None and entry.is_file():
             _, body = leaf_parts(entry.read_text())
-            print("\n" + paint("Orientation", "1"))
-            print(textwrap.shorten(" ".join(body.split()), width=600, placeholder=" …"))
+            if PRETTY:
+                print("\n" + paint("Orientation", "1"))
+                print(textwrap.shorten(" ".join(body.split()), width=600, placeholder=" …"))
+            else:
+                print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
+        if not PRETTY:
+            print("commands: find | QUESTION | open | add | amend | prove | roots | register | access; --help; --pretty")
+            return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
         print("kt how to _                        list a question branch")

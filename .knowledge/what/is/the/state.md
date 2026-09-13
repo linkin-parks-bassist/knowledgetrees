@@ -14,7 +14,7 @@ visible `example/` corpus contains the canonical knowledge-tree procedure, compl
 public-safe generic methodology, and distilled planning and specification leaves.
 The knowledge-first installer merges reusable leaves into the user's global root,
 preserves local
-orientation, installs the single verifier, asserts the `AGENTS.md` bootstrap, and
+orientation, installs kt with built-in verification plus its legacy entry point, asserts the `AGENTS.md` bootstrap, and
 hard-links shared-harness and Codex skill entry points to the installed canonical
 procedure. Skill-shaped entry points are created during installation. Its
 isolated-home integration suite passes, as do both repository proof
@@ -64,7 +64,7 @@ one parent and retry. Empty or weak-only matches exit 1 while retaining suggesti
 adequate heuristic matches precede weak suggestions. `--min-coverage` tunes the cutoff.
 Terminal `_` lists the selected branch. Prefix scoping, exclusion of sibling
 branches, exact reads, and incremental widening have isolated CLI test coverage.
-The installer distributes it alongside the single verifier. `tests/test-kt.py` checks isolated
+The installer distributes its legacy verifier compatibility entry point alongside kt. `tests/test-kt.py` checks isolated
 roots with spaces, phrase ranking, metadata, missing results, open scoping, and
 proof forwarding without executing real predicates.
 
@@ -298,3 +298,30 @@ The owner authorized committing and pushing the confirmation and documentation u
 Access, CLI, and OpenCode adapter integration checks, project/example read-only
 proof sweeps, and diff whitespace validation pass for this update. Installed
 access and hooks documentation is updated without overwriting customizations.
+
+## Built-in proof verification
+
+`kt prove` now runs its built-in proof engine after the existing root access
+checks; it needs no standalone verifier executable. The legacy standalone name
+is a compatibility entry point into that same engine and preserves its old root
+selection semantics without kt access enforcement. New integrations use kt prove.
+CLI tests execute real proofs without a separate installed verifier, and the
+proof-stamp suite passes through both entry points, covering hardlinks, mixed
+outcomes, read-only checks, legacy markers, and sticky falsification.
+
+The owner requested compact agent-oriented default output with opt-in `--pretty`.
+Existing canonical CLI usage lives in example/how/to/use/kt.md; update that owner
+and the installed usage leaf rather than creating a parallel answer.
+
+Non-exact lookup defaults to compact plain-text rows with lexical coverage,
+weak/falsified status, root-qualified addresses, and excerpts bounded to 160
+characters. `--pretty` restores the human layout and opt-in terminal colors.
+Exact answers remain verbatim. Default roots, capture, and orientation previews
+are also compact. Usage documentation replaces stale parent-discovery and
+verifier-forwarding descriptions with current behavior.
+
+Final checks pass: access, lookup/capture, amendment, installer, shared hooks,
+OpenCode adapter, and proof stamps through both the compatibility and built-in
+entry points. Project, example, and installed global proof sweeps pass. The
+installed CLI and compatibility entry point match repository bytes; relevant
+installed procedure edits preserve hardlinks. Publication is owner-authorized.

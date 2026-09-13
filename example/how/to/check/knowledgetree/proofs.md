@@ -1,28 +1,29 @@
 ---
-verified_at: '2026-09-12T15:33:08+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: sanitized adaptation of the canonical global knowledge-tree methodology
-verification: Checked per-proof timestamp integration tests, legacy markers, read-only checking, and installed verifier behavior.
-review_when: Recheck when the knowledge-tree model or operating procedure changes.
+status: unverified
+scope: public knowledge-tree procedure
+source: tools/kt; tools/verify-knowledgetree-proofs; tests/test-kt.py; tests/test-proof-stamps.py
+review_when: Recheck proof engine, compatibility entry point, or access enforcement changes.
 ---
 
-Install the independent knowledge-tree proof verifier at
-`~/.knowledge/.tools/verify-knowledgetree-proofs`. From this repository before
-installation, use the packaged source at `tools/verify-knowledgetree-proofs`.
-
-From a directory containing `.knowledge`, check every marked proof in it with:
+Use `kt prove` to check marked proofs. Verification is built into kt; it does
+not launch or require a separately installed verifier. From a directory containing
+an accessible `.knowledge` root:
 
 ```bash
-~/.knowledge/.tools/verify-knowledgetree-proofs
+kt prove
+kt prove vivado
+kt prove --root /path/to/approved/.knowledge --no-stamp
 ```
 
-To check only leaves whose relative semantic path contains an exact `vivado`
-component, run:
+Before installation, use `tools/kt prove` from the checkout. Root access checks
+apply before proof execution, including restrictions on registered nested trees.
+`kt prove --help` lists verification options without requiring root access.
 
-```bash
-~/.knowledge/.tools/verify-knowledgetree-proofs vivado
-```
+The old `verify-knowledgetree-proofs` executable is a small compatibility entry
+point into the same kt proof engine, not another implementation. It preserves
+legacy standalone root selection, which does not enforce kt access policies;
+new agent and harness integrations should use `kt prove`. Existing standalone
+scripts continue to work when the compatibility entry point and kt are together.
 
 Each positional token must match an exact directory component or filename stem;
 multiple tokens select their disjunction. Use `-r PATH` or `--root PATH` to select a
@@ -38,10 +39,6 @@ The verifier runs only scripts explicitly introduced by
 structure, timeout, or proof failures as failure. A semantic filter matching no
 leaves succeeds as an empty check. Proofs run from the directory containing
 `.knowledge`, with a ten-second default timeout per proof.
-
-For a user-wide installation, keep one executable copy at
-`~/.knowledge/.tools/verify-knowledgetree-proofs`. Harness integrations should call
-that canonical installed copy rather than multiplying it per harness.
 
 Write new markers as `Proof: (verified at _)`. Every successful proof execution
 replaces the placeholder or previous timestamp with ISO 8601 local time including

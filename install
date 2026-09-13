@@ -443,7 +443,7 @@ def main(arguments: list[str] | None = None) -> int:
 
     if args.dry_run:
         print(f"Would install {len(leaf_installs)} reusable leaves into {knowledge_root}")
-        print(f"Would install the verifier at {verifier_target}")
+        print(f"Would install the legacy verifier compatibility entry point at {verifier_target}")
         print(f"Would install kt at {kt_target} and link {kt_command}")
         for destination, _content, _mode in hook_files:
             print(f"Would install lookup/capture reminders at {destination}")
@@ -531,7 +531,7 @@ def main(arguments: list[str] | None = None) -> int:
         return completed.returncode
 
     print(f"Installed {len(leaf_installs)} reusable leaves into {knowledge_root}")
-    print(f"Installed one verifier at {verifier_target}")
+    print(f"Installed kt with built-in verification at {kt_target}; legacy entry point at {verifier_target}")
     print(f"Installed kt at {kt_target}; command: {kt_command}")
     if hook_files:
         print("Installed failure and task-end reminders for Codex, OpenCode, and Copilot CLI.")

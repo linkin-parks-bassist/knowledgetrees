@@ -60,3 +60,11 @@ history remains external to the CLI. Both harnesses use the installed shared CLI
 
 The kt prove rename is implemented and installed. Continue ordinary-use
 privacy and heuristic tuning; restart clients to refresh injected procedure text.
+
+## Unified CLI and agent output
+
+- [x] Move the proof engine into kt; preserve the old executable as a compatibility entry point.
+- [x] Default to compact agent-oriented output with opt-in --pretty; keep verbatim reads and retrieval semantics.
+- [x] Update canonical usage/proof documentation and installer descriptions.
+- [x] Validate CLI, both proof entry points, access, amendment, installer, hooks, and OpenCode adapter behavior.
+- [x] Deploy the CLI update and prepare the owner-authorized publication.

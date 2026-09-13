@@ -13,7 +13,8 @@ GitHub repository. It must contain:
 - `README.md`, adapting `~/Downloads/knowledge_trees_pitch.html` into readable
   Markdown;
 - the canonical `knowledgetrees` procedure in the visible example corpus;
-- a distributable copy of the knowledge-tree proof verifier outside `.knowledge`;
+- distributable proof verification built into kt outside `.knowledge`, with a legacy
+  standalone compatibility entry point;
 - its own canonical `.knowledge` root;
 - a visible `example/` corpus containing all global knowledge that pertains directly
   and only to knowledge trees, with an empty `example/where/am/i.md` that adopters
@@ -23,7 +24,7 @@ GitHub repository. It must contain:
 
 The repository must provide a knowledge-first installer. It merges reusable leaves
 without installing the example spine, preserves an existing orientation, installs
-one verifier under the global knowledge root, asserts the bootstrap in the user's
+one kt CLI with built-in verification under the global knowledge root, asserts the bootstrap in the user's
 `AGENTS.md`, and creates shared-harness and Codex `SKILL.md` entry points as hard
 links to the installed `how/to/use/knowledgetrees.md`. The compatibility skill is a
 bootstrap created by the installer for current harnesses, not a parallel knowledge
@@ -76,3 +77,10 @@ User-global registry; private-by-default wider roots; persistent pairwise approv
 Amendment must accept a complete replacement through a file or stdin, require an
 expected content revision, preserve hardlinks and root access policies, invalidate
 stale whole-leaf/proof verification, and work without Git or an interactive editor.
+
+## Agent-oriented output
+
+Default CLI output must be compact plain text intended for agents, especially
+non-exact lookups. Provide `--pretty` for the human-oriented layout. Preserve
+retrieval ordering, explicit weak/falsified status, root-qualified leaf addresses,
+verbatim exact reads, and exit-status semantics while reducing decorative output.

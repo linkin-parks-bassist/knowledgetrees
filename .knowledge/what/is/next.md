@@ -59,3 +59,7 @@ The owner-authorized confirmation and documentation update passed checks and is
 ready for publication; continue ordinary-use access and hook usability review.
 For live OpenCode verification, fully restart the process (and any separate backend),
 resume the existing session, and inspect subsequent hook delivery.
+
+Built-in proof verification and compact default output are integration-tested
+and locally deployed, with documentation updated. Continue ordinary-use review
+of result usefulness, token cost, and OpenCode resume hook delivery.

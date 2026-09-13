@@ -1,17 +1,16 @@
 ---
-verified_at: '2026-09-12T18:20:19+10:00'
-verified_by: codex /root
+status: unverified
 scope: public knowledge-tree example
 source: repository installer and current agent-harness discovery behavior
-verification: Checked the installer implementation, session-boundary bootstrap wording, and isolated-home integration tests.
 review_when: Recheck when installer behavior or harness skill discovery changes.
 ---
 
 From a complete repository checkout, run `./install`. Preview the targets without
 writing with `./install --dry-run`. The installer merges reusable example leaves
 into `~/.knowledge` without installing the example's illustrative spine, preserves
-an existing `where/am/i.md`, installs one verifier at
-`~/.knowledge/.tools/verify-knowledgetree-proofs`, and asserts the mandatory
+an existing `where/am/i.md`, installs the unified CLI at
+`~/.knowledge/.tools/kt` (including `kt prove`) and the legacy
+`verify-knowledgetree-proofs` compatibility entry point, and asserts the mandatory
 bootstrap in `~/AGENTS.md`.
 
 For a new root, it seeds truthful generic navigation in `where/am/i.md`; add

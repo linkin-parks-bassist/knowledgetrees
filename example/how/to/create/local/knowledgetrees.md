@@ -1,9 +1,7 @@
 ---
-verified_at: '2026-09-12T15:22:03+10:00'
-verified_by: codex /root
+status: unverified
 scope: public knowledge-tree example
 source: sanitized adaptation of the canonical global knowledge-tree methodology
-verification: Compared root creation, nested-scope orientation, and verification guidance with the canonical procedure and installer behavior.
 review_when: Recheck when root creation or verifier conventions change.
 ---
 
@@ -32,6 +30,6 @@ inside a project tree.
 Store build, test, current-state, and subsystem knowledge locally; keep host-wide
 personal tooling knowledge in `~/.knowledge`. Read ancestor instructions first,
 commit local knowledge with related project changes under that repository's policy,
-and run `~/.knowledge/.tools/verify-knowledgetree-proofs` from the project before
+and run `kt prove` from the project before
 relying on the new tree. Before installation, this repository's packaged verifier
-can be run as `tools/verify-knowledgetree-proofs`.
+can be run as `tools/kt prove`.

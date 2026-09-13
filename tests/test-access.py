@@ -55,7 +55,7 @@ def main():
                 for arguments in (("open", "global:where/is/private.md"),
                                   ("open", str(global_root / "where/is/private.md")),
                                   ("prove", "--root", str(global_root))):
-                    output = run(*arguments, expected=3 if arguments[0] != "prove" else 2)
+                    output = run(*arguments, expected=3)
                     assert "confidential payload" not in output
                 before = config.read_bytes() if config.exists() else None
                 run("access", "global", "allow", expected=3)

@@ -15,8 +15,8 @@ This repository contains:
 
 - a visible, self-describing public corpus in [`example/`](example/where/am/i.md);
 - the knowledge-first [`install`](install) script;
-- the standalone [`verify-knowledgetree-proofs`](tools/verify-knowledgetree-proofs)
-  verifier; and
+- the proof engine built into [`kt`](tools/kt), with a
+  [`verify-knowledgetree-proofs`](tools/verify-knowledgetree-proofs) compatibility entry point; and
 - selected planning and specification practices distilled into semantic leaves,
   without inheriting an inflexible skill-driven workflow.
 
@@ -223,6 +223,14 @@ The goal is not to turn every sentence into code. Proofs are for single, immedia
 checkable true-or-false assertions—not requirements, instructions, opinions, plans,
 or compound conclusions.
 
+Use `kt prove` for access-controlled proof verification. The proof engine is
+built into kt; no separate verifier process or installation is needed.
+`kt prove --help` lists options. The old `verify-knowledgetree-proofs` script is
+only a compatibility entry point into that same engine. It retains legacy
+standalone root selection without kt access enforcement, so new integrations
+should use `kt prove` for approved roots. The compatibility commands below also
+work for checking the public example before installation.
+
 **Agents run the verifier before relying on proof-backed knowledge.** They check the
 active root during bootstrap and when entering a new scope, then relevant semantic
 slices before consequential use. A broken proof is a stop-and-repair signal: inspect
@@ -350,7 +358,8 @@ Run the installer from a clone:
 
 The installer is knowledge-first. It safely merges the reusable leaves from
 `example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
-single verifier at `~/.knowledge/.tools/verify-knowledgetree-proofs`, and adds the
+kt CLI with built-in proof verification and a legacy verifier compatibility entry
+point under `~/.knowledge/.tools/`, and adds the
 mandatory once-per-session bootstrap to `~/AGENTS.md`. The loaded procedure remains
 active across messages and tasks; it is not reinvoked on every turn. The installer
 refuses to overwrite differing knowledge unless `--force` is supplied explicitly.
@@ -360,7 +369,13 @@ Installation also puts `kt` in `~/.local/bin` (add that directory to your `PATH`
 if needed). Use `kt find leaves` or `kt find "how to add knowledge leaves"` for
 ranked keyword results, `kt open global:how/to/add/knowledge/leaves.md` to read a
 leaf verbatim, and `kt prove --no-stamp leaves` to check relevant proofs.
-`kt roots` shows the active scopes. Search is lexical, not a semantic model;
+`kt roots` shows the active scopes. Default output is compact plain text for
+agents. Non-exact searches use one summary and one tab-separated line per result:
+leaf address, lexical coverage (with `weak` below threshold), review/falsification
+status, and an excerpt of at most 160 characters. Use `kt --pretty find leaves`
+or `kt where is vivado --pretty` for the expanded human layout and terminal colors.
+Exact answers and `kt open` remain verbatim in both modes; search ranking and
+exit statuses are unchanged. Search is lexical, not a semantic model;
 scores rank matches, and a miss does not prove knowledge is absent.
 
 Question prefixes make the directories active search boundaries:
@@ -559,7 +574,7 @@ The installer is covered by an isolated-home integration test. It verifies that:
 - an existing orientation, `AGENTS.md`, and Codex configuration are preserved;
 - repeated installation is idempotent;
 - differing knowledge is rejected before overwrite unless `--force` is explicit;
-- the verifier runs successfully from its single global installation; and
+- built-in verification and the legacy compatibility entry point run successfully; and
 - both compatibility `SKILL.md` paths have the same device and inode as the
   canonical installed procedure.
 

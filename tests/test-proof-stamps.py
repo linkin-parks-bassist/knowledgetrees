@@ -7,12 +7,15 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-VERIFIER = Path(__file__).resolve().parents[1] / "tools/verify-knowledgetree-proofs"
+TOOLS = Path(__file__).resolve().parents[1] / "tools"
+COMMAND = ([str(TOOLS / "kt"), "prove"] if os.environ.get("KT_TEST_BUILTIN_PROOFS")
+           else [str(TOOLS / "verify-knowledgetree-proofs")])
 
 
 def run(root, *arguments, expected=0):
-    result = subprocess.run([str(VERIFIER), "--root", str(root), *arguments],
-                            capture_output=True, text=True)
+    result = subprocess.run([*COMMAND, "--root", str(root), *arguments],
+                            capture_output=True, text=True, cwd=root.parent,
+                            env={**os.environ, "KT_CONFIG": str(root.parent / "access.json")})
     assert result.returncode == expected, (result.stdout, result.stderr)
 
 
