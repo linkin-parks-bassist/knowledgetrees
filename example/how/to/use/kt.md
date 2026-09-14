@@ -6,6 +6,40 @@ review_when: Recheck after changes to the kt CLI or root discovery.
 updated_at: "2026-09-13T13:54:30+10:00"
 ---
 
+## Command and address quick reference
+
+- Lookup: `kt how to rewrite a knowledge leaf` or `kt find "rewrite knowledge leaf"`.
+  Both search permitted active roots; neither accepts `--root`. Use `--limit 5`
+  to bound search output without piping away the command exit status.
+- Read: copy a returned address exactly into `kt open ADDRESS`. `local:PATH`
+  selects only the current project; `global:PATH` selects only global knowledge.
+  A qualified read never falls back to another root. General kt procedures normally
+  live globally: `kt open global:how/to/rewrite/a/knowledge/leaf.md`.
+  An external `ROOT:PATH` uses a configured canonical root identity from `kt roots`;
+  it cannot substitute for registration/access. An absolute leaf filename has no colon.
+- Proofs: `kt prove --root .knowledge --no-stamp` or
+  `kt prove --root "$HOME/.knowledge" --no-stamp`. ROOT is the exact knowledge-tree
+  directory from `kt roots`, not its containing repository. A quiet exit 0 means
+  the sweep passed; `--verbose` supplies diagnostics. Optional filters are separate
+  semantic components, e.g. `kt prove --root .knowledge --no-stamp how to use`;
+  slash-containing leaf paths are not filters. Multiple tokens are disjunctive.
+- Create: `kt add "what is the result" "Checked answer" --local --source "evidence"`.
+  Creation supports `--local`, `--global`, or `--root ROOT`; it refuses existing leaves.
+- Rewrite inline: `kt rewrite ADDRESS "Complete replacement Markdown"`; optional
+  `--expect HASH` protects against stale context, and `--dry-run` previews the diff.
+  Successful writes return the superseded original and a reminder to restore any
+  still-valid knowledge lost; review that output before continuing.
+- Deprecated compatibility: `kt amend` remains supported for existing workers;
+  new work uses rewrite. Legacy syntax with a required revision: `kt open ADDRESS --revision`, then
+  `kt amend ADDRESS --expect HASH --body-file FILE`. HASH is the revision on stderr;
+  FILE contains complete replacement Markdown. Read the deprecated amendment compatibility section first.
+- Help: `kt COMMAND --help` describes options for that command. Options do not
+  automatically transfer between commands. `kt open` takes an address, not `--root`.
+
+Preserve exit status when diagnosing failures: use `--limit` for searches instead
+of `| head`; a pipeline normally returns the final command's status. In a batch,
+check each kt command rather than letting a later successful command hide failure.
+
 Use `kt where is vivado` or `kt how to make a plan` for branch-directed lookup.
 Words are consumed as directories one at a time. At the first unmatched word,
 the remaining words are ranked only among leaves beneath the matched prefix.
@@ -27,7 +61,7 @@ retrieval, not a semantic model, and scores are not probabilities of correctness
 A no-match result exits 1 but does not establish that knowledge is absent.
 When `kt` fails to find needed information, you MUST determine whether a leaf
 exists: retry distinctive terms/synonyms and inspect plausible paths in the applicable
-roots. If it exists, read or amend it; if absent, investigate and add the scoped
+roots. If it exists, read or rewrite it; if absent, investigate and add the scoped
 leaf. Preserve the established answer before the next unrelated tool call or
 completion. Add a truthful unresolved record if blocked; forbidden writes require
 a scoped handoff. Do not silently move on or create a duplicate from a lexical miss.
@@ -45,10 +79,9 @@ then global. Absolute Markdown leaf paths also work. Content and frontmatter are
 returned verbatim. Relative paths cannot escape the selected root.
 
 `kt prove --no-stamp leaves` checks exact semantic-component tokens in the active
-root. `kt prove /path/to/project --no-stamp` selects that project's `.knowledge`;
-explicit `--root ROOT` and other proof options are parsed by the built-in engine.
-Verification uses access-controlled `kt prove`. Default proof
-checks may stamp outcomes; lookup and open do not verify or stamp proofs.
+root. Select another permitted root with `kt prove --root ROOT --no-stamp`, using
+its exact knowledge-tree directory from `kt roots`. Default proof checks may stamp
+outcomes; lookup and open do not verify or stamp proofs.
 
 Default output is compact plain text for agents. Non-exact searches print one
 summary (`matches=shown/total`, adequate count, selected branch where applicable,

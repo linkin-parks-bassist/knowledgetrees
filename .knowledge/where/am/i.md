@@ -1,9 +1,9 @@
 ---
 scope: knowledgetrees repository
-source: "AGENTS.md; repository layout; completed CLI refactor and captured answer routes"
+source: "Owner manual refresh preference; local script and inode verification, 2026-09-14"
 review_when: Recheck when repository purpose, layout, or publication state changes.
 status: "unverified"
-updated_at: "2026-09-13T13:51:54+10:00"
+updated_at: "2026-09-14T22:46:24+10:00"
 ---
 
 This is the project knowledge root for the `knowledgetrees` public repository maintained in this working directory.
@@ -23,7 +23,8 @@ not an operational orientation.
 ## How to navigate this tree
 
 - `how/` contains repository procedures: `how/to/work/on/this/repository.md`,
-  `how/to/test/the/installer.md`, and `how/to/test/proof/stamps.md`; architecture lives in `how/is/kt/structured.md`.
+  `how/to/test/the/installer.md`, and `how/to/test/proof/stamps.md`, and
+  `how/to/update/installed/kt/instructions.md`; architecture lives in `how/is/kt/structured.md`.
 - `what/` owns requirements and progress: `what/is/the/spec.md`,
   `what/is/the/plan.md`, `what/is/the/state.md`, and `what/is/next.md`.
 - `where/` establishes repository scope through `where/am/i.md`.

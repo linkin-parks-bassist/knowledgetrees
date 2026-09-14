@@ -120,6 +120,8 @@ New question -> `kt` first unless adequately checked knowledge is already loaded
 miss -> determine whether a leaf exists; absent -> investigate and add it (or an
 unresolved record) before the next unrelated tool call or completion. Use nearest
 project and global roots; the skills own proof checks, scope, paths, and maintenance.
+Use `kt rewrite` for edits and review its returned original contents; `kt amend`
+is deprecated but retained for living legacy workers.
 Current higher-authority instructions and permissions always govern.
 {AGENTS_END}"""
     return replace_managed_block(current, block)

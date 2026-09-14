@@ -770,11 +770,23 @@ def invalidate_review(text, original, source=None):
     return "---\n" + header + "\n---\n\n" + body.lstrip("\r\n")
 
 
+def print_rewrite_original(original, digest, *, unchanged=False):
+    label = "unchanged current contents" if unchanged else "superseded contents; no longer current knowledge"
+    print(f"--- BEGIN ORIGINAL ({label}; revision={digest}) ---")
+    sys.stdout.write(original)
+    if not original.endswith("\n"):
+        sys.stdout.write("\n")
+    print("--- END ORIGINAL ---")
+    print("Check against the original content to see if any still-valid knowledge was lost; rewrite again to add it back if so.")
+
+
 def amend(args):
     path = resolve_leaf(args.path, writable=True)
-    if not re.fullmatch(r"[a-f0-9]{64}", args.expect):
+    if args.expect is not None and not re.fullmatch(r"[a-f0-9]{64}", args.expect):
         raise ValueError("--expect must be the SHA-256 revision from kt open --revision")
-    if args.body_file == "-":
+    if hasattr(args, "contents"):
+        replacement = args.contents
+    elif args.body_file == "-":
         if sys.stdin.isatty():
             raise ValueError("pipe the replacement text or use --body-file")
         replacement = sys.stdin.read(1048577)
@@ -788,11 +800,13 @@ def amend(args):
         fcntl.flock(stream, fcntl.LOCK_EX)
         snapshot = snapshot_from_stream(stream)
         original_bytes = snapshot.data
-        if snapshot.digest != args.expect:
+        if args.expect is not None and snapshot.digest != args.expect:
             raise RevisionConflict("kt: leaf changed; reread with kt open --revision and merge before amending")
         original = original_bytes.decode("utf-8")
         if replacement == original and not args.source:
-            print(f"Unchanged. Revision: {args.expect}")
+            print(f"Unchanged. Revision: {snapshot.digest}")
+            if hasattr(args, "contents"):
+                print_rewrite_original(original, snapshot.digest, unchanged=True)
             return 0
         _, old_records = proof_records(original)
         previous = {identity: marker for _, identity, marker in old_records if identity is not None}
@@ -820,9 +834,11 @@ def amend(args):
         stream.truncate()
         stream.flush()
         os.fsync(stream.fileno())
-    print(f"Amended {args.path}. Revision: {revision(updated.encode('utf-8'))}")
+    print(f"{'Rewritten' if hasattr(args, 'contents') else 'Amended'} {args.path}. Revision: {revision(updated.encode('utf-8'))}")
     print(f"Whole-leaf review invalidated; {invalidated} new/changed proofs need checking." if PRETTY
           else f"status={leaf_parts(updated)[0].get('status', 'unverified')} proofs_to_check={invalidated}")
+    if hasattr(args, "contents"):
+        print_rewrite_original(original, snapshot.digest)
     return 0
 
 
@@ -1015,7 +1031,7 @@ def capture(args):
         if (root / ancestor).is_symlink():
             raise ValueError("symlink in leaf path")
     if path.exists() or path.is_symlink():
-        raise ValueError(f"leaf already exists: {path}; read its owner and amend deliberately")
+        raise ValueError(f"leaf already exists: {path}; use kt rewrite and review its returned original contents")
     if args.answer == "-":
         if sys.stdin.isatty():
             raise ValueError("pipe the answer on stdin when using -")
@@ -1456,7 +1472,7 @@ def roots_command(args):
             else:
                 print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
         if not PRETTY:
-            print("commands: find | QUESTION | open | add | amend | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
+            print("commands: find | QUESTION | open | add | rewrite | amend (deprecated) | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
             return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
@@ -1469,12 +1485,12 @@ def roots_command(args):
 
 
 def command_parser():
-    parser = argparse.ArgumentParser(description=__doc__, epilog="Questions: kt where is vivado; kt how to _ (list a branch).")
+    parser = argparse.ArgumentParser(description=__doc__, epilog="Questions: kt where is vivado; kt how to _ (list a branch). Interface guide: kt open global:how/to/use/kt.md. --root is command-specific, not a global option.")
     parser.set_defaults(handler=roots_command)
     parser.add_argument("--pretty", action="store_true", help="human-oriented layout and terminal colors (default: compact plain text)")
     parser.add_argument("--dangerously-skip-permissions", action="store_true", help="persistently bypass ask/deny after user confirmation; force-private remains enforced")
     commands = parser.add_subparsers(dest="command")
-    search = commands.add_parser("find", help="rank keyword matches across project and global roots")
+    search = commands.add_parser("find", help="rank keyword matches across project and global roots", description="Search all permitted active roots. No --root option; open the root-qualified address returned by the search.")
     search.set_defaults(handler=find)
     search.add_argument("--pretty", action="store_true", help="human-oriented layout")
     search.add_argument("terms", nargs="+", help="words or a quoted question")
@@ -1482,15 +1498,22 @@ def command_parser():
     search.add_argument("--min-coverage", type=float, default=0.6)
     opening = commands.add_parser("open", help="print a leaf verbatim, including metadata")
     opening.set_defaults(handler=open_command)
-    opening.add_argument("path", help="relative path, project:path, global:path, or absolute .md path")
+    opening.add_argument("path", help="local:path, global:path, ROOT:path (registered root), or absolute .md path; project: aliases local:")
     opening.add_argument("--revision", action="store_true", help="print SHA-256 revision on stderr; stdout stays verbatim")
-    amending = commands.add_parser("amend", help="replace an existing leaf with revision conflict protection")
+    amending = commands.add_parser("amend", help="deprecated: use rewrite; retained for existing workers", description="Deprecated in favor of kt rewrite. Retained with unchanged syntax and behavior for existing workers.")
     amending.set_defaults(handler=amend)
     amending.add_argument("path")
     amending.add_argument("--expect", required=True, help="SHA-256 revision returned by open --revision")
     amending.add_argument("--body-file", default="-", help="complete replacement Markdown file, or - for stdin")
     amending.add_argument("--source", help="actual evidence for the revised answer")
     amending.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
+    replacing = commands.add_parser("rewrite", help="rewrite a leaf with inline Markdown and return its previous contents")
+    replacing.set_defaults(handler=amend)
+    replacing.add_argument("path", help="existing leaf address")
+    replacing.add_argument("contents", help="complete replacement Markdown; use -- before positional arguments beginning with -")
+    replacing.add_argument("--expect", help="optional SHA-256 revision from open --revision; rejects stale context")
+    replacing.add_argument("--source", help="actual evidence for the revised answer")
+    replacing.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
     for name in ("rm", "mv"):
         maintenance = commands.add_parser(name, help="remove a leaf" if name == "rm" else "move a leaf without overwriting")
         maintenance.set_defaults(handler=relocate_leaf)

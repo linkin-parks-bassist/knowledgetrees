@@ -4,7 +4,7 @@ description: 'Use after kt misses or reusable discoveries: establish leaf existe
 metadata:
   updated_at: "2026-09-13T13:52:11+10:00"
   scope: public knowledge-tree example
-  source: "tools/kt local_root/discovered_roots; exact-directory discovery contract"
+  source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
   status: "unverified"
 ---
@@ -17,19 +17,37 @@ for locations, `how to` for procedures, `when to` for triggers, `what is` for
 definitions/state, and `why does` or `why is` for rationale. Place the full
 sentence-derived leaf under that branch so queries exclude unrelated answer kinds.
 If `kt` fails to find information, determine whether the leaf exists through
-alternate keywords and scoped semantic inspection. If it exists, use or amend it;
+alternate keywords and scoped semantic inspection. If it exists, use or rewrite it;
 if it does not, add it at the correct scope. A lexical miss never establishes absence.
 A checked hit needs no duplicate capture. If unresolved, add `status: unresolved`,
 `checked_at`, blocker, and next check rather than inventing a verified answer.
 Do not resume surrounding work with an outstanding capture obligation. The agent's
 own uncertainty remains an additional capture signal, not the only trigger.
 
+## Capture every scale of knowledge
+
+Capture fine-grained implementation answers as readily as architecture and specs.
+Do not reject a discovered fact because it is "just a code comment", a single
+function, typedef, include-order constraint, file, or folder. Record what a function
+does and why, contracts and invariants, what a file contains, where a type lives,
+and dependency/layout details at their owning project or subsystem scope. There is
+no minimum abstraction, complexity, or answer-length threshold for capture.
+
+Examples of complete question routes include `what does f do`, `why does f check
+its input`, `what does file z contain`, `where is typedef y declared`, `what is the
+required include order`, and `how is the repository structured`. These are example
+questions, not claims that such leaves already exist. Preserve literal identifiers
+when needed to locate the answer. Answer in the leaf body and attribute checked
+source evidence; keep review conditions tied to the code or structure that can change.
+
 ## Choose the owner and path
 
 Put host/personal tooling in `~/.knowledge` and project/subsystem facts in the
 nearest applicable local root. Never promote professional, customer, partner, or
 restricted material into the global tree; sanitize anything intended for publication.
-Reread an existing owner before editing to preserve concurrent changes.
+Keep an existing owner in context when editing: read it first, or review the
+original returned by kt rewrite and immediately restore any still-valid knowledge
+that was lost. Use --expect when holding a revision to protect concurrent changes.
 Use `kt open ROOT:PATH` for that read and `kt prove --root ROOT TOKEN` after
 changing eligible proofs. Create a new leaf in one call:
 
@@ -112,8 +130,9 @@ refreshes only its `Proof: (verified at …)` marker. A failing run changes it t
 decide semantic eligibility, faithful coverage, or whether all prose is proved;
 the agent remains responsible. Read maintenance before repairing a falsified leaf.
 
-For an existing owner, use the revision-checked read/revise/submit loop in
-`how/to/amend/a/knowledge/leaf.md`; creation still refuses overwriting existing leaves.
+For an existing owner, use kt rewrite and review its returned original contents as
+described in
+`how/to/rewrite/a/knowledge/leaf.md`; creation still refuses overwriting existing leaves.
 
 Use canonical `does/` and `is/` branches for yes/no answers. Capture scope defaults
 to local, global, or the full canonical root path; --scope overrides that metadata.

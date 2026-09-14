@@ -1,16 +1,31 @@
 ---
-verified_at: '2026-09-12T16:50:03+10:00'
-verified_by: codex /root
 scope: public knowledge-tree example
-source: sanitized operational recommendations and the canonical knowledge-tree contract
-verification: Reviewed extracted obligations, observable lookup gates, navigation, capture, proof semantics, and scope preservation.
+source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
 review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
+status: unverified
 ---
 
 A knowledge tree is an authoritative, semantically structured knowledge substrate.
 Directory choices progressively narrow natural-language questions; Markdown leaves
 directly answer them. It is persistent memory and the primary agent retrieval
 interface for its scope, not a catalog or link farm over human-oriented monoliths.
+
+Knowledge trees must hold knowledge at every scale. There is no minimum level of
+abstraction or importance: very fine-grained implementation knowledge belongs in
+the tree just as much as architecture, design decisions, plans, and specifications.
+This includes what function `f` does and why, its inputs, outputs, ownership,
+side effects and invariants; what file `z` contains; where typedef `y` is declared;
+include order and dependency constraints; repository folders and their roles;
+and information normally expressed in code comments. Capture these direct answers
+in the owning project or subsystem tree. Do not omit them because they are small,
+obvious, discoverable in source, or below the level of a design document.
+
+Source code remains primary evidence for implemented behavior. A leaf contains the
+checked answer and rationale, with source locations and review conditions for drift;
+a filename or instruction to read the code alone does not capture the knowledge.
+Existing comments need not be deleted to establish this coverage. The same tree
+also holds broad architecture shape and cohesive specs; retrieval chooses the scale
+needed by the question.
 
 Context is working memory, not storage. Retrieve the smallest answer that resolves
 the current question, then stop. Any directory can have a local root; nearest scope

@@ -5,8 +5,7 @@ metadata:
   status: unverified
   updated_at: '2026-09-12T12:34:09+00:00'
   scope: public knowledge-tree example and distributable skill
-  source: sanitized operational recommendations and the canonical knowledge-tree contract
-  verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
+  source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
@@ -22,22 +21,33 @@ lost context or changed scope rather than rerunning completed startup work.
 ## Bootstrap
 
 Use `kt` from PATH, or `~/.knowledge/.tools/kt` if PATH has not been configured.
-`kt roots` shows current roots; its preview does not replace full orientation reads.
+Local knowledge is automatically included in repository lookups; permitted broader
+roots contribute results automatically. Do not enumerate roots at startup.
+`kt roots` is a diagnostic for root configuration/access questions, not a prerequisite.
 
-1. Establish the explicit current-directory project root within permission, with `how/`,
-   `what/`, `where/`, `why/`, `does/`, `is/`, `does/`, `is/`, and a truthful `where/am/i.md`. Create missing
-   repository spine leaves: `what/is/the/{spec,plan,state}.md` and `what/is/next.md`.
-Private/wider roots are inactive until approved or the user enables persistent
-bypass. Force-private roots remain invisible and inaccessible outside exact local scope. Do not request global access merely
-to finish bootstrap when the local project can answer the task.
+1. Orient in the current repository through `local:where/am/i.md` and the four
+   spine leaves `what/is/the/{spec,plan,state}.md` and `what/is/next.md`. Use supplied
+   orientation content directly rather than rereading it. Establish missing local
+   canonical branches and spine leaves within permission.
+2. Check the local root's evidence and proofs with `kt prove --root .knowledge`.
+   Stop on falsification and repair within authority. ROOT means the exact tree
+   directory, not its containing repository; no root inventory is needed.
+3. Query normally. Read and check broader-root answers when needed for the task;
+   accessibility alone does not require startup orientation or a full proof sweep
+   of every available root. Respect access-required responses and force-private.
+4. Entering another project directory scope requires its local orientation and
+   verification, not another bootstrap skill invocation. Detailed rules live in maintenance.
 
-2. Run `kt prove --root ROOT` for each permitted active
-   root. Stop on falsification; inspect and repair evidence within current authority.
-3. Read permitted active roots’ `where/am/i.md`, then the active repository's four spine
-   leaves. Each orientation must explain every canonical branch and give actual
-   exemplar paths; repair missing routes from evidence, not invented filenames.
-4. Entering another directory scope requires orientation and verification there,
-   not another skill invocation. Detailed root and spine rules live in maintenance.
+## Knowledge at every scale
+
+Use the owning knowledge tree for all scales of knowledge, from code-comment-level
+facts to complete architecture and specifications. Function behavior and rationale,
+file contents, typedef locations, include order, dependency constraints, repository
+folder structure, and implementation invariants all belong in the tree. No detail
+is too fine-grained to retrieve or capture. Source code supplies evidence; record
+the direct answer, not merely a link or a reminder to inspect the source. Apply the
+same kt-first lookup and miss-resolution obligations to these implementation
+questions as to broad design questions.
 
 ## Default action: new question -> kt first
 
@@ -69,6 +79,20 @@ If no leaf exists, investigate within authority and add the appropriately scoped
 leaf. If unresolved, add `status: unresolved` with blocker and next check.
 Once an answer is established, capture it before the next unrelated tool call
 or completion. Verification and capture calls are part of resolving the question.
+
+For CLI syntax and command-specific options, read
+`kt open global:how/to/use/kt.md`; `find` has no `--root` option. Copy returned
+root-qualified addresses into `kt open` rather than guessing a procedure's root.
+
+## Editing learned knowledge
+
+Use `kt rewrite ADDRESS "Complete revised Markdown"` for existing leaves. Review
+its returned original contents, explicitly labeled superseded, and rewrite again
+immediately if any still-valid knowledge was lost. It does not echo the new text.
+Optional --expect protects a known revision; --source records evidence and
+--dry-run previews the diff. Check relevant proofs before relying on knowledge.
+`kt amend` is deprecated but remains compatible for existing workers until they
+finish. The canonical procedure is `how/to/rewrite/a/knowledge/leaf.md`.
 
 ## Operating loop and direct-answer routes
 

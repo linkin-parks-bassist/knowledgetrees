@@ -1,34 +1,23 @@
 ---
 status: unverified
-source: tools/kt; tests/test-amend.py
-review_when: Recheck revision checks, metadata or proof handling.
+source: tools/kt; owner compatibility requirement, 2026-09-15
+review_when: Recheck when legacy workers finish or the edit interface changes.
 ---
 
-Read a leaf with `kt open ROOT:PATH --revision`. stdout remains the complete
-verbatim Markdown; stderr supplies `Revision: <SHA-256>` for those same bytes.
-Write a complete revised version to a temporary file and submit it with
-`kt amend ROOT:PATH --expect HASH --body-file FILE`. Omit --body-file or use `-`
-to read the replacement from stdin. `--dry-run` shows the resulting diff without
-writing. Optional --source records actual new evidence.
+`kt amend` is deprecated in favor of `kt rewrite`. The canonical editing procedure
+is `how/to/rewrite/a/knowledge/leaf.md`. Use rewrite for new work; it returns the
+superseded original contents for review and restoration of still-valid knowledge.
 
-The command needs no Git repository and invokes no editor. Revision mismatch exits
-4 and leaves the file untouched; reread and merge concurrent changes. An advisory
-exclusive lock serializes amend writers, and a final content/inode check detects
-ordinary intervening edits by non-locking writers. This is not transactional against
-arbitrary direct file writes or power loss. In-place writes preserve hardlinks.
-Access policies apply to reading and amendment; symlink aliases cannot be amended.
+Amend remains supported for workers that loaded the former interface. Do not
+remove it until those workers have finished. Existing syntax and behavior remain:
 
-Identical submissions are no-ops unless new source is supplied. Changed content
-loses whole-leaf verified_at, verified_by and verification fields and becomes
-unverified (or remains unresolved). updated_at records editing, not verification.
-Unchanged assertion-paragraph plus fenced predicate retains its original proof
-marker, regardless of any replacement timestamp supplied. New or changed proofs
-are reset to `Proof: (verified at _)` and must be checked separately. Amendment
-never executes proof bodies or claims independent whole-leaf verification.
-Sticky falsified_at is preserved even if omitted from the replacement; independent
-review/repair remains necessary before deliberately clearing it.
+```sh
+kt open ROOT:PATH --revision
+kt amend ROOT:PATH --expect HASH --body-file FILE
+```
 
-Evidence: tests/test-amend.py uses a standalone non-Git tree and verifies conflict
-refusal, dry-run/no-op behavior, in-place hardlinks, review invalidation, unchanged
-and changed proof stamps, sticky falsification, stdin/body-only text, input validation,
-symlink refusal, and denied-root behavior. Existing lookup and access tests pass.
+Read the leaf before amending; amend does not return its superseded contents.
+HASH is the SHA-256 revision printed on stderr by open. FILE supplies complete
+replacement Markdown; omit --body-file or use - for stdin. --source and --dry-run
+remain available. Conflicts exit 4 without writing. Hardlinks, access controls,
+review invalidation, proof handling and sticky falsification remain preserved.

@@ -26,7 +26,7 @@ navigation for new global roots and requests informed consent for scoped OpenCod
 access before making changes; this visible example's orientation stays empty.
 
 Every procedure uses kt for lookup or proof checks. An unanswered query must be
-classified as an existing leaf to retrieve/amend or an absent leaf to add; capture
+classified as an existing leaf to retrieve/rewrite or an absent leaf to add; capture
 precedes the next unrelated tool call or completion. Checked answers already loaded
 need no redundant retrieval. This operating policy is not mechanically proved by
 installer or discovery checks.

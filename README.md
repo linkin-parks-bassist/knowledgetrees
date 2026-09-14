@@ -11,6 +11,14 @@ the knowledge available to the next agent.
 
 **Knowledge is discovered as needed and captured as learned.**
 
+Knowledge trees cover **every scale**, from code-comment-level implementation facts
+to broad architecture and complete specifications. What a function does and why,
+what a file contains, where a typedef lives, include order, dependencies, invariants,
+and repository folder structure all belong in the owning tree. No useful answer is
+too fine-grained. Leaves hold the answer itself with checked source evidence, so
+agents can retrieve small implementation facts as directly as large design answers.
+
+
 This repository contains:
 
 - a visible, self-describing public corpus in [`example/`](example/where/am/i.md);
@@ -182,7 +190,7 @@ says when to check it again.
 
 ### Current state is mutable; history is separate
 
-When a policy changes, amend its current semantic owner. Keep the old version in Git
+When a policy changes, rewrite its current semantic owner. Keep the old version in Git
 or explicit history when history still matters. Do not make the next agent reason
 over incompatible versions and guess which governs.
 
@@ -232,7 +240,7 @@ built into kt; no separate verifier process or installation is needed.
 from the checkout. Explicit roots require the same access approval as retrieval.
 
 **Agents run the verifier before relying on proof-backed knowledge.** They check the
-active root during bootstrap and when entering a new scope, then relevant semantic
+local root during bootstrap and when entering a new project scope, then relevant semantic
 slices before consequential use. A broken proof is a stop-and-repair signal: inspect
 the evidence, correct or remove the stale assertion or faulty predicate, and rerun
 the check before using that knowledge.
@@ -409,7 +417,8 @@ kt add "how to prepare the demo" "Run the project's documented demo command." --
 Capture defaults to the session directory’s project tree, otherwise global; select `--global`,
 `--project`, or `--root example` explicitly. Use `--scope` for a scope description,
 `--dry-run` to preview, or `-` as the answer to read multiline Markdown from stdin.
-Existing leaves are protected: read their owner and amend deliberately.
+Existing leaves are protected: rewrite deliberately, review the returned original,
+and restore any still-valid knowledge that was lost.
 New leaves receive a creation timestamp and `status: unverified`, not an invented
 verification claim. Capture neither executes nor manufactures proofs. Independently
 review the whole answer and check eligible proofs before relying on it.
@@ -419,7 +428,7 @@ For unresolved answers, add `--unresolved --blocker "missing evidence" --next-ch
 The agent default is **new question → `kt` first**, unless adequately checked
 knowledge is already loaded. If `kt` does not find the information, the agent must
 determine whether a leaf exists using alternate terms and scoped semantic inspection.
-Existing leaves are read or amended; absent leaves must be added after investigation,
+Existing leaves are read or rewritten; absent leaves must be added after investigation,
 or recorded as unresolved when blocked. Capture an established answer before the
 next unrelated tool call or completion—not in a later documentation pass.
 
@@ -428,7 +437,7 @@ next unrelated tool call or completion—not in a later documentation pass.
 The installer adds reminders for **Codex, OpenCode, and GitHub Copilot CLI**:
 
 - After a detected tool failure, check `kt` for a known explanation or fix. Once
-  the cause is understood, capture the reusable diagnosis or amend its owner.
+  the cause is understood, capture the reusable diagnosis or rewrite its owner.
 - At task end, a failure or 10 completed tool calls requests one capture-review
   follow-up. The agent checks existing owners and records missing discoveries,
   or reports that there is nothing new to retain.
@@ -604,6 +613,14 @@ piece of work easier.
 
 **Knowledge is discovered as needed and captured as learned.**
 
+Knowledge trees cover **every scale**, from code-comment-level implementation facts
+to broad architecture and complete specifications. What a function does and why,
+what a file contains, where a typedef lives, include order, dependencies, invariants,
+and repository folder structure all belong in the owning tree. No useful answer is
+too fine-grained. Leaves hold the answer itself with checked source evidence, so
+agents can retrieve small implementation facts as directly as large design answers.
+
+
 ### Root privacy and cross-project sharing
 
 `kt` discovers the exact local tree, the user-global tree, and explicitly registered
@@ -674,9 +691,26 @@ Lookup reuses root policies and lazily loaded text within each invocation; it do
 not create a persistent index/cache or index private roots. This removes repeated
 policy/discovery work on misses while keeping new invocations fresh.
 
-### Amending an existing answer
+### Rewriting an existing answer
 
-Read the current leaf and its revision:
+Rewrite an existing leaf in one call:
+
+```sh
+kt rewrite local:how/to/build.md 'Complete revised Markdown'
+```
+
+Contents can contain literal newlines. Optional `--expect HASH` rejects stale
+context; without it, rewrite uses the current leaf at call time. `--source` records
+evidence and `--dry-run` previews the diff. Quote shell arguments correctly;
+operating-system argument size limits apply.
+
+A successful rewrite returns the original contents, labeled as superseded, with
+a reminder to restore any still-valid knowledge lost in the rewrite. Review that
+output before continuing. The new contents are not echoed.
+
+`kt amend` is deprecated in favor of `kt rewrite`, but remains supported for
+existing workers until they finish. Its interface and behavior remain compatible.
+For that legacy file/stdin workflow, read the leaf and revision:
 
 ```bash
 kt open local:how/to/build.md --revision
@@ -693,4 +727,4 @@ You can pipe the replacement through stdin instead, or add `--dry-run` to inspec
 the diff. Stale revisions exit 4 without writing; reread and merge. Amendment
 preserves hardlinks, invalidates whole-leaf review, and resets new/changed proof
 stamps. It does not execute proofs or clear sticky falsification. Git is optional
-history, not a requirement. See `how/to/amend/a/knowledge/leaf.md` for details.
+history, not a requirement. See `how/to/rewrite/a/knowledge/leaf.md` for the canonical procedure.

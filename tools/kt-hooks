@@ -17,7 +17,7 @@ FAILURE = (
     "another speculative probe. Use a question-prefix query, read relevant leaves, "
     "and inspect/check eligible proofs before reliance. A kt miss is not proof of "
     "absence: check alternate terms and scoped paths. After understanding what went "
-    "wrong, capture the reusable diagnosis/fix with kt add (or amend its existing "
+    "wrong, capture the reusable diagnosis/fix with kt add (or rewrite its existing "
     "owner), before unrelated work or completion. If unresolved, record the blocker "
     "and next check. Expected negative tests need no invented lesson or duplicate "
     "leaf. Respect scope, privacy, and permissions; never capture passwords or raw logs."
@@ -25,7 +25,7 @@ FAILURE = (
 REVIEW = (
     "Knowledge-tree capture review: before finishing, review reusable discoveries "
     "from this work, especially failed probes and kt misses. Check kt for existing "
-    "owners; amend them or use kt add to capture missing answers with actual source "
+    "owners; rewrite them or use kt add to capture missing answers with actual source "
     "evidence at the correct scope. Record unresolved questions with blocker and next "
     "check. Inspect/check eligible proofs; creation or passing proofs does not verify "
     "a whole leaf. Do not invent discoveries or duplicate checked knowledge. If there "
@@ -119,7 +119,7 @@ def bootstrap_context(payload):
         raise ValueError("empty bootstrap procedure")
     context = (
         "Knowledge-tree harness bootstrap (already loaded): the harness supplies the canonical procedure below. "
-        "Do not invoke the bootstrap skill to load it again. In a fresh session, perform startup root discovery, "
+        "Do not invoke the bootstrap skill to load it again. In a fresh session, perform local startup orientation, "
         "evidence checks, and orientation before substantive work. On resume or after compaction, preserve "
         "completed initialization and checked knowledge; restore only genuinely lost context or changed scope. "
         "Ordinary turns and task boundaries do not reboot startup work. Focused skills still apply when triggered. "

@@ -1,9 +1,9 @@
 ---
 status: "unverified"
 scope: knowledgetrees repository
-source: "tools/kt; installer; owner single-command verification requirement"
+source: "Authorized Projects parent-folder relocation and focused verification 2026-09-14"
 review_when: Update after material repository changes.
-updated_at: "2026-09-13T13:54:52+10:00"
+updated_at: "2026-09-14T23:12:16+10:00"
 ---
 
 The public repository's operational root is .knowledge/. The visible example/
@@ -100,3 +100,59 @@ without saving a root grant. Local deployment matches source, both known local
 copies of the separate script are removed, and the old Bash lookup prototype
 delegates its proof call to kt prove. Active source/documentation references are
 removed; registry bytes were unchanged.
+
+## Interface documentation repair
+
+The recent agent interface audit found unsupported find --root calls, incorrect
+prove root selection, and guessed local addresses for global procedures. The
+installed executable matched repository source before repair. The usage leaf now
+has a command/address quick reference; bootstrap links it and distinguishes an
+exact tree root from a repository directory. CLI help names local addresses and
+explains that find searches permitted active roots without --root. Installed usage,
+bootstrap and executable were updated in place; bootstrap skill hardlinks remain
+shared. No project-specific transcript or private project contents were exported.
+
+## Manual instruction refresh
+
+The installed core kt instruction leaves are independent copies of public example
+sources again; only installed canonical leaves and harness skills share hardlinks.
+The local sync-kt-instructions.py is untracked and excluded through .git/info/exclude.
+Run it manually to force-refresh fourteen curated instruction leaves and ten skill
+paths from repository guidance, with previous revisions backed up outside the tree.
+--check detects drift. Personal knowledge and project spines remain separate, and
+executable/hook deployment still uses the installer. The local procedure owner is
+how/to/update/installed/kt/instructions.md.
+
+## All-scales knowledge coverage
+
+The public definition, bootstrap, lookup, capture, maintenance, ingestion and
+atomicity guidance explicitly require fine-grained implementation knowledge as
+well as architecture and specs. README includes the same scope with concrete
+examples. The manual refresh script now manages fourteen instruction leaves,
+including the definition and atomicity guidance, and installed copies were refreshed.
+Changed methodology remains unverified pending independent whole-leaf review.
+
+The containing personal-project folder was renamed to `Projects`. Repository identity and existing local work were preserved; registry/trust and agent snapshot dependencies were migrated, and local proofs plus Git whitespace checks pass. No repository implementation changes were required for this rename.
+
+## Inline rewrite and local startup
+
+Implemented kt rewrite ADDRESS CONTENTS with optional --expect, --source and
+--dry-run using shared amendment safeguards. Successful writes return the exact
+original contents explicitly labeled superseded plus a reminder to restore any
+still-valid knowledge lost. New contents are not echoed. No-ops return unchanged
+contents with an explicit label; dry-run remains a diff. Mandatory local bootstrap
+proof checks and proof-before-reliance rules remain. Editing guidance permits
+original-content review through rewrite output, requiring immediate restoration
+of lost valid knowledge. No blanket integrity reductions from the interrupted
+audit were applied. Root inventories and unrelated-root startup sweeps remain
+removed as previously requested.
+
+Amendment/rewrite, CLI, access, bypass/privacy and maintenance tests pass; source
+and installed instructions were refreshed locally. Rewrite is canonical throughout
+README, bootstrap, lookup/capture/maintenance guidance and hook reminders. Amend
+is deprecated in CLI help and retained unchanged for living workers; its old
+knowledge route remains a compatibility guide pointing to the rewrite owner.
+The owner authorized commit, push and installation. Installer deployment is
+complete; installed CLI/handler match source and instruction refresh checks are
+clean. The validated changes are committed on main for owner-authorized publication.
+Evidence: tools/kt, tests/test-amend.py and focused regression checks, 2026-09-15.

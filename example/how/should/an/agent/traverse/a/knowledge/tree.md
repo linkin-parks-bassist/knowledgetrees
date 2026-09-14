@@ -3,8 +3,7 @@ name: knowledgetrees-lookup
 description: 'Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and capture missing knowledge before continuing.'
 metadata:
   scope: public knowledge-tree example
-  source: sanitized operational recommendations and the canonical knowledge-tree contract
-  verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
+  source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
   status: unverified
 ---
@@ -14,6 +13,13 @@ answer is already present in adequately checked loaded knowledge. A known path
 can be read directly with `kt open`; otherwise use a question-prefix call such
 as `kt where is vivado` or `kt how to make a plan`. Use `kt find` when a broad
 keyword search is intended. No need to reload the skill or orientation per query.
+
+The kt-first rule applies at every scale, including code-comment-level questions:
+what a function does and why, what a file contains, where a typedef lives, include
+order, dependencies, invariants, and folder structure. Consult the owning tree
+before source probes for a new implementation question. A missing fine-grained
+answer creates the same investigation and capture obligation as a missing spec or
+architecture answer; smallness and source visibility are not exemptions.
 
 ## Query, read, and resolve misses
 
@@ -55,7 +61,7 @@ unrelated projects merely because a search reveals them.
 ## Close the question before resuming work
 
 An existing checked answer needs no duplicate leaf. A miss must be classified:
-existing leaf (retrieve or amend it), or absent leaf (add it at the correct scope).
+existing leaf (retrieve or rewrite it), or absent leaf (add it at the correct scope).
 If no leaf exists, investigate safely, verify from primary evidence, and capture
 the answer before the next unrelated tool call or completion. Necessary verification
 and capture calls are allowed while resolving the question. Capture even small answers;

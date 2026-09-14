@@ -2,10 +2,10 @@
 name: knowledgetrees-maintenance
 description: 'Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed.'
 metadata:
-  updated_at: "2026-09-13T13:54:30+10:00"
+  updated_at: "2026-09-14T22:44:44+10:00"
   status: "unverified"
   scope: public knowledge-tree example
-  source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
+  source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
 
@@ -22,13 +22,16 @@ root; kt discovers the exact current-directory tree and explicitly registered
 roots, not parents. Use broader roots only within their access policy.
 Project leaves must be portable across machines and checkout locations.
 
-Orientation is a truthful README-like projection, not a thin link catalog. Describe
-scope, topology, priorities, state, boundaries, and concrete semantic entry routes.
-Include at least one line for every canonical branch saying which questions it
-answers and a few actual exemplar paths overall; describe optional branches such
-as `when/` when present. Verify exemplars exist. A branch with no answers yet is
-explicitly empty, not populated with invented examples. Navigation belongs in each
-root's orientation because it is the guaranteed starting point.
+Orientation is a truthful README-like projection, not a thin link catalog: it
+explains the repository, its contents, and an overview of what is in the tree.
+Describe scope, topology, priorities, state, boundaries, and concrete semantic
+entry routes. Include at least one line for every canonical branch saying which
+questions it answers and a few actual exemplar paths overall; describe optional
+branches such as `when/` when present. Verify exemplars exist. A branch with no
+answers yet is explicitly empty, not populated with invented examples. Orientation
+contains no general knowledge-tree usage instructions (query conventions,
+traversal strategy, how to use `kt`): those are owned by the bootstrap procedure
+and hooks, not by the orientation leaf.
 
 Repository roots also contain and maintain four current-truth leaves:
 
@@ -53,8 +56,10 @@ infrastructure directory `.tools/`; scripts otherwise belong outside the tree.
 Call `kt prove`, which runs the proof engine built into the installed kt CLI.
 Prefer `kt prove --root ROOT TOKEN`
 for scoped checks, or `kt prove --root ROOT --no-stamp` for a read-only sweep.
-Use `--root ROOT` for an explicit root. Check every active root during bootstrap
-and on entry into a new scope. Before consequential use, after proof changes, when
+Use `--root ROOT` for an explicit root. ROOT is the exact allowed knowledge-tree directory shown by `kt roots` (normally PROJECT/.knowledge), not the containing repository directory. If a mistaken repository path returns access-required, correct it to the already allowed tree root; do not grant access to a new root merely to repair that argument. Check the current local root during bootstrap
+and on entry into a new project scope. Do not enumerate or sweep every accessible
+root at startup; broader answers are checked when needed. Supplied orientation
+content need not be reread. Before consequential use, after proof changes, when
 focus narrows, and before completing materially affected work, check relevant exact
 semantic path-component tokens. Multiple tokens are disjunctive, not physical
 subdirectory names; use `--verbose` for diagnostics.
@@ -72,10 +77,19 @@ checks pass. Passing every proof is necessary but not sufficient for leaf valida
 and never changes leaf `verified_at` or clears a falsification automatically.
 The verifier neither judges proof eligibility nor performs agentic repair.
 
+## Maintain knowledge at every scale
+
+Keep function contracts and rationale, code-comment-level details, file contents,
+typedef locations, include order, dependencies and repository structure current
+alongside architecture and specs. Never prune a useful direct answer merely because
+it is fine-grained or derivable from source. When implementation changes, review
+its affected small leaves as well as broad state/spec projections, correcting stale
+answers against current source evidence at the owning scope.
+
 ## Growth, freshness, and retirement
 
 Resolve every `kt` miss by determining whether the leaf exists, using alternate
-keywords and scoped semantic inspection. Retrieve/amend existing owners; add absent
+keywords and scoped semantic inspection. Retrieve/rewrite existing owners; add absent
 leaves. Capture established answers before the next unrelated tool call or completion.
 Tree hits create no duplicate leaf. Unresolved questions record blocker and next check;
 forbidden writes require a scoped handoff. Read `how/to/add/knowledge/leaves.md`
@@ -85,7 +99,10 @@ replace agent review. A review with no new knowledge needs no invented leaf.
 Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
 
-Reread before replacing a leaf, preserve concurrent edits, correct contradictions
+Have the original contents in context when editing a leaf. Read them beforehand,
+or use kt rewrite and review its returned superseded contents immediately after
+the write, restoring any still-valid knowledge that was lost before continuing.
+Preserve concurrent edits (use --expect when holding a revision), correct contradictions
 against governing evidence, and update affected orientation/spine projections.
 Commit project knowledge with owning changes when permitted; never automatically
 publish global personal knowledge. Superseded current truth leaves the active

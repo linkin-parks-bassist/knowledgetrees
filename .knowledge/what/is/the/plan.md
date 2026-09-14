@@ -24,3 +24,8 @@ repository owner authorizes committing/pushing this session's CLI improvements.
 Retain private operational knowledge in its scope; keep example/ public-safe and
 its orientation empty. Do not automatically enable bypass or supply terminal
 access confirmations. Continuously maintain current state and answer owners.
+
+The owner authorized commit, push and install of the inline rewrite, deprecated
+amend compatibility, local-startup and all-scales guidance updates on 2026-09-15.
+Implementation, regression checks, proof checks and local installation are complete;
+the validated changes are committed for authorized publication.

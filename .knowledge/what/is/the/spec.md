@@ -1,9 +1,9 @@
 ---
 scope: knowledgetrees repository
-source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
+source: "Owner all-scales requirement and checked source/install edits, 2026-09-14"
 review_when: Recheck when the requested contents or publication workflow changes.
 status: "unverified"
-updated_at: "2026-09-13T13:54:30+10:00"
+updated_at: "2026-09-14T22:50:12+10:00"
 ---
 
 The repository must be a local Git repository connected to its intended public
@@ -121,3 +121,29 @@ and interrupted cleanup may leave source leaves alongside the saved answer.
 Existing destination replacement requires --expect and uses amendment conflict
 checks/hardlink preservation. Creation refuses overwrites; dry-run writes nothing.
 All inputs and output enforce access and forced privacy.
+
+## Knowledge at every scale
+
+The canonical definition, bootstrap, lookup, capture, maintenance and ingestion
+procedures must explicitly cover knowledge at all scales. Fine-grained function
+behavior and rationale, code-comment-level details, file contents, typedef
+locations, include order, dependencies, invariants and repository folders belong
+in the owning tree just as architecture and specs do. No minimum abstraction,
+complexity or answer-length threshold may exclude them. Leaves contain direct
+answers with checked source evidence and appropriate review conditions.
+
+## Inline rewrite
+
+Provide `kt rewrite ADDRESS CONTENTS` for complete inline Markdown replacement in
+one call without a required prior read/revision token or temporary file. Optional
+--expect protects prior context; --source and --dry-run remain available. Reuse
+amendment access checks, hardlink preservation and verification handling.
+
+Rewrite must return the complete original contents after a successful write,
+explicitly labeled old/superseded, and direct the agent to restore any still-valid
+knowledge lost. Do not echo the replacement. Mandatory proof checks remain;
+original-content review may happen through this rewrite output.
+
+kt rewrite is the canonical editing interface. Mark kt amend deprecated in CLI
+help and guidance, while preserving its interface and behavior for living workers
+until they have finished. Keep the old amendment route as a compatibility leaf.

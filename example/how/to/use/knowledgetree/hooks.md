@@ -34,12 +34,12 @@ test -x "$HOME/.knowledge/.tools/kt-hooks"
 
 Detected tool failure -> check `kt` for a known explanation/fix; inspect relevant
 knowledge and eligible proofs; diagnose within authority; then capture the reusable
-answer or amend its existing owner. Expected negative tests do not require invented
+answer or rewrite its existing owner. Expected negative tests do not require invented
 discoveries. A search miss requires alternate terms and scoped inspection before
 declaring absence. Unresolved knowledge needs its blocker and next check.
 
 Task end -> request a capture review after a failure or at least 10 completed tool
-calls in the work cycle. The review may capture missing answers, amend owners, or
+calls in the work cycle. The review may capture missing answers, rewrite owners, or
 conclude that there is nothing new. This does not certify that capture happened.
 One review is requested per cycle; review-generated prompts do not rearm it.
 The next ordinary user prompt starts a fresh activity cycle. Set

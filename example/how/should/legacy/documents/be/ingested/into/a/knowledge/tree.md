@@ -2,12 +2,10 @@
 name: knowledgetrees-ingestion
 description: 'Use when ingesting legacy knowledge: find existing owners with kt, establish leaf existence on misses, capture absent answers, audit coverage, and retire redundant sources only when authorized.'
 metadata:
-  verified_at: '2026-09-12T20:16:19+10:00'
-  verified_by: codex /root
   scope: public knowledge-tree example
-  source: sanitized operational recommendations and the canonical knowledge-tree contract
-  verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
+  source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
+  status: unverified
 ---
 
 Treat a legacy document as temporary ingestion material, not a parallel canonical
@@ -15,6 +13,14 @@ knowledge authority. Establish its coverage boundary and inventory only enough t
 bound the work. Process small coherent sections, classifying each substantive
 statement as a requirement, decision/rationale, procedure, interface contract,
 current-state fact, failure mode, acceptance gate, or other reusable answer.
+
+Coverage includes every scale: function-level contracts and rationale,
+code-comment-level explanations, file contents, typedef locations, include order,
+dependencies and folder structure as well as architecture and specs. Do not let
+an architecture summary stand in for omitted implementation details. Checked code
+and comments may supply evidence for these answers; their presence in source is
+not a reason to exclude useful knowledge from the tree. This coverage requirement
+does not itself authorize removing code comments or other source material.
 
 Write independently retrievable answers into sentence-indexed leaves at the proper
 scope. Do not copy the whole document into one leaf, preserve it as the answer, or

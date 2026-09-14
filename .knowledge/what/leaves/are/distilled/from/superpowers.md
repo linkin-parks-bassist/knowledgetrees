@@ -9,7 +9,7 @@ review_when: Recheck when the example corpus or its provenance changes.
 
 Exactly four example leaves identify Superpowers as their source.
 
-Proof: (verified at 2026-09-12T15:34:29+10:00)
+Proof: (verified at 2026-09-15T08:16:13+10:00)
 
 ```bash
 test "$(grep -rl 'source: distilled from Superpowers' example --include='*.md' | wc -l)" = 4

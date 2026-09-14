@@ -103,13 +103,37 @@ true
         for invalid in ("", "---\nunclosed", "invalid\x00body"):
             run("amend", "project:bare.md", "--expect", fresh, content=invalid, expected=2)
         run("amend", "project:bare.md", "--expect", "bad", content="body", expected=2)
+        # Inline replacement needs neither a prior revision call nor stdin/file input.
+        run("rewrite", "project:how/to/test.md", "Inline answer\nwith multiple lines", "--dry-run")
+        before = path.read_text()
+        rewritten = run("rewrite", "project:how/to/test.md", "Inline answer\nwith multiple lines", "--source", "inline evidence")
+        assert before in rewritten.stdout
+        assert "superseded contents; no longer current knowledge" in rewritten.stdout
+        assert "rewrite again to add it back if so" in rewritten.stdout
+        assert "Inline answer\nwith multiple lines" not in rewritten.stdout
+        assert "Rewritten" in rewritten.stdout
+        assert path.stat().st_ino == inode and alias.read_text() == path.read_text()
+        assert "Inline answer\nwith multiple lines" in path.read_text()
+        assert "older-failure" in path.read_text() and "inline evidence" in path.read_text()
+        run("rewrite", "project:how/to/test.md", "stale", "--expect", hashlib.sha256(before.encode()).hexdigest(), expected=4)
+        current = path.read_text()
+        no_op = run("rewrite", "project:how/to/test.md", current)
+        assert "Unchanged" in no_op.stdout and current in no_op.stdout
+        assert "unchanged current contents" in no_op.stdout
+        conflict = run("rewrite", "project:how/to/test.md", "stale", "--expect", "0" * 64, expected=4)
+        assert "BEGIN ORIGINAL" not in conflict.stdout
+        for invalid in ("", "---\nunclosed"):
+            run("rewrite", "project:how/to/test.md", invalid, expected=2)
+        run("rewrite", "project:missing.md", "answer", expected=2)
         # Symlink aliases cannot be used for mutation; denied roots stay denied.
         (root / "alias.md").symlink_to(bare)
         run("amend", "project:alias.md", "--expect", fresh, content="body", expected=2)
+        run("rewrite", "project:alias.md", "body", expected=2)
         config = {"roots": {"blocked": {"path": str(root), "access": "deny"}}}
         Path(env["KT_CONFIG"]).write_text(json.dumps(config))
         run("open", "project:bare.md", "--revision", expected=3)
         run("amend", "project:bare.md", "--expect", fresh, content="body", expected=3)
+        run("rewrite", "project:bare.md", "body", expected=3)
         assert "New body" in bare.read_text()
     print("amendment integration checks passed")
 

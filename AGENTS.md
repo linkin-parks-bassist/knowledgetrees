@@ -10,6 +10,9 @@ unresolved record) before the next unrelated tool call or completion. The skills
 own proof checks, scope, paths, and maintenance. Higher-authority instructions and
 permissions always govern.
 
+Use `kt rewrite` for edits and review its returned original contents; `kt amend`
+is deprecated but retained for living legacy workers.
+
 Keep the roots distinct: `.knowledge/` is this repository's actual operational
 knowledge root; `example/` is a public distributable specimen. Do not copy
 repository-specific state into `example/` or use the example as a substitute for
