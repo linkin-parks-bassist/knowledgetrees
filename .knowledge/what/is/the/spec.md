@@ -158,8 +158,8 @@ workers. Exit status remains authoritative; reminders live in one-shot hooks.
 
 ## Path-segment dictionary
 
-Provide `kt dict [ROOT...]`. With no roots it prints every unique segment in leaf
-paths across accessible trees; arguments restrict it to configured root labels or
+Provide `kt dict [ROOT...]`. With no roots it considers only the final two segments of each leaf path across
+accessible trees; arguments restrict it to configured root labels or
 canonical paths. Sort segments on one comma-separated line, preserve hyphenated segments, strip
 .md and deduplicate globally. Omit segments of two characters or fewer and standard
 grammar/navigation words. Read no leaf bodies and reveal no full paths or

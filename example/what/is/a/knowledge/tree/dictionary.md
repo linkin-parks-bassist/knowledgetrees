@@ -6,10 +6,10 @@ review_when: Recheck when leaf path rules, root access, kt dict, or live discove
 updated_at: "2026-09-15T18:06:14+10:00"
 ---
 
-A knowledge-tree dictionary is the sorted set of useful unique path segments
-appearing in Markdown leaf paths across selected accessible roots. `kt dict` prints
-a single comma-separated line, removes the final `.md`, preserves hyphenated
-components, and prints repeated segments only once. It omits segments of two
+A knowledge-tree dictionary is the sorted set of useful unique path segments appearing in the final two
+positions of Markdown leaf paths across selected accessible roots. `kt dict` prints
+a single comma-separated line, takes only each leaf path’s final two components, removes the final `.md`,
+preserves hyphenated components, and prints repeated segments only once. It omits segments of two
 characters or fewer and standard grammatical or navigation words such as `a`,
 `to`, `how`, `when`, `what`, and `where`. It reads no leaf bodies and emits no full
 leaf paths.

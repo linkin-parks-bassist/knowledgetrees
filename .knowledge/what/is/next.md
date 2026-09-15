@@ -45,3 +45,7 @@ installed locally. No implementation, publication, or installation work remains.
 The all-accessible bare proof default and explicit --local/--global selectors are
 validated, installed and published as 18eea6f. No implementation, installation or
 publication work remains.
+
+
+Commit and publish the validated and installed tree-native final-two-segment
+dictionary implementation under the standing repository workflow.

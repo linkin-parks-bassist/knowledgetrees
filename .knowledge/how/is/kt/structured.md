@@ -29,10 +29,14 @@ silent. Access/permission changes retain consent disclosures but omit post-save
 receipts. Reads/searches/inspection/previews retain requested output.
 
 
-`dictionary` walks only accessible Markdown leaf path names through the existing
-access-aware `leaves` iterator, strips the final .md, deduplicates components, filters segments of at most two
-characters and GRAMMATICAL words, then sorts them case-insensitively for one
-comma-separated output line. No leaf content is read. Optional configured root
+`dictionary` walks the accessible directory trees directly with `os.walk`. At each
+Markdown leaf, the current directory supplies the penultimate segment and the leaf
+stem supplies the final segment; it does not materialize a list of full leaf paths.
+It rejects segments of at most two characters and GRAMMATICAL words before adding
+candidates to the deduplicating set, then sorts the compact set case-insensitively
+for one comma-separated output line. Registered nested-root directories are pruned
+at traversal boundaries and walked separately only when accessible, avoiding a
+per-file access-policy resolution. No leaf content is read. Optional configured root
 arguments restrict the default all-accessible-root set. Evidence: tools/kt and
 CLI/access integration tests, 2026-09-15.
 

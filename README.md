@@ -394,7 +394,7 @@ Exact answers and `kt open` remain verbatim in both modes; search ranking and
 exit statuses are unchanged. Search is lexical, not a semantic model;
 scores rank matches, and a miss does not prove knowledge is absent.
 
-`kt dict` prints the sorted unique vocabulary of segments used in leaf paths across
+`kt dict` prints the sorted unique vocabulary from the final two segments of leaf paths across
 accessible roots on one comma-separated line. It reads no leaf bodies, emits no
 complete paths, and prints each useful segment once. Segments of at most two
 characters and standard grammar/navigation words are omitted, so an agent can see terms such as `obtain` and `sudo-authorization`

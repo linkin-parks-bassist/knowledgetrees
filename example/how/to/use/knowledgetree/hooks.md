@@ -24,7 +24,7 @@ and sticky leaf falsification flags remain protected differences.
 
 The shared installed handler is executable at `~/.knowledge/.tools/kt-hooks`.
 
-Proof: (verified at 2026-09-12T22:05:28+10:00)
+Proof: (verified at 2026-09-15T22:29:17+10:00)
 
 ```sh
 test -x "$HOME/.knowledge/.tools/kt-hooks"

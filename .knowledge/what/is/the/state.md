@@ -228,3 +228,17 @@ The proof-selection follow-up is validated and installed. Bare kt prove checks a
 accessible roots; --local and --global narrow explicitly, and bootstrap uses
 --local. Full regressions and actual local/global/all-accessible proof sweeps pass.
 Installed kt matches source and guidance drift is clean. The completed proof-scope follow-up was committed and pushed to main as 18eea6f.
+
+
+kt dict now walks accessible directory trees directly and considers only the
+containing-directory name and leaf stem. It rejects short and grammar/navigation
+segments before inserting candidates into its deduplicating set; registered nested
+roots are pruned at directory boundaries and traversed separately when accessible.
+This preserves pairs such as obtain/sudo-authorization while dropping most shared
+structural vocabulary. The optimized output is byte-for-byte identical to the
+prior final-two implementation: 215 segments and 2,237 bytes for the current roots.
+Seven warm source runs measured a 0.197-second median, down from about 0.62 seconds
+before the specialized traversal. CLI, access, bypass/privacy, installer, leaf
+maintenance, hook and proof-stamp regressions pass. Project, global and public
+example proofs pass; installed kt matches source and guidance drift is clean.
+Publication is pending.

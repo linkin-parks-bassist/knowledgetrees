@@ -437,16 +437,29 @@ def dictionary(args):
                 selected.append((label, root))
     segments = set()
     for _, root in selected:
-        for path in leaves(root, access):
-            parts = list(path.relative_to(root).parts)
-            parts[-1] = parts[-1].removesuffix(".md")
-            segments.update(part for part in parts if part)
-    useful = sorted(
-        (segment for segment in segments if len(segment) > 2 and segment.casefold() not in GRAMMATICAL),
-        key=lambda value: (value.casefold(), value),
-    )
-    if useful:
-        print(", ".join(useful))
+        # A nested registered root owns its subtree. Prune it here and, when
+        # accessible, walk it through its own selected-root entry. This enforces
+        # access boundaries with directory checks rather than resolving every file.
+        nested = {other for _, other in access.roots if other != root and other.is_relative_to(root)}
+        for directory, directories, files in os.walk(root, followlinks=False):
+            base = Path(directory)
+            directories[:] = sorted(
+                name for name in directories
+                if not name.startswith(".") and (base / name).resolve() not in nested
+            )
+            for name in files:
+                path = base / name
+                if not name.endswith(".md") or path.is_symlink():
+                    continue
+                # os.walk already gives us the tree position: the containing
+                # directory is the penultimate segment and the leaf stem is
+                # the final one. Do not materialize or post-process full paths.
+                candidates = (name[:-3],) if base == root else (base.name, name[:-3])
+                for segment in candidates:
+                    if len(segment) > 2 and segment.casefold() not in GRAMMATICAL:
+                        segments.add(segment)
+    if segments:
+        print(", ".join(sorted(segments, key=lambda value: (value.casefold(), value))))
     return 0
 
 
@@ -1541,7 +1554,7 @@ def command_parser():
     opening.set_defaults(handler=open_command)
     opening.add_argument("path", help="local:path, global:path, ROOT:path (registered root), or absolute .md path; project: aliases local:")
     opening.add_argument("--revision", action="store_true", help="compatibility flag: reads always print SHA-256 revision on stderr")
-    vocabulary = commands.add_parser("dict", help="print sorted unique leaf-path segments from accessible roots")
+    vocabulary = commands.add_parser("dict", help="print useful final-two leaf-path segments from accessible roots")
     vocabulary.set_defaults(handler=dictionary)
     vocabulary.add_argument("roots", nargs="*", help="optional root labels or configured root paths; default: all accessible roots")
     amending = commands.add_parser("amend", help="deprecated: use rewrite; retained for existing workers", description="Deprecated in favor of kt rewrite. Retained with unchanged syntax and behavior for existing workers.")

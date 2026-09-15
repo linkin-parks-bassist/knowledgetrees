@@ -20,7 +20,7 @@ notice. Accuracy/preservation reminders belong in the one-shot review hook.
 
 ## Command and address quick reference
 
-- Dictionary: `kt dict` prints every unique segment used in leaf paths across all
+- Dictionary: `kt dict` prints every useful segment occurring in the final two positions of leaf paths across all
   accessible roots on one sorted, comma-separated line. It reads path names, not
   leaf bodies, and never prints complete paths. Repeated segments appear once;
   segments of at most two characters and standard grammar/navigation words are omitted. `kt dict local global`

@@ -91,6 +91,8 @@ def main():
         dictionary = run("dict").strip().split(", ")
         assert dictionary == sorted(set(dictionary), key=lambda value: (value.casefold(), value))
         assert {"obtain", "sudo-authorization"}.issubset(dictionary)
+        assert "explain" in dictionary and "knowledge" in dictionary
+        assert "add" not in dictionary, "segments above the final two path positions are excluded"
         assert not {"a", "to", "how", "when", "what", "where"}.intersection(dictionary)
         assert all(len(segment) > 2 for segment in dictionary)
         assert dictionary.count("obtain") == 1 and "sudo-authorization.md" not in dictionary

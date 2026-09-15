@@ -23,7 +23,7 @@ lost context or changed scope rather than rerunning completed startup work.
 Use `kt` from PATH, or `~/.knowledge/.tools/kt` if PATH has not been configured.
 Local knowledge is automatically included in repository lookups; permitted broader
 roots contribute results automatically. At startup run `kt dict` once. It prints
-the sorted unique segments used by leaf paths across accessible roots, without
+the sorted unique segments from the final two positions of leaf paths across accessible roots, without
 reading leaf contents or repeating complete paths. This small vocabulary shows
 which terms can be used in later semantic queries. Do not enumerate roots or list
 whole trees at startup. `kt roots` is a diagnostic for root configuration/access
