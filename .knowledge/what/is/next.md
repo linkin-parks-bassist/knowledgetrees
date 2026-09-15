@@ -47,5 +47,5 @@ validated, installed and published as 18eea6f. No implementation, installation o
 publication work remains.
 
 
-Commit and publish the validated and installed tree-native final-two-segment
-dictionary implementation under the standing repository workflow.
+The tree-native final-two-segment dictionary is validated, installed and published
+as 6bb5098. No implementation, installation or publication work remains.

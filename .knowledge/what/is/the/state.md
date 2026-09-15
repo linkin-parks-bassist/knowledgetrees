@@ -240,5 +240,6 @@ prior final-two implementation: 215 segments and 2,237 bytes for the current roo
 Seven warm source runs measured a 0.197-second median, down from about 0.62 seconds
 before the specialized traversal. CLI, access, bypass/privacy, installer, leaf
 maintenance, hook and proof-stamp regressions pass. Project, global and public
-example proofs pass; installed kt matches source and guidance drift is clean.
-Publication is pending.
+example proofs pass; installed kt matches source and guidance drift is clean. The
+completed dictionary optimization and guidance were committed and pushed to main
+as 6bb5098.
