@@ -234,7 +234,10 @@ The goal is not to turn every sentence into code. Proofs are for single, immedia
 checkable true-or-false assertions—not requirements, instructions, opinions, plans,
 or compound conclusions.
 
-Use `kt prove` for access-controlled proof verification. The proof engine is
+Use `kt prove` for access-controlled proof verification across all accessible
+roots. Use `kt prove --local` for only the exact current-directory tree,
+`kt prove --global` for only global knowledge, or `--root ROOT` for another exact
+accessible tree. The proof engine is
 built into kt; no separate verifier process or installation is needed.
 `kt prove --help` lists options. Before installation, run `tools/kt prove`
 from the checkout. Explicit roots require the same access approval as retrieval.

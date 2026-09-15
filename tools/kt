@@ -1308,11 +1308,14 @@ def proof_parser_for_cli():
         metavar="TOKEN",
         help="select leaves matching any exact semantic path component",
     )
-    parser.add_argument(
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument(
         "-r", "--root",
         type=Path,
-        help="knowledge root to check instead of discovering one from the working directory",
+        help="check one exact accessible knowledge root",
     )
+    selection.add_argument("--local", action="store_true", help="check only the exact current-directory .knowledge root")
+    selection.add_argument("--global", dest="global_root", action="store_true", help="check only the global knowledge root")
     parser.add_argument(
         "--timeout",
         type=positive_timeout,
@@ -1429,16 +1432,40 @@ def prove(arguments):
     arguments = list(arguments)
     if "--help" in arguments or "-h" in arguments:
         return verify_proofs(arguments)
+    local_selected = "--local" in arguments
+    global_selected = "--global" in arguments
+    arguments = [argument for argument in arguments if argument not in ("--local", "--global")]
+    explicit_root = any(a in ("--root", "-r") or a.startswith("--root=") for a in arguments)
+    if sum((local_selected, global_selected, explicit_root)) > 1:
+        raise ValueError("select only one of --local, --global, or --root")
     if arguments and not arguments[0].startswith("-") and Path(arguments[0]).expanduser().is_dir():
+        if local_selected or global_selected or explicit_root:
+            raise ValueError("a positional proof directory cannot be combined with a root selector")
         root = Path(arguments.pop(0)).expanduser().resolve()
         if root.name != ".knowledge" and (root / ".knowledge").is_dir():
             root /= ".knowledge"
         arguments = ["--root", str(root), *arguments]
-    elif not any(a in ("--root", "-r") or a.startswith("--root=") for a in arguments):
+    elif local_selected:
+        root = local_root()
+        if not root.is_dir():
+            raise AccessRequired("kt: no local knowledge root in the current directory")
+        require_root(root, "local")
+        arguments = ["--root", str(root), *arguments]
+    elif global_selected:
+        root = global_knowledge_root()
+        require_root(root, "global")
+        arguments = ["--root", str(root), *arguments]
+    elif not explicit_root:
         allowed = roots()
         if not allowed:
-            raise AccessRequired("kt: no accessible proof root")
-        arguments = ["--root", str(allowed[0][1]), *arguments]
+            raise AccessRequired("kt: no accessible proof roots")
+        failed = False
+        for label, root in allowed:
+            if any(child != root and child.is_relative_to(root) and root_access(child, child_label) != "allow"
+                   for child_label, child in discovered_roots()):
+                raise AccessRequired(f"kt: proof scope {label!r} contains a restricted registered subtree; narrow the scope or approve it first")
+            failed = verify_proofs(["--root", str(root), *arguments]) != 0 or failed
+        return 1 if failed else 0
     selected = None
     for index, argument in enumerate(arguments):
         if argument in ("--root", "-r") and index + 1 < len(arguments):

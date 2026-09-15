@@ -34,7 +34,7 @@ questions, not a prerequisite.
    spine leaves `what/is/the/{spec,plan,state}.md` and `what/is/next.md`. Use supplied
    orientation content directly rather than rereading it. Establish missing local
    canonical branches and spine leaves within permission.
-3. Check the local root's evidence and proofs with `kt prove --root .knowledge`.
+3. Check the local root's evidence and proofs with `kt prove --local`.
    Stop on falsification and repair within authority. ROOT means the exact tree
    directory, not its containing repository; no root inventory is needed.
 4. Query normally. Read and check broader-root answers when needed for the task;

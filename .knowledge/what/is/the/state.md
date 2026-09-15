@@ -216,3 +216,16 @@ public-example proofs pass. The installed 51-leaf canonical corpus matches curre
 rendered repository guidance; Codex TOML parses with 13 skill entries; installed kt
 matches source. The validated work was committed and pushed to main as 4c8e553. The local
 installation already matches the published implementation and guidance.
+
+
+Bare kt prove now checks all accessible roots; --local and --global provide readable
+single-root selectors. Bootstrap uses --local. CLI tests distinguish local/global
+selection and prove that bare mode observes a failure in another accessible root.
+This follow-up is not yet validated, installed, committed or published.
+
+
+The proof-selection follow-up is validated and installed. Bare kt prove checks all
+accessible roots; --local and --global narrow explicitly, and bootstrap uses
+--local. Full regressions and actual local/global/all-accessible proof sweeps pass.
+Installed kt matches source and guidance drift is clean. The owner’s standing
+publication request applies to this completed follow-up.

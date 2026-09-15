@@ -35,10 +35,10 @@ notice. Accuracy/preservation reminders belong in the one-shot review hook.
   live globally: `kt open global:how/to/rewrite/a/knowledge/leaf.md`.
   An external `ROOT:PATH` uses a configured canonical root identity from `kt roots`;
   it cannot substitute for registration/access. An absolute leaf filename has no colon.
-- Proofs: `kt prove --root .knowledge --no-stamp` or
-  `kt prove --root "$HOME/.knowledge" --no-stamp`. ROOT is the exact knowledge-tree
-  directory from `kt roots`, not its containing repository. A quiet exit 0 means
-  the sweep passed; `--verbose` supplies diagnostics. Optional filters are separate
+- Proofs: bare `kt prove` checks every accessible root. `kt prove --local` checks
+  only the exact current-directory `.knowledge`; `kt prove --global` checks only
+  global knowledge; `--root ROOT` selects another exact accessible tree. A quiet
+  exit 0 means every selected sweep passed; `--verbose` supplies diagnostics. Optional filters are separate
   semantic components, e.g. `kt prove --root .knowledge --no-stamp how to use`;
   slash-containing leaf paths are not filters. Multiple tokens are disjunctive.
 - Create: `kt add "what is the result" "Checked answer" --local --source "evidence"`.
@@ -99,9 +99,9 @@ no leaf paths/snippets; force-private roots expose no generated root identity ei
 then global. Absolute Markdown leaf paths also work. Content and frontmatter are
 returned verbatim on stdout; full reads also print Revision: HASH on stderr. Relative paths cannot escape the selected root.
 
-`kt prove --no-stamp leaves` checks exact semantic-component tokens in the active
-root. Select another permitted root with `kt prove --root ROOT --no-stamp`, using
-its exact knowledge-tree directory from `kt roots`. Default proof checks may stamp
+`kt prove --no-stamp leaves` checks exact semantic-component tokens across all
+accessible roots. Narrow with `--local`, `--global`, or `--root ROOT`; explicit
+ROOT is the exact knowledge-tree directory from `kt roots`. Default proof checks may stamp
 outcomes; lookup and open do not verify or stamp proofs.
 
 Default output is compact plain text for agents. Non-exact searches print one

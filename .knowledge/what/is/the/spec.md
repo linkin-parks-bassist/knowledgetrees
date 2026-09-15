@@ -165,3 +165,12 @@ canonical paths. Sort segments on one comma-separated line, preserve hyphenated 
 grammar/navigation words. Read no leaf bodies and reveal no full paths or
 restricted subtree segments. Run kt dict once in fresh-session bootstrap so agents
 receive query vocabulary without unrelated knowledge contents.
+
+
+## Proof root selection
+
+Bare kt prove checks all accessible roots. Provide `kt prove --local` for only the
+exact current-directory tree and `kt prove --global` for only global knowledge;
+retain --root ROOT for another exact accessible tree. Fresh-session bootstrap uses
+--local to keep mandatory startup verification bounded. All modes retain silent
+success, failure diagnostics, access/force-private enforcement and proof semantics.

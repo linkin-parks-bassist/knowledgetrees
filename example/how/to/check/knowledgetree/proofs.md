@@ -7,12 +7,12 @@ updated_at: "2026-09-13T13:54:30+10:00"
 ---
 
 Use `kt prove` to check marked proofs. Verification is built into kt; it does
-not launch or require a separately installed verifier. From a directory containing
-an accessible `.knowledge` root:
+not launch or require a separately installed verifier. Bare `kt prove` checks all accessible roots. Use explicit selectors to narrow it:
 
 ```bash
 kt prove
-kt prove vivado
+kt prove --local
+kt prove --global vivado
 kt prove --root /path/to/approved/.knowledge --no-stamp
 ```
 
@@ -22,8 +22,8 @@ apply before proof execution, including restrictions on registered nested trees.
 
 
 Each positional token must match an exact directory component or filename stem;
-multiple tokens select their disjunction. Use `-r PATH` or `--root PATH` to select a
-knowledge root explicitly when invoking it elsewhere; positional tokens following
+multiple tokens select their disjunction. Use `--local` for the exact current-directory tree, `--global` for the global
+tree, or `-r PATH`/`--root PATH` for another exact accessible root; positional tokens following
 that option retain the same exact, disjunctive semantics.
 
 Normal success is quiet and returns 0. Every failure returns 1 and prints the

@@ -35,3 +35,10 @@ characters and GRAMMATICAL words, then sorts them case-insensitively for one
 comma-separated output line. No leaf content is read. Optional configured root
 arguments restrict the default all-accessible-root set. Evidence: tools/kt and
 CLI/access integration tests, 2026-09-15.
+
+
+The prove wrapper expands bare invocation into one verifier run per accessible
+root and combines failure status. --local and --global select their canonical
+roots before delegating to the existing verifier; --root and positional-directory
+compatibility remain. Restricted registered subtrees still prevent unsafe broader
+proof traversal. Evidence: tools/kt and CLI integration tests, 2026-09-15.
