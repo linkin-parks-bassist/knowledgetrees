@@ -17,7 +17,10 @@ HANDLER = REPOSITORY / "tools/kt-hooks"
 
 
 def main():
-    handle = runpy.run_path(str(HANDLER))["handle"]
+    handler_api = runpy.run_path(str(HANDLER))
+    assert "Ensure rewritten knowledge is accurate and no still-valid knowledge was lost." in handler_api["REVIEW"]
+    assert "lost. check." not in handler_api["REVIEW"]
+    handle = handler_api["handle"]
     with tempfile.TemporaryDirectory(prefix="kt bootstrap ") as initial, patch.dict(os.environ, {"KT_GLOBAL_ROOT": str(Path(initial) / ".knowledge"), "KT_CONFIG": str(Path(initial) / "config.json")}):
         initial_root = Path(initial) / ".knowledge"
         (initial_root / ".tools").mkdir(parents=True)
@@ -30,6 +33,7 @@ def main():
             context = output["hookSpecificOutput"]
             assert context["hookEventName"] == "SessionStart"
             assert "kt roots" in context["additionalContext"]
+            assert "Run `kt dict` once" in context["additionalContext"]
             assert "already loaded" in context["additionalContext"]
             assert "verified_by:" not in context["additionalContext"]
         assert handle("codex", "start", {"source": "unexpected"}) == ({}, 0)

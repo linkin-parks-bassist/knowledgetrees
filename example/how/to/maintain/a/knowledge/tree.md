@@ -99,10 +99,10 @@ replace agent review. A review with no new knowledge needs no invented leaf.
 Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
 
-Have the original contents in context when editing a leaf. Read them beforehand,
-or use kt rewrite and review its returned superseded contents immediately after
-the write, restoring any still-valid knowledge that was lost before continuing.
-Preserve concurrent edits (use --expect when holding a revision), correct contradictions
+Have the original contents in context before editing a leaf. Full reads supply
+the revision hash automatically; use kt rewrite ADDRESS HASH CONTENTS. The required
+hash rejects changed contents; reread and merge on conflict. Preserve still-valid
+knowledge and concurrent edits, correct contradictions
 against governing evidence, and update affected orientation/spine projections.
 Commit project knowledge with owning changes when permitted; never automatically
 publish global personal knowledge. Superseded current truth leaves the active

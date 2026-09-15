@@ -45,9 +45,9 @@ source evidence; keep review conditions tied to the code or structure that can c
 Put host/personal tooling in `~/.knowledge` and project/subsystem facts in the
 nearest applicable local root. Never promote professional, customer, partner, or
 restricted material into the global tree; sanitize anything intended for publication.
-Keep an existing owner in context when editing: read it first, or review the
-original returned by kt rewrite and immediately restore any still-valid knowledge
-that was lost. Use --expect when holding a revision to protect concurrent changes.
+Keep an existing owner in context before editing. Full reads supply the revision
+hash automatically; pass it positionally to kt rewrite ADDRESS HASH CONTENTS.
+Preserve still-valid knowledge and reread/merge if the hash conflicts.
 Use `kt open ROOT:PATH` for that read and `kt prove --root ROOT TOKEN` after
 changing eligible proofs. Create a new leaf in one call:
 
@@ -130,7 +130,7 @@ refreshes only its `Proof: (verified at …)` marker. A failing run changes it t
 decide semantic eligibility, faithful coverage, or whether all prose is proved;
 the agent remains responsible. Read maintenance before repairing a falsified leaf.
 
-For an existing owner, use kt rewrite and review its returned original contents as
+For an existing owner, use kt rewrite ADDRESS HASH CONTENTS as
 described in
 `how/to/rewrite/a/knowledge/leaf.md`; creation still refuses overwriting existing leaves.
 

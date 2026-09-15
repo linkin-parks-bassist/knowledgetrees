@@ -13,6 +13,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import tomllib
 
 
 EXCLUDED_EXAMPLE_LEAVES = {
@@ -116,11 +117,14 @@ Follow the canonical knowledge-tree procedure once per fresh agent session. When
 harness injects it into context, it is already loaded: do not invoke a bootstrap
 skill again. Otherwise load `knowledgetrees` as the compatibility fallback.
 Perform startup orientation and evidence checks once, not per task or turn.
+Run `kt dict` once at startup to load unique accessible leaf-path segments without
+reading leaf contents or listing whole paths.
 New question -> `kt` first unless adequately checked knowledge is already loaded;
 miss -> determine whether a leaf exists; absent -> investigate and add it (or an
 unresolved record) before the next unrelated tool call or completion. Use nearest
 project and global roots; the skills own proof checks, scope, paths, and maintenance.
-Use `kt rewrite` for edits and review its returned original contents; `kt amend`
+Full leaf reads supply a revision hash; edit with `kt rewrite ADDRESS HASH CONTENTS`
+and preserve still-valid knowledge already in context. `kt amend`
 is deprecated but retained for living legacy workers.
 Current higher-authority instructions and permissions always govern.
 {AGENTS_END}"""
@@ -131,7 +135,7 @@ SKILLS_TABLE = re.compile(
     r"(?ms)^\[\[skills\.config\]\]\s*\n.*?(?=^\[|\Z)"
 )
 PATH_SETTING = re.compile(r"(?m)^path\s*=\s*(['\"])(.*?)\1\s*$")
-ENABLED_SETTING = re.compile(r"(?m)^enabled\s*=\s*(?:true|false)\s*$")
+ENABLED_SETTING = re.compile(r"(?m)^enabled\s*=\s*(?:true|false)[ \t]*$")
 
 
 def codex_config_text(current: str, skill_path: Path) -> str:
@@ -421,6 +425,11 @@ def main(arguments: list[str] | None = None) -> int:
     for _canonical, destination in skill_links:
         if destination.is_relative_to(target_home / ".codex"):
             config_updated = codex_config_text(config_updated, destination)
+    try:
+        tomllib.loads(config_updated)
+    except tomllib.TOMLDecodeError as error:
+        print(f"error: cannot safely merge Codex configuration: {error}", file=sys.stderr)
+        return 2
 
     if not path_exists(opencode_config) and path_exists(opencode_config.with_suffix(".jsonc")):
         print("error: OpenCode JSONC configuration exists; integrate its permissions manually before installation", file=sys.stderr)

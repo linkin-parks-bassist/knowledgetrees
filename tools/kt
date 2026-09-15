@@ -312,8 +312,6 @@ def access_command(args):
                 if label not in dict(available):
                     config["roots"][label] = {"path": str(root), "access": "ask"}
         save_access_config(config)
-    private = root_access(root, label, config=config) == "force-private"
-    print(f"Saved {args.decision}" + ("." if private else f" for {label} ({args.scope})."))
     return 0
 
 
@@ -332,7 +330,6 @@ def permissions_command(args):
         return 1
     config["dangerously_skip_permissions"] = enabled
     save_access_config(config)
-    print("dangerously_skip_permissions=" + str(enabled).lower())
     return 0
 
 
@@ -418,6 +415,39 @@ def leaves(root, access=None):
             path = Path(directory) / name
             if name.endswith(".md") and not path.is_symlink() and access.allows(path):
                 yield path
+
+
+def dictionary(args):
+    """Print unique leaf-path components without reading leaf contents."""
+    access = RootAccessView.load()
+    selected = access.allowed_roots()
+    if args.roots:
+        aliases = root_aliases()
+        selected = []
+        for value in args.roots:
+            root = aliases.get(value)
+            if root is None:
+                candidate = Path(value).expanduser().resolve()
+                root = next((path for _, path in access.roots if path == candidate), None)
+            if root is None:
+                raise ValueError(f"unknown knowledge root: {value}")
+            label = next((name for name, path in access.roots if path == root), root_identity(root))
+            require_root(root, label)
+            if (label, root) not in selected:
+                selected.append((label, root))
+    segments = set()
+    for _, root in selected:
+        for path in leaves(root, access):
+            parts = list(path.relative_to(root).parts)
+            parts[-1] = parts[-1].removesuffix(".md")
+            segments.update(part for part in parts if part)
+    useful = sorted(
+        (segment for segment in segments if len(segment) > 2 and segment.casefold() not in GRAMMATICAL),
+        key=lambda value: (value.casefold(), value),
+    )
+    if useful:
+        print(", ".join(useful))
+    return 0
 
 
 def find(args, branches=None, browse=False, context=None):
@@ -536,7 +566,9 @@ def question(arguments):
             candidate = root.joinpath(*components).with_suffix(".md")
             if candidate.is_file() and not candidate.is_symlink() and candidate.resolve().is_relative_to(root) and context.access.allows(candidate):
                 print(f"kt: exact {label}:{candidate.relative_to(root)}; check relevant proofs before reliance", file=sys.stderr)
-                sys.stdout.write(candidate.read_text())
+                data = candidate.read_bytes()
+                print(f"Revision: {revision(data)}", file=sys.stderr)
+                sys.stdout.write(data.decode("utf-8"))
                 return 0
     # Consume directories word by word. Stop at the first unmatched component.
     walked = []
@@ -642,8 +674,7 @@ def resolve_leaf(value, writable=False):
 
 def open_leaf(value, with_revision=False):
     data = resolve_leaf(value).read_bytes()
-    if with_revision:
-        print(f"Revision: {revision(data)}", file=sys.stderr)
+    print(f"Revision: {revision(data)}", file=sys.stderr)
     sys.stdout.write(data.decode("utf-8"))
     return 0
 
@@ -770,20 +801,17 @@ def invalidate_review(text, original, source=None):
     return "---\n" + header + "\n---\n\n" + body.lstrip("\r\n")
 
 
-def print_rewrite_original(original, digest, *, unchanged=False):
-    label = "unchanged current contents" if unchanged else "superseded contents; no longer current knowledge"
-    print(f"--- BEGIN ORIGINAL ({label}; revision={digest}) ---")
-    sys.stdout.write(original)
-    if not original.endswith("\n"):
-        sys.stdout.write("\n")
-    print("--- END ORIGINAL ---")
-    print("Check against the original content to see if any still-valid knowledge was lost; rewrite again to add it back if so.")
+def deprecated_amend(args):
+    print("kt: amend is deprecated; review updated workflow guidance with kt open global:how/to/rewrite/a/knowledge/leaf.md.", file=sys.stderr)
+    args.legacy_output = True
+    return amend(args)
 
 
 def amend(args):
     path = resolve_leaf(args.path, writable=True)
-    if args.expect is not None and not re.fullmatch(r"[a-f0-9]{64}", args.expect):
-        raise ValueError("--expect must be the SHA-256 revision from kt open --revision")
+    expected = args.hash if hasattr(args, "contents") else args.expect
+    if not isinstance(expected, str) or not re.fullmatch(r"[a-f0-9]{64}", expected):
+        raise ValueError("revision must be the SHA-256 hash supplied by a leaf read")
     if hasattr(args, "contents"):
         replacement = args.contents
     elif args.body_file == "-":
@@ -800,13 +828,12 @@ def amend(args):
         fcntl.flock(stream, fcntl.LOCK_EX)
         snapshot = snapshot_from_stream(stream)
         original_bytes = snapshot.data
-        if args.expect is not None and snapshot.digest != args.expect:
+        if snapshot.digest != expected:
             raise RevisionConflict("kt: leaf changed; reread with kt open --revision and merge before amending")
         original = original_bytes.decode("utf-8")
         if replacement == original and not args.source:
-            print(f"Unchanged. Revision: {snapshot.digest}")
-            if hasattr(args, "contents"):
-                print_rewrite_original(original, snapshot.digest, unchanged=True)
+            if getattr(args, "legacy_output", False):
+                print(f"Unchanged. Revision: {snapshot.digest}")
             return 0
         _, old_records = proof_records(original)
         previous = {identity: marker for _, identity, marker in old_records if identity is not None}
@@ -834,11 +861,10 @@ def amend(args):
         stream.truncate()
         stream.flush()
         os.fsync(stream.fileno())
-    print(f"{'Rewritten' if hasattr(args, 'contents') else 'Amended'} {args.path}. Revision: {revision(updated.encode('utf-8'))}")
-    print(f"Whole-leaf review invalidated; {invalidated} new/changed proofs need checking." if PRETTY
-          else f"status={leaf_parts(updated)[0].get('status', 'unverified')} proofs_to_check={invalidated}")
-    if hasattr(args, "contents"):
-        print_rewrite_original(original, snapshot.digest)
+    if getattr(args, "legacy_output", False):
+        print(f"Amended {args.path}. Revision: {revision(updated.encode('utf-8'))}")
+        print(f"Whole-leaf review invalidated; {invalidated} new/changed proofs need checking." if PRETTY
+              else f"status={leaf_parts(updated)[0].get('status', 'unverified')} proofs_to_check={invalidated}")
     return 0
 
 
@@ -886,7 +912,6 @@ def relocate_leaf(args):
         if snapshot.digest != args.expect.lower():
             raise RevisionConflict("kt: revision mismatch; reread before removing or moving")
         if destination is not None and destination == path:
-            print(f"Unchanged {leaf_address(path)}")
             return 0
         if destination is not None and (destination.exists() or destination.is_symlink()):
             raise ValueError("destination already exists; no files changed")
@@ -911,8 +936,6 @@ def relocate_leaf(args):
             check_leaf_snapshot(path, snapshot, stream,
                                 message="kt: source changed; source retained and destination created; inspect both")
         path.unlink()
-    print(f"Moved {source} -> {target} review=scope,links,proofs" if destination
-          else f"Removed {source} review=links,orientation")
     return 0
 
 
@@ -990,7 +1013,6 @@ def combine_leaves(args):
                                 message="kt: input changed; combined destination saved, changed source retained; inspect both")
             source.unlink()
         removed += 1
-    print(f"Combined {len(sources)} leaves -> {leaf_address(destination)} removed={removed} status={leaf_parts(destination.read_text())[0].get('status', 'unverified')} review=links,scope,proofs")
     return 0
 
 
@@ -1031,7 +1053,7 @@ def capture(args):
         if (root / ancestor).is_symlink():
             raise ValueError("symlink in leaf path")
     if path.exists() or path.is_symlink():
-        raise ValueError(f"leaf already exists: {path}; use kt rewrite and review its returned original contents")
+        raise ValueError(f"leaf already exists: {path}; read the owner and use kt rewrite ADDRESS HASH CONTENTS")
     if args.answer == "-":
         if sys.stdin.isatty():
             raise ValueError("pipe the answer on stdin when using -")
@@ -1062,12 +1084,6 @@ def capture(args):
     # Exclusive creation protects an existing leaf even if it appeared after preflight.
     with path.open("x", encoding="utf-8") as handle:
         handle.write(content)
-    print(paint("Created", "32") + f" {label}:{path.relative_to(root)}" +
-          ("" if PRETTY else f" status={metadata['status']}"))
-    if PRETTY:
-        print(f"  {path}")
-        print("  Unresolved record saved." if args.unresolved else
-              "  Unverified: independently review the leaf; check eligible proofs before reliance.")
     return 0
 
 
@@ -1447,8 +1463,6 @@ def open_command(args):
 def register_command(args):
     register_root(args.path, args.name)
     root = Path(args.path).expanduser().resolve()
-    print("Registered." if root_access(root) == "force-private"
-          else f"Registered {root_identity(root)}.")
     return 0
 
 
@@ -1472,7 +1486,7 @@ def roots_command(args):
             else:
                 print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
         if not PRETTY:
-            print("commands: find | QUESTION | open | add | rewrite | amend (deprecated) | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
+            print("commands: find | QUESTION | open | dict | add | rewrite | amend (deprecated) | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
             return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
@@ -1499,19 +1513,22 @@ def command_parser():
     opening = commands.add_parser("open", help="print a leaf verbatim, including metadata")
     opening.set_defaults(handler=open_command)
     opening.add_argument("path", help="local:path, global:path, ROOT:path (registered root), or absolute .md path; project: aliases local:")
-    opening.add_argument("--revision", action="store_true", help="print SHA-256 revision on stderr; stdout stays verbatim")
+    opening.add_argument("--revision", action="store_true", help="compatibility flag: reads always print SHA-256 revision on stderr")
+    vocabulary = commands.add_parser("dict", help="print sorted unique leaf-path segments from accessible roots")
+    vocabulary.set_defaults(handler=dictionary)
+    vocabulary.add_argument("roots", nargs="*", help="optional root labels or configured root paths; default: all accessible roots")
     amending = commands.add_parser("amend", help="deprecated: use rewrite; retained for existing workers", description="Deprecated in favor of kt rewrite. Retained with unchanged syntax and behavior for existing workers.")
-    amending.set_defaults(handler=amend)
+    amending.set_defaults(handler=deprecated_amend)
     amending.add_argument("path")
     amending.add_argument("--expect", required=True, help="SHA-256 revision returned by open --revision")
     amending.add_argument("--body-file", default="-", help="complete replacement Markdown file, or - for stdin")
     amending.add_argument("--source", help="actual evidence for the revised answer")
     amending.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
-    replacing = commands.add_parser("rewrite", help="rewrite a leaf with inline Markdown and return its previous contents")
+    replacing = commands.add_parser("rewrite", help="rewrite a leaf using its read revision and inline Markdown")
     replacing.set_defaults(handler=amend)
     replacing.add_argument("path", help="existing leaf address")
+    replacing.add_argument("hash", help="required SHA-256 revision supplied by the leaf read")
     replacing.add_argument("contents", help="complete replacement Markdown; use -- before positional arguments beginning with -")
-    replacing.add_argument("--expect", help="optional SHA-256 revision from open --revision; rejects stale context")
     replacing.add_argument("--source", help="actual evidence for the revised answer")
     replacing.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
     for name in ("rm", "mv"):

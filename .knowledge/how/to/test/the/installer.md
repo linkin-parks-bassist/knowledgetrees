@@ -24,3 +24,12 @@ Successful proof timestamp refreshes alone are not installation content conflict
 their installed stamps are retained until the verifier checks them again. Falsified
 markers, sticky leaf falsification flags, prose edits, and other metadata changes
 remain protected content differences. Reinstallation tests cover both cases.
+
+
+Codex skill enablement must preserve the newline between an `enabled` setting and
+the following TOML table. Match horizontal trailing whitespace only; `\s*$` can
+consume the newline and produce invalid text such as `enabled = true[desktop]` or
+`enabled = true[[skills.config]]`. Parse the complete proposed configuration with
+Python tomllib before any installer write. The integration fixture places a desktop
+table immediately after an existing disabled skill and verifies the parsed table.
+Evidence: repaired ~/.codex/config.toml, install and tests/test-install.py, 2026-09-15.

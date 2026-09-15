@@ -6,8 +6,26 @@ review_when: Recheck after changes to the kt CLI or root discovery.
 updated_at: "2026-09-13T13:54:30+10:00"
 ---
 
+## Success output policy
+
+Under normal operation, silence = success and success = silence, following kt
+prove. Successful create/rewrite/remove/move/combine/register operations and
+identical no-ops emit no stdout or stderr; check exit 0. Access/permissions changes
+retain required consent prompts and disclosures, without post-save receipts.
+Reads, searches, help, policy inspection, dry-run previews and explicitly verbose
+proof checks return the requested information. Failures retain diagnostics and
+nonzero exit statuses; silence alone is not sufficient without checking status.
+Deprecated amend retains its legacy stdout for living workers plus its deprecation
+notice. Accuracy/preservation reminders belong in the one-shot review hook.
+
 ## Command and address quick reference
 
+- Dictionary: `kt dict` prints every unique segment used in leaf paths across all
+  accessible roots on one sorted, comma-separated line. It reads path names, not
+  leaf bodies, and never prints complete paths. Repeated segments appear once;
+  segments of at most two characters and standard grammar/navigation words are omitted. `kt dict local global`
+  restricts output to the named configured roots; canonical configured root paths
+  are also accepted. Restricted and force-private material remains excluded.
 - Lookup: `kt how to rewrite a knowledge leaf` or `kt find "rewrite knowledge leaf"`.
   Both search permitted active roots; neither accepts `--root`. Use `--limit 5`
   to bound search output without piping away the command exit status.
@@ -25,12 +43,14 @@ updated_at: "2026-09-13T13:54:30+10:00"
   slash-containing leaf paths are not filters. Multiple tokens are disjunctive.
 - Create: `kt add "what is the result" "Checked answer" --local --source "evidence"`.
   Creation supports `--local`, `--global`, or `--root ROOT`; it refuses existing leaves.
-- Rewrite inline: `kt rewrite ADDRESS "Complete replacement Markdown"`; optional
-  `--expect HASH` protects against stale context, and `--dry-run` previews the diff.
-  Successful writes return the superseded original and a reminder to restore any
-  still-valid knowledge lost; review that output before continuing.
+- Rewrite inline: `kt rewrite ADDRESS HASH "Complete replacement Markdown"`.
+  HASH is a required positional revision supplied automatically on stderr by full
+  leaf reads. No --expect option. --dry-run previews the diff. Successful writes
+  produce no stdout or stderr (exit 0), without echoing either body. No-ops are
+  also silent; dry-run shows the diff and failures report diagnostics. Accuracy and
+  preservation reminders belong to the one-shot task-end capture-review hook.
 - Deprecated compatibility: `kt amend` remains supported for existing workers;
-  new work uses rewrite. Legacy syntax with a required revision: `kt open ADDRESS --revision`, then
+  new work uses rewrite. Legacy syntax with a required revision: `kt open ADDRESS`, then
   `kt amend ADDRESS --expect HASH --body-file FILE`. HASH is the revision on stderr;
   FILE contains complete replacement Markdown. Read the deprecated amendment compatibility section first.
 - Help: `kt COMMAND --help` describes options for that command. Options do not
@@ -47,7 +67,8 @@ If no candidate meets the default 60% meaningful-keyword coverage threshold,
 search widens to the parent,
 one level at a time. This transparent lexical-coverage heuristic is not confidence
 or semantic similarity. `kt where is _` lists location leaves without a query.
-Exact question-path hits return full contents, frontmatter included; they do not
+Exact question-path hits return full contents on stdout and their SHA-256 revision
+on stderr, frontmatter included; they do not
 run proofs or establish correctness. Use `kt open` to read fallback list results.
 
 Conventions: `does/` and `is/` answer yes/no questions; `where/is/` answers locations, `how/to/` procedures, `when/to/`
@@ -76,7 +97,7 @@ no leaf paths/snippets; force-private roots expose no generated root identity ei
 `kt open global:how/to/add/knowledge/leaves.md` selects a global leaf explicitly;
 `local:` selects the exact local tree; `project:` is a compatibility alias. An unqualified relative path tries project
 then global. Absolute Markdown leaf paths also work. Content and frontmatter are
-returned verbatim. Relative paths cannot escape the selected root.
+returned verbatim on stdout; full reads also print Revision: HASH on stderr. Relative paths cannot escape the selected root.
 
 `kt prove --no-stamp leaves` checks exact semantic-component tokens in the active
 root. Select another permitted root with `kt prove --root ROOT --no-stamp`, using

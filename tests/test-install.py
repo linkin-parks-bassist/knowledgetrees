@@ -8,6 +8,7 @@ import runpy
 import subprocess
 import sys
 import tempfile
+import tomllib
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -80,6 +81,8 @@ def main() -> None:
             "[[skills.config]]\n"
             f'path = "{codex_skill}"\n'
             "enabled = false\n"
+            "[desktop]\n"
+            "followUpQueueMode = \"steer\"\n"
         )
         codex_hooks = target_home / ".codex/hooks.json"
         unrelated_hook = {"hooks": [{"type": "command", "command": "existing-review-command"}]}
@@ -152,7 +155,9 @@ def main() -> None:
         config = codex_config.read_text()
         assert 'model = "example-model"' in config
         assert config.count(str(codex_skill)) == 1
-        assert "enabled = true" in config
+        assert "enabled = true\n[desktop]" in config or "enabled = true\n\n[desktop]" in config
+        parsed_config = tomllib.loads(config)
+        assert parsed_config["desktop"]["followUpQueueMode"] == "steer"
         installed_skills = runpy.run_path(str(INSTALLER))["SKILL_LEAVES"]
         for name, relative in installed_skills.items():
             owner = knowledge / relative

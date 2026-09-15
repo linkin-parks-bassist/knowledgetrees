@@ -134,16 +134,34 @@ answers with checked source evidence and appropriate review conditions.
 
 ## Inline rewrite
 
-Provide `kt rewrite ADDRESS CONTENTS` for complete inline Markdown replacement in
-one call without a required prior read/revision token or temporary file. Optional
---expect protects prior context; --source and --dry-run remain available. Reuse
-amendment access checks, hardlink preservation and verification handling.
+Every full leaf read must automatically supply its SHA-256 revision alongside
+verbatim contents (stderr hash, stdout body). Keep open --revision as compatibility.
+Canonical editing is kt rewrite ADDRESS HASH CONTENTS, with the hash a required
+positional argument and no --expect option. Reject stale revisions without writing.
+Echo neither body; success and identical no-ops must produce no stdout or stderr (exit 0). Put accuracy and preservation
+reminders in the existing one-shot task-end capture-review hook.
+Retain --source, --dry-run, hardlinks, access controls, concurrent-write checks,
+review invalidation, proof handling and mandatory proof checks. Original contents
+must be in context before editing. Keep deprecated amend's required --expect and
+existing behavior for living workers until they finish.
 
-Rewrite must return the complete original contents after a successful write,
-explicitly labeled old/superseded, and direct the agent to restore any still-valid
-knowledge lost. Do not echo the replacement. Mandatory proof checks remain;
-original-content review may happen through this rewrite output.
+Legacy amend calls must also emit a brief deprecation notice directing workers
+to updated rewrite guidance; preserve existing stdout and command behavior.
 
-kt rewrite is the canonical editing interface. Mark kt amend deprecated in CLI
-help and guidance, while preserving its interface and behavior for living workers
-until they have finished. Keep the old amendment route as a compatibility leaf.
+## Normal success output
+
+Silence = success and success = silence, following kt prove. Mutation success and
+no-ops must be silent; requested data, previews/verbose checks, errors and consent
+prompts remain. Preserve legacy amend stdout plus deprecation notice for living
+workers. Exit status remains authoritative; reminders live in one-shot hooks.
+
+
+## Path-segment dictionary
+
+Provide `kt dict [ROOT...]`. With no roots it prints every unique segment in leaf
+paths across accessible trees; arguments restrict it to configured root labels or
+canonical paths. Sort segments on one comma-separated line, preserve hyphenated segments, strip
+.md and deduplicate globally. Omit segments of two characters or fewer and standard
+grammar/navigation words. Read no leaf bodies and reveal no full paths or
+restricted subtree segments. Run kt dict once in fresh-session bootstrap so agents
+receive query vocabulary without unrelated knowledge contents.

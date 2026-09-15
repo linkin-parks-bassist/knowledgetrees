@@ -29,3 +29,11 @@ The owner authorized commit, push and install of the inline rewrite, deprecated
 amend compatibility, local-startup and all-scales guidance updates on 2026-09-15.
 Implementation, regression checks, proof checks and local installation are complete;
 the validated changes are committed for authorized publication.
+
+The follow-up interface uses mandatory positional hashes in rewrite and automatic
+hashes in full reads, with brief success output. Implementation, guidance, tests,
+proof checks and local installation are complete; publication remains pending.
+
+
+The owner authorized commit and push of the complete validated follow-up on
+2026-09-15. Installation and all final checks are complete; publish the commit.

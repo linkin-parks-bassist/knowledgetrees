@@ -40,7 +40,10 @@ declaring absence. Unresolved knowledge needs its blocker and next check.
 
 Task end -> request a capture review after a failure or at least 10 completed tool
 calls in the work cycle. The review may capture missing answers, rewrite owners, or
-conclude that there is nothing new. This does not certify that capture happened.
+conclude that there is nothing new. It also reminds agents to ensure rewritten
+knowledge is accurate and no still-valid knowledge was lost. Rewrite success and no-ops
+are silent, so batching rewrites does not repeat that reminder.
+This does not certify that capture happened.
 One review is requested per cycle; review-generated prompts do not rearm it.
 The next ordinary user prompt starts a fresh activity cycle. Set
 `KT_HOOK_MIN_CALLS` to a positive integer in the harness environment to tune the

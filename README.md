@@ -391,6 +391,14 @@ Exact answers and `kt open` remain verbatim in both modes; search ranking and
 exit statuses are unchanged. Search is lexical, not a semantic model;
 scores rank matches, and a miss does not prove knowledge is absent.
 
+`kt dict` prints the sorted unique vocabulary of segments used in leaf paths across
+accessible roots on one comma-separated line. It reads no leaf bodies, emits no
+complete paths, and prints each useful segment once. Segments of at most two
+characters and standard grammar/navigation words are omitted, so an agent can see terms such as `obtain` and `sudo-authorization`
+without loading a tree listing. Pass root labels or configured canonical root paths
+to restrict the dictionary, for example `kt dict local global`. The mandatory
+once-per-session bootstrap runs it once before normal semantic discovery.
+
 Question prefixes make the directories active search boundaries:
 `kt where is vivado` walks `where/is/` and returns the exact leaf if present.
 Otherwise, it walks matching directory words until the first mismatch and ranks
@@ -417,8 +425,8 @@ kt add "how to prepare the demo" "Run the project's documented demo command." --
 Capture defaults to the session directory’s project tree, otherwise global; select `--global`,
 `--project`, or `--root example` explicitly. Use `--scope` for a scope description,
 `--dry-run` to preview, or `-` as the answer to read multiline Markdown from stdin.
-Existing leaves are protected: rewrite deliberately, review the returned original,
-and restore any still-valid knowledge that was lost.
+Existing leaves are protected: read their owner and carry its hash into rewrite,
+preserving still-valid knowledge.
 New leaves receive a creation timestamp and `status: unverified`, not an invented
 verification claim. Capture neither executes nor manufactures proofs. Independently
 review the whole answer and check eligible proofs before relying on it.
@@ -691,25 +699,47 @@ Lookup reuses root policies and lazily loaded text within each invocation; it do
 not create a persistent index/cache or index private roots. This removes repeated
 policy/discovery work on misses while keeping new invocations fresh.
 
+## Success output policy
+
+Under normal operation, silence = success and success = silence, following kt
+prove. Successful create/rewrite/remove/move/combine/register operations and
+identical no-ops emit no stdout or stderr; check exit 0. Access/permissions changes
+retain required consent prompts and disclosures, without post-save receipts.
+Reads, searches, help, policy inspection, dry-run previews and explicitly verbose
+proof checks return the requested information. Failures retain diagnostics and
+nonzero exit statuses; silence alone is not sufficient without checking status.
+Deprecated amend retains its legacy stdout for living workers plus its deprecation
+notice. Accuracy/preservation reminders belong in the one-shot review hook.
+
 ### Rewriting an existing answer
 
-Rewrite an existing leaf in one call:
+Every full leaf read (`kt open` or an exact question) automatically prints its
+SHA-256 hash as `Revision: HASH` on stderr. stdout remains the verbatim leaf, so
+the read brings both contents and revision into context without an extra call.
+`open --revision` remains accepted for compatibility.
+
+Rewrite using that required positional hash:
 
 ```sh
-kt rewrite local:how/to/build.md 'Complete revised Markdown'
+kt rewrite local:how/to/build.md HASH 'Complete revised Markdown'
 ```
 
-Contents can contain literal newlines. Optional `--expect HASH` rejects stale
-context; without it, rewrite uses the current leaf at call time. `--source` records
-evidence and `--dry-run` previews the diff. Quote shell arguments correctly;
+There is no rewrite --expect option. If the leaf changed since the read, rewrite
+exits 4 without writing; reread and merge. A matching hash confirms unchanged
+contents, rather than measuring read recency. Keep the original in context and
+preserve still-valid knowledge. Contents may include literal newlines. --source
+records evidence and --dry-run previews the diff. Quote shell arguments correctly;
 operating-system argument size limits apply.
 
-A successful rewrite returns the original contents, labeled as superseded, with
-a reminder to restore any still-valid knowledge lost in the rewrite. Review that
-output before continuing. The new contents are not echoed.
+Successful rewrites and identical no-ops produce no stdout or stderr; exit 0
+signals success. Neither body is echoed. Dry-run still shows the diff and failures
+report diagnostics.
+The one-shot task-end capture-review hook carries the accuracy and preservation
+reminder once per work cycle. Mandatory proof checks remain intact.
 
 `kt amend` is deprecated in favor of `kt rewrite`, but remains supported for
-existing workers until they finish. Its interface and behavior remain compatible.
+existing workers until they finish. Its interface and behavior remain compatible. Calls also print a brief
+deprecation notice on stderr pointing to the updated workflow guidance.
 For that legacy file/stdin workflow, read the leaf and revision:
 
 ```bash

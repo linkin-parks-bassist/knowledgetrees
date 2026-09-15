@@ -134,25 +134,84 @@ Changed methodology remains unverified pending independent whole-leaf review.
 
 The containing personal-project folder was renamed to `Projects`. Repository identity and existing local work were preserved; registry/trust and agent snapshot dependencies were migrated, and local proofs plus Git whitespace checks pass. No repository implementation changes were required for this rename.
 
-## Inline rewrite and local startup
+## Revision-carrying reads and inline rewrite
 
-Implemented kt rewrite ADDRESS CONTENTS with optional --expect, --source and
---dry-run using shared amendment safeguards. Successful writes return the exact
-original contents explicitly labeled superseded plus a reminder to restore any
-still-valid knowledge lost. New contents are not echoed. No-ops return unchanged
-contents with an explicit label; dry-run remains a diff. Mandatory local bootstrap
-proof checks and proof-before-reliance rules remain. Editing guidance permits
-original-content review through rewrite output, requiring immediate restoration
-of lost valid knowledge. No blanket integrity reductions from the interrupted
-audit were applied. Root inventories and unrelated-root startup sweeps remain
-removed as previously requested.
+Full open/exact-question reads automatically return a SHA-256 revision on stderr
+for the same bytes read on stdout. kt rewrite ADDRESS HASH CONTENTS requires that
+revision positionally; no rewrite --expect. Conflicts preserve the leaf. Success
+is silent on success and identical no-ops (exit 0), echoing neither body. The existing one-shot
+capture-review hook carries the accuracy/preservation reminder once per work cycle. No-op
+output is brief; dry-run remains a diff. Original contents must be in context
+before editing. Mandatory proof checks remain intact. Deprecated amend retains
+its required --expect syntax and behavior for living workers. Root inventory and
+unrelated-root startup sweeps remain removed. Guidance and README reflect this
+contract. The preceding version was published as f230b4d; this interface update
+is not yet published. Local installation and instruction refresh are complete;
+CLI, amendment/rewrite, access, bypass/privacy, maintenance, installer and harness
+hook tests pass. Project, installed global and public example proof checks pass.
+Evidence: source and regression/proof checks, 2026-09-15.
 
-Amendment/rewrite, CLI, access, bypass/privacy and maintenance tests pass; source
-and installed instructions were refreshed locally. Rewrite is canonical throughout
-README, bootstrap, lookup/capture/maintenance guidance and hook reminders. Amend
-is deprecated in CLI help and retained unchanged for living workers; its old
-knowledge route remains a compatibility guide pointing to the rewrite owner.
-The owner authorized commit, push and installation. Installer deployment is
-complete; installed CLI/handler match source and instruction refresh checks are
-clean. The validated changes are committed on main for owner-authorized publication.
-Evidence: tools/kt, tests/test-amend.py and focused regression checks, 2026-09-15.
+Legacy amend CLI calls now emit a brief deprecation notice on stderr pointing
+to the updated rewrite procedure. Rewrite/internal combine calls stay free of
+that notice; legacy stdout and behavior are preserved.
+
+The deprecation notice is installed locally with refreshed guidance. Amendment
+and maintenance tests plus project/global proof checks pass; publication remains
+pending alongside the positional-hash rewrite changes.
+
+Silent rewrite and one-shot preservation-reminder changes are installed locally.
+Focused amendment and hook tests plus project/global proof checks pass; the
+follow-up interface work remains uncommitted.
+
+Normal operation follows kt prove: mutation success/no-ops are silent, with
+requested data/previews, errors and consent prompts retained. Legacy amend
+continues its compatibility stdout plus deprecation notice.
+
+The normal-success silence policy is installed locally and reflected in README,
+usage and bootstrap. CLI, amendment, maintenance, access, bypass/privacy and
+installer regressions pass; project/global/example proofs pass. Executables match
+source and instruction refresh checks are clean. Follow-up changes are uncommitted.
+
+
+kt dict now prints sorted unique useful accessible leaf-path segments on one
+comma-separated line without reading bodies or exposing full paths. It filters
+two-character and standard grammar/navigation segments. Optional configured roots restrict its scope. The
+bootstrap, installer block, README and usage require one fresh-session dictionary
+call. CLI tests cover deduplication, ordering, hyphen preservation, root selection
+and restricted subtree exclusion. This work is not yet installed or published.
+
+The dictionary implementation is installed locally. Installed and source output match for the current accessible roots.
+Curated guidance is synchronized; installed executable matches source. CLI,
+access, bypass/privacy, rewrite/amend, maintenance, installer, hook and proof-stamp
+tests pass. Project, installed-global and public-example proofs pass. Dictionary
+publication remains pending with the other uncommitted follow-up changes.
+
+Capture review found and removed a duplicated “check.” fragment in the one-shot
+review prompt. Hook regression coverage now rejects its return. The corrected
+handler is installed locally; publication remains pending.
+
+
+The owner authorized aligning local installed guidance with the latest canonical
+repository example. A full forced install replaced all 51 reusable leaves, deployed
+CLI/hooks/skills/bootstrap and preserved the existing orientation. Installed-global
+proofs pass and installed kt matches source. The dictionary now emits 514 filtered
+segments in one comma-separated line for current accessible roots. Manual refresh
+scope rendering matches the installer and its drift check ignores successful proof
+timestamp refreshes. Publication remains pending.
+
+
+The full install exposed a Codex TOML merge defect: ENABLED_SETTING used `\s*$`,
+consumed following newlines and joined three skill entries to subsequent tables.
+The live config was repaired and parses with 13 skill entries. The regex now accepts
+horizontal trailing whitespace only, the installer parses proposed TOML before
+writes, and an adjacent-table regression test passes. All ten installed KT skill
+paths have required frontmatter and point to their canonical hardlinks. A client
+reload is still needed to clear the warning shown before repair.
+
+
+The owner authorized committing and publishing the complete follow-up. Final
+validation passed for CLI, rewrite/amend, maintenance, access, bypass/privacy,
+installer, Codex/OpenCode hooks and proof timestamps. Project, installed-global and
+public-example proofs pass. The installed 51-leaf canonical corpus matches current
+rendered repository guidance; Codex TOML parses with 13 skill entries; installed kt
+matches source. The validated work is ready for the authorized commit and push.

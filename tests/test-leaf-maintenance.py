@@ -35,6 +35,8 @@ with tempfile.TemporaryDirectory(prefix="kt-maintenance-") as temporary:
         result = subprocess.run([sys.executable, str(CLI), *args], cwd=base, env=env,
                                 capture_output=True, text=True)
         assert result.returncode == expected, (args, result.stdout, result.stderr)
+        if expected == 0 and "--dry-run" not in args:
+            assert result.stdout == "" and result.stderr == "", (args, result.stdout, result.stderr)
         return result.stdout + result.stderr
     def digest(path):
         return hashlib.sha256(path.read_bytes()).hexdigest()

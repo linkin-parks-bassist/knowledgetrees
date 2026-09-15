@@ -22,20 +22,25 @@ lost context or changed scope rather than rerunning completed startup work.
 
 Use `kt` from PATH, or `~/.knowledge/.tools/kt` if PATH has not been configured.
 Local knowledge is automatically included in repository lookups; permitted broader
-roots contribute results automatically. Do not enumerate roots at startup.
-`kt roots` is a diagnostic for root configuration/access questions, not a prerequisite.
+roots contribute results automatically. At startup run `kt dict` once. It prints
+the sorted unique segments used by leaf paths across accessible roots, without
+reading leaf contents or repeating complete paths. This small vocabulary shows
+which terms can be used in later semantic queries. Do not enumerate roots or list
+whole trees at startup. `kt roots` is a diagnostic for root configuration/access
+questions, not a prerequisite.
 
-1. Orient in the current repository through `local:where/am/i.md` and the four
+1. Run `kt dict` once to load the available path vocabulary.
+2. Orient in the current repository through `local:where/am/i.md` and the four
    spine leaves `what/is/the/{spec,plan,state}.md` and `what/is/next.md`. Use supplied
    orientation content directly rather than rereading it. Establish missing local
    canonical branches and spine leaves within permission.
-2. Check the local root's evidence and proofs with `kt prove --root .knowledge`.
+3. Check the local root's evidence and proofs with `kt prove --root .knowledge`.
    Stop on falsification and repair within authority. ROOT means the exact tree
    directory, not its containing repository; no root inventory is needed.
-3. Query normally. Read and check broader-root answers when needed for the task;
+4. Query normally. Read and check broader-root answers when needed for the task;
    accessibility alone does not require startup orientation or a full proof sweep
    of every available root. Respect access-required responses and force-private.
-4. Entering another project directory scope requires its local orientation and
+5. Entering another project directory scope requires its local orientation and
    verification, not another bootstrap skill invocation. Detailed rules live in maintenance.
 
 ## Knowledge at every scale
@@ -84,13 +89,19 @@ For CLI syntax and command-specific options, read
 `kt open global:how/to/use/kt.md`; `find` has no `--root` option. Copy returned
 root-qualified addresses into `kt open` rather than guessing a procedure's root.
 
+Successful operations are silent by default (exit 0), following kt prove. Reads,
+searches and previews return requested information; failures report diagnostics.
+
 ## Editing learned knowledge
 
-Use `kt rewrite ADDRESS "Complete revised Markdown"` for existing leaves. Review
-its returned original contents, explicitly labeled superseded, and rewrite again
-immediately if any still-valid knowledge was lost. It does not echo the new text.
-Optional --expect protects a known revision; --source records evidence and
---dry-run previews the diff. Check relevant proofs before relying on knowledge.
+Full leaf reads automatically supply Revision: HASH on stderr alongside the
+verbatim contents on stdout. Use `kt rewrite ADDRESS HASH "Complete revised Markdown"`
+for existing leaves, carrying the required positional revision from that read.
+Keep the read contents in context and preserve still-valid knowledge; conflict
+means reread and merge. Rewrite success and no-ops are silent (exit 0); dry-run
+shows the diff and failures report diagnostics.
+The one-shot task-end capture-review hook carries the accuracy/preservation reminder. --source records evidence and --dry-run previews the diff. Check relevant
+proofs before relying on knowledge. No rewrite --expect option.
 `kt amend` is deprecated but remains compatible for existing workers until they
 finish. The canonical procedure is `how/to/rewrite/a/knowledge/leaf.md`.
 

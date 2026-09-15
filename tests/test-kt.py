@@ -33,6 +33,8 @@ def main():
         (global_root / "how/to/explain/violet.md").write_text("Unrelated procedure mentions violet accelerator.\n")
         (global_root / "how/to/explain/empty-topic").mkdir()
         (global_root / "how/to/recover.md").write_text("Recover with amber diagnostics.\n")
+        (global_root / "how/to/obtain").mkdir(parents=True)
+        (global_root / "how/to/obtain/sudo-authorization.md").write_text("Use the approved procedure.\n")
         (global_root / ".tools").mkdir()
         nested = project / "sub/folder"
         nested.mkdir(parents=True)
@@ -50,7 +52,7 @@ def main():
 
         result = run("add", "How to do the thing?", "Do it carefully.", "--source", "test evidence")
         captured = local / "how/to/do/the/thing.md"
-        assert "Created local:" in result and captured.is_file()
+        assert result == "" and captured.is_file()
         saved = captured.read_text()
         assert 'status: "unverified"' in saved and 'source: "test evidence"' in saved
         assert "verified_at:" not in saved and "Proof:" not in saved
@@ -86,6 +88,17 @@ def main():
         assert result.index("local:" + leaf) < result.index("global:" + leaf)
         assert "2026-09-12T12:00:00+00:00" in result
         assert "FALSIFIED" in run("find", "leaves")
+        dictionary = run("dict").strip().split(", ")
+        assert dictionary == sorted(set(dictionary), key=lambda value: (value.casefold(), value))
+        assert {"obtain", "sudo-authorization"}.issubset(dictionary)
+        assert not {"a", "to", "how", "when", "what", "where"}.intersection(dictionary)
+        assert all(len(segment) > 2 for segment in dictionary)
+        assert dictionary.count("obtain") == 1 and "sudo-authorization.md" not in dictionary
+        local_dictionary = run("dict", "local").strip().split(", ")
+        assert "sudo-authorization" not in local_dictionary
+        assert run("dict", str(global_root)) == run("dict", "global")
+        assert run("dict", "local", "global") == run("dict")
+        assert run("dict", "unknown-root", expected=2) == ""
         compact = run("find", "leaves")
         pretty = run("find", "leaves", "--pretty")
         assert len(compact) < len(pretty)
@@ -102,6 +115,12 @@ def main():
         assert len(long_result) < 400, "default search must not dump a long paragraph"
         assert run("open", "project:what/is/longexcerpt.md") == long_body
         assert run("what", "is", "longexcerpt") == long_body
+        for arguments in (("open", "local:what/is/longexcerpt.md"), ("what", "is", "longexcerpt")):
+            read = subprocess.run([sys.executable, str(SCRIPT), *arguments], cwd=project, env=env, text=True, capture_output=True)
+            import hashlib
+            assert read.returncode == 0 and read.stdout == long_body
+            assert "Revision: " + hashlib.sha256(long_body.encode()).hexdigest() in read.stderr
+
         for question in ("does a proof verify a leaf", "is a tree authorization"):
             run("add", question, "No. The answer needs independent evidence.")
             assert run(*question.split()) == run("open", "local:" + question.replace(" ", "/") + ".md")

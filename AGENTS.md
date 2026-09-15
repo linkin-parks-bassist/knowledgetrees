@@ -4,13 +4,16 @@ Follow the canonical knowledge-tree procedure once per fresh agent session. When
 the harness supplies it in context, it is already loaded: do not invoke a bootstrap
 skill again. Otherwise load `knowledgetrees` as the compatibility fallback.
 Perform startup orientation and evidence checks once, not per task or turn.
+Run `kt dict` once at startup to load unique accessible leaf-path segments without
+reading leaf contents or listing whole paths.
 New question -> `kt` first unless adequately checked knowledge is already loaded;
 miss -> determine whether a leaf exists; absent -> investigate and add it (or an
 unresolved record) before the next unrelated tool call or completion. The skills
 own proof checks, scope, paths, and maintenance. Higher-authority instructions and
 permissions always govern.
 
-Use `kt rewrite` for edits and review its returned original contents; `kt amend`
+Full leaf reads supply a revision hash; edit with `kt rewrite ADDRESS HASH CONTENTS`
+and preserve still-valid knowledge already in context. `kt amend`
 is deprecated but retained for living legacy workers.
 
 Keep the roots distinct: `.knowledge/` is this repository's actual operational

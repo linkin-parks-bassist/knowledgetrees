@@ -20,3 +20,23 @@ instructions.
 
 Keep deprecated kt amend available until the living legacy workers have finished;
 removal requires a later decision. New work uses kt rewrite.
+
+The positional-hash/silent rewrite, one-shot preservation reminder and legacy
+amend notice updates are validated and
+installed locally. It remains
+uncommitted pending publication. Full reads supply the required hash automatically;
+new work uses kt rewrite ADDRESS HASH CONTENTS. Keep legacy amend working for
+living workers.
+
+Normal-success silence is also validated and installed. Publication of the
+follow-up interface/policy changes remains pending.
+
+
+The dictionary command and fully aligned canonical local installation are
+validated. Publish them with the other uncommitted follow-up interface and policy
+changes when authorized.
+
+
+The owner authorized publication. Commit and push the validated dictionary,
+revision-carrying rewrite, silent-success policy, canonical guidance alignment and
+Codex TOML repair. No implementation or installation work remains.

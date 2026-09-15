@@ -4,27 +4,33 @@ source: tools/kt; tests/test-amend.py
 review_when: Recheck revision checks, metadata or proof handling.
 ---
 
-Use the canonical single-call editing command:
+Read a leaf normally with `kt open ROOT:PATH` or an exact sentence-prefix query.
+Every full leaf read supplies `Revision: HASH` on stderr for the same bytes returned
+verbatim on stdout. `open --revision` remains accepted as a compatibility flag;
+it is no longer needed. Ranked excerpts are not full reads and do not supply a
+revision for editing.
 
-`kt rewrite ROOT:PATH "Complete revised Markdown"`. Contents are a literal argument,
-including multiline text. No prior revision token, editor, stdin, or temporary file
-is required. Optional `--expect HASH` rejects changes since an earlier read; without
-it, replacement intentionally uses the current leaf at call time and cannot detect
-stale context from before the call. Both commands detect intervening edits during
-the write and share metadata, proof, hardlink, and access handling. `--source` and
-`--dry-run` work with rewrite too. Use proper shell quoting when invoking through
-a shell; inline arguments are subject to operating-system argument size limits.
+Use the canonical editing command:
 
-Successful rewrite output includes the complete original contents, labeled as
-superseded, followed by a reminder to check whether any still-valid knowledge
-was lost and rewrite again to restore it. Review that output before continuing.
-The new contents are not echoed. No-ops return the unchanged contents with an
-explicit unchanged label; dry-run prints the diff and writes nothing. This review
-helps preserve knowledge; the command does not automatically judge semantic loss.
+```sh
+kt rewrite ROOT:PATH HASH "Complete revised Markdown"
+```
 
-If you already have a revision from `kt open ROOT:PATH --revision`, supply it as
-`--expect HASH` to reject stale context. stdout from open is verbatim Markdown;
-stderr supplies the SHA-256 revision of those bytes.
+HASH is a mandatory positional SHA-256 revision from the read. There is no
+rewrite --expect option. A matching hash establishes that the leaf still has the
+read contents; it does not prove how recently it was read or that the agent reviewed
+it. Keep those contents in context and preserve still-valid knowledge when editing.
+Contents are a literal argument, including multiline Markdown. No temporary file,
+stdin, editor, or extra read just to obtain a hash is required. --source records
+actual evidence; --dry-run previews the diff without writing. Quote shell arguments
+correctly; operating-system argument size limits apply.
+
+Successful rewrites and identical no-ops produce no stdout or stderr. Exit 0
+signals success. Neither old nor new contents are echoed. --dry-run still shows
+the diff, and failures report diagnostics with a nonzero exit status. Preserve
+still-valid knowledge and check relevant proofs before reliance. The existing
+one-shot task-end capture-review hook carries the accuracy/preservation reminder
+once per work cycle, rather than repeating it after every rewrite.
 
 The command needs no Git repository and invokes no editor. Revision mismatch exits
 4 and leaves the file untouched; reread and merge concurrent changes. An advisory
@@ -56,9 +62,13 @@ have finished. Its arguments, revision requirements, output and exit statuses
 remain compatible. It does not return superseded contents, so read the leaf first.
 
 ```sh
-kt open ROOT:PATH --revision
+kt open ROOT:PATH
 kt amend ROOT:PATH --expect HASH --body-file FILE
 ```
 
 Omit `--body-file` or use `-` to read complete replacement Markdown from stdin.
 `--source` and `--dry-run` remain supported. New workers should use rewrite.
+
+Legacy amend calls emit a brief deprecation notice on stderr, directing workers
+to `kt open global:how/to/rewrite/a/knowledge/leaf.md` for the updated workflow.
+Its existing stdout, arguments, writes and exit statuses remain unchanged.

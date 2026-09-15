@@ -29,6 +29,7 @@ try {
   assert.equal(startup.system[0], "existing harness instructions");
   assert.match(startup.system[1], /already loaded/);
   assert.match(startup.system[1], /kt roots/);
+  assert.match(startup.system[1], /Run `kt dict` once/);
   assert.match(startup.system[1], /Project orientation fixture/);
   assert.doesNotMatch(startup.system[1], /verified_by:/);
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);

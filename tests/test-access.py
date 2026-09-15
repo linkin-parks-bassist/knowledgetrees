@@ -114,6 +114,8 @@ def main():
                 (child / "hidden.md").write_text("nestedsecret must not leak")
                 run("register", "restricted-child", str(child))
                 assert "must not leak" not in run("find", "nestedsecret", expected=1)
+                assert "hidden" not in run("dict").strip().split(", ")
+                run("dict", "restricted-child", expected=3)
                 run("open", "project:private/hidden.md", expected=3)
                 run("open", str(child / "hidden.md"), expected=3)
                 # Denying an ancestor root also denies registered children.
