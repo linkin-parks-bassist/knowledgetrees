@@ -37,6 +37,6 @@ validated. Publish them with the other uncommitted follow-up interface and polic
 changes when authorized.
 
 
-The owner authorized publication. Commit and push the validated dictionary,
-revision-carrying rewrite, silent-success policy, canonical guidance alignment and
-Codex TOML repair. No implementation or installation work remains.
+The validated dictionary, revision-carrying rewrite, silent-success policy,
+canonical guidance alignment and Codex TOML repair are published as 4c8e553 and
+installed locally. No implementation, publication, or installation work remains.

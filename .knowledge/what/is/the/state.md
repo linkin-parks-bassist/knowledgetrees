@@ -214,4 +214,5 @@ validation passed for CLI, rewrite/amend, maintenance, access, bypass/privacy,
 installer, Codex/OpenCode hooks and proof timestamps. Project, installed-global and
 public-example proofs pass. The installed 51-leaf canonical corpus matches current
 rendered repository guidance; Codex TOML parses with 13 skill entries; installed kt
-matches source. The validated work is ready for the authorized commit and push.
+matches source. The validated work was committed and pushed to main as 4c8e553. The local
+installation already matches the published implementation and guidance.
