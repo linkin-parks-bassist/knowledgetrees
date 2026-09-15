@@ -43,5 +43,5 @@ installed locally. No implementation, publication, or installation work remains.
 
 
 The all-accessible bare proof default and explicit --local/--global selectors are
-validated and installed. Publish the completed follow-up; no implementation or
-installation work remains.
+validated, installed and published as 18eea6f. No implementation, installation or
+publication work remains.

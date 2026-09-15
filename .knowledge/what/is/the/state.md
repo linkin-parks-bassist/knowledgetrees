@@ -227,5 +227,4 @@ This follow-up is not yet validated, installed, committed or published.
 The proof-selection follow-up is validated and installed. Bare kt prove checks all
 accessible roots; --local and --global narrow explicitly, and bootstrap uses
 --local. Full regressions and actual local/global/all-accessible proof sweeps pass.
-Installed kt matches source and guidance drift is clean. The owner’s standing
-publication request applies to this completed follow-up.
+Installed kt matches source and guidance drift is clean. The completed proof-scope follow-up was committed and pushed to main as 18eea6f.
