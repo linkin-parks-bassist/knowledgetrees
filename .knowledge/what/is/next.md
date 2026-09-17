@@ -49,3 +49,6 @@ publication work remains.
 
 The tree-native final-two-segment dictionary is validated, installed and published
 as 6bb5098. No implementation, installation or publication work remains.
+
+Review the implemented lifecycle feature and its expected yellow baseline. Commit
+or publish it only when the repository owner explicitly authorizes publication.

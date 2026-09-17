@@ -89,8 +89,9 @@ For CLI syntax and command-specific options, read
 `kt open global:how/to/use/kt.md`; `find` has no `--root` option. Copy returned
 root-qualified addresses into `kt open` rather than guessing a procedure's root.
 
-Successful operations are silent by default (exit 0), following kt prove. Reads,
-searches and previews return requested information; failures report diagnostics.
+Successful mutations are silent by default. Reads, searches, previews, and
+`kt prove` return requested information; proof checks always report lifecycle totals
+and every non-green path. Failures report diagnostics.
 
 ## Editing learned knowledge
 

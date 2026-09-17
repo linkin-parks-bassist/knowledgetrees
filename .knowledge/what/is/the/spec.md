@@ -51,6 +51,16 @@ proofs never changes leaf `verified_at` or establishes whole-leaf validation.
 Keep legacy markers compatible, support read-only checking, preserve hardlinks,
 and leave agentic knowledge repair outside the verifier's scope.
 
+Every leaf has one derived lifecycle state. Green requires independent whole-leaf
+verification, no elapsed expiry, no sticky falsification, valid proof structure,
+and passing proofs. Yellow means re-verification is required because the leaf is
+unverified or an optional `expires_at` timestamp or `expires_every` period has
+elapsed; agents must not use yellow contents before re-verifying them. Brown means
+the leaf is falsified, malformed, or has a failing proof; the tree is busted and an
+agent encountering it must diagnose and repair it. Every `kt prove` run prints
+aggregate green/yellow/brown counts and every non-green root-qualified path. Yellow
+is a warning; brown makes the command fail.
+
 Every repository leaf must be suitable for public release: it must not name the
 repository owner as an individual, expose home-directory identifiers, or include
 personal or private knowledge. Imported global knowledge must therefore be curated
@@ -150,8 +160,8 @@ to updated rewrite guidance; preserve existing stdout and command behavior.
 
 ## Normal success output
 
-Silence = success and success = silence, following kt prove. Mutation success and
-no-ops must be silent; requested data, previews/verbose checks, errors and consent
+Mutation success and no-ops must be silent; requested data, proof lifecycle reports,
+previews/verbose checks, errors and consent
 prompts remain. Preserve legacy amend stdout plus deprecation notice for living
 workers. Exit status remains authoritative; reminders live in one-shot hooks.
 
@@ -172,5 +182,5 @@ receive query vocabulary without unrelated knowledge contents.
 Bare kt prove checks all accessible roots. Provide `kt prove --local` for only the
 exact current-directory tree and `kt prove --global` for only global knowledge;
 retain --root ROOT for another exact accessible tree. Fresh-session bootstrap uses
---local to keep mandatory startup verification bounded. All modes retain silent
-success, failure diagnostics, access/force-private enforcement and proof semantics.
+--local to keep mandatory startup verification bounded. All modes report lifecycle
+counts and non-green paths while retaining access/force-private enforcement and proof semantics.

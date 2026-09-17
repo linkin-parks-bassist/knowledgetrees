@@ -38,10 +38,12 @@ architecture answer; smallness and source visibility are not exemptions.
 2. Read likely matches with `kt open local:PATH` or `kt open global:PATH`.
    Prefer project answers for project questions and global answers for host tooling.
    Results and orientation previews are not substitutes for the full answer.
-3. Check `scope`, `source`, `verification`, `verified_at`, and `review_when`.
+3. Check `scope`, `source`, `verification`, `verified_at`, expiry metadata, and `review_when`.
    Freshness depends on volatility and evidence, not timestamp recency alone. Read
    the assertion and predicate behind every proof before relying on the claim.
-   Run `kt prove --root ROOT TOKEN` and stop on failed proofs or `falsified_at`.
+   Run `kt prove --root ROOT TOKEN`. Green may be used. Yellow is a warning that
+   prohibits relying on the contents until re-verification. Brown means the tree
+   is busted; stop, diagnose the falsification or failed proof, and repair the leaf.
 4. If `kt` does not find the information, you MUST determine whether a leaf exists.
    Retry distinctive keywords and synonyms, then try plausible sentence paths
    from known orientation routes with `kt open`. List only the nearest existing

@@ -35,11 +35,14 @@ notice. Accuracy/preservation reminders belong in the one-shot review hook.
   live globally: `kt open global:how/to/rewrite/a/knowledge/leaf.md`.
   An external `ROOT:PATH` uses a configured canonical root identity from `kt roots`;
   it cannot substitute for registration/access. An absolute leaf filename has no colon.
-- Proofs: bare `kt prove` checks every accessible root. `kt prove --local` checks
+- Proofs and leaf state: bare `kt prove` checks every accessible root. `kt prove --local` checks
   only the exact current-directory `.knowledge`; `kt prove --global` checks only
-  global knowledge; `--root ROOT` selects another exact accessible tree. A quiet
-  exit 0 means every selected sweep passed; `--verbose` supplies diagnostics. Optional filters are separate
+  global knowledge; `--root ROOT` selects another exact accessible tree. Exit 0
+  means no selected leaf is brown; `--verbose` supplies diagnostics. Optional filters are separate
   semantic components, e.g. `kt prove --root .knowledge --no-stamp how to use`;
+  every run reports green/yellow/brown totals and prints all yellow/brown addresses.
+  Yellow warns and forbids use pending re-verification; brown fails the command and
+  requires diagnosis and repair.
   slash-containing leaf paths are not filters. Multiple tokens are disjunctive.
 - Create: `kt add "what is the result" "Checked answer" --local --source "evidence"`.
   Creation supports `--local`, `--global`, or `--root ROOT`; it refuses existing leaves.

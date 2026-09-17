@@ -243,3 +243,15 @@ maintenance, hook and proof-stamp regressions pass. Project, global and public
 example proofs pass; installed kt matches source and guidance drift is clean. The
 completed dictionary optimization and guidance were committed and pushed to main
 as 6bb5098.
+
+Green/yellow/brown lifecycle support is implemented in the repository source.
+`expires_at` accepts timezone-aware ISO 8601; `expires_every` accepts compact or
+plain-English seconds-through-weeks durations measured from `verified_at`. `kt prove`
+aggregates all selected roots, always prints the three totals, prints every yellow
+or brown root-qualified leaf, warns without failing for yellow, and fails for brown.
+All regression suites pass. Public guidance and the project spec are updated. Local,
+public-example, and installed-global proof sweeps have no brown leaves. Installation
+is complete and the installed executable matches repository source. The first install
+surfaced a sticky global falsification caused by a nondeterministic Copilot discovery
+predicate; the predicate was removed from its two global owners after deterministic
+topology checks and repeated full proof sweeps passed. Publication remains unauthorized.

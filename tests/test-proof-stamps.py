@@ -16,6 +16,7 @@ def run(root, *arguments, expected=0):
                             capture_output=True, text=True, cwd=root.parent,
                             env={**os.environ, "KT_CONFIG": str(root.parent / "access.json")})
     assert result.returncode == expected, (result.stdout, result.stderr)
+    return result
 
 
 with tempfile.TemporaryDirectory(prefix="proof-stamp-test-") as temporary:
@@ -64,5 +65,24 @@ with tempfile.TemporaryDirectory(prefix="proof-stamp-test-") as temporary:
     leaf.write_text("Bad.\n\nProof:\n\n```bash\nfalse\n```\n")
     run(root, expected=1)
     assert leaf.read_text().startswith("---\nfalsified_at:")
+
+with tempfile.TemporaryDirectory(prefix="leaf-state-test-") as temporary:
+    root = Path(temporary) / ".knowledge"
+    root.mkdir()
+    (root / "green.md").write_text(
+        "---\nverified_at: '2026-09-17T00:00:00+10:00'\nexpires_every: '2 weeks'\n---\n\nCurrent.\n")
+    (root / "expired.md").write_text(
+        "---\nverified_at: '2026-08-01T00:00:00+10:00'\nexpires_every: 'two weeks'\n---\n\nOld.\n")
+    (root / "unverified.md").write_text("Needs review.\n")
+    result = run(root, "--no-stamp")
+    assert result.stdout == "green=1 yellow=2 brown=0\n"
+    assert "yellow local:expired.md" in result.stderr
+    assert "yellow local:unverified.md" in result.stderr
+
+    (root / "brown.md").write_text(
+        "Broken.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
+    result = run(root, "--no-stamp", expected=1)
+    assert result.stdout == "green=1 yellow=2 brown=1\n"
+    assert "brown local:brown.md" in result.stderr
 
 print("proof timestamp integration checks passed")

@@ -37,3 +37,8 @@ proof checks and local installation are complete; publication remains pending.
 
 The owner authorized commit and push of the complete validated follow-up on
 2026-09-15. Installation and all final checks are complete; publish the commit.
+
+11. [x] Define green/yellow/brown leaf lifecycle states and expiry metadata.
+12. [x] Aggregate lifecycle counts and print every non-green address from `kt prove`.
+13. [x] Enforce yellow non-use and mandatory brown repair in agent guidance.
+14. [x] Run the full regression/proof suite and install the validated update. Publish only with owner authorization.

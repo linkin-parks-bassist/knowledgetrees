@@ -97,6 +97,11 @@ Whole-leaf `verified_at` requires independent review of everything in the leaf; 
 execution alone never earns it. An unresolved reusable question instead records
 `status: unresolved`, `checked_at`, blocker, and next check.
 
+Freshness may additionally use either `expires_at` (ISO 8601 with timezone) or
+`expires_every` (for example `14d`, `2 weeks`, or `two weeks`, measured from
+`verified_at`). An elapsed expiry makes the leaf yellow and unusable until
+re-verification. Use expiry only when a real time-based freshness boundary exists.
+
 ## Narrowly eligible executable proofs
 
 Add a proof for a single concrete true/false assertion whose truth a tiny local

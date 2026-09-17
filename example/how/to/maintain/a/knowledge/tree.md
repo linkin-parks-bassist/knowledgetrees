@@ -70,7 +70,14 @@ proof stamps `Proof: (verified at …)`; a failed or timed-out execution stamps
 structure also falsifies the leaf. Legacy `Proof:` markers are accepted. Writes
 preserve hardlink identity; `--no-stamp` makes checks read-only.
 
-Stop relying on falsified knowledge. Inspect evidence and repair or remove false,
+`kt prove` always reports green, yellow, and brown totals and prints every non-green
+root-qualified leaf path. Green is independently verified, unexpired, and proof-clean.
+Yellow is unverified or expired and is a warning; do not use it until re-verification.
+Brown is falsified, malformed, or proof-failing and makes `kt prove` fail because
+the tree is busted.
+
+Stop relying on falsified knowledge. An agent encountering a brown leaf must inspect
+evidence and repair or remove false,
 malformed, or unsafe claims and predicates only within authorized scope. Review the
 whole leaf independently before explicitly clearing `falsified_at`; rerun until
 checks pass. Passing every proof is necessary but not sufficient for leaf validation,
@@ -98,6 +105,8 @@ explained in `how/to/use/knowledgetree/hooks.md`; they do not certify capture or
 replace agent review. A review with no new knowledge needs no invented leaf.
 Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
+Leaves may declare an ISO-8601 `expires_at` or an `expires_every` duration measured
+from `verified_at`; elapsed expiry makes them yellow until independently re-verified.
 
 Have the original contents in context before editing a leaf. Full reads supply
 the revision hash automatically; use kt rewrite ADDRESS HASH CONTENTS. The required

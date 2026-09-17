@@ -161,24 +161,24 @@ def main():
         global_only = run("roots", cwd=base)
         assert str(global_root) in global_only and "local\tallow\t" not in global_only
         run("proof", expected=2)
-        assert run("prove", "--no-stamp", "leaves") == ""
-        assert run("prove", "--local", "--no-stamp", "leaves") == ""
-        assert run("prove", "--global", "--no-stamp", "leaves") == ""
-        assert run("prove", str(project), "--no-stamp") == ""
-        assert run("prove", "--root", str(global_root), "--no-stamp", "leaves") == ""
+        assert run("prove", "--no-stamp", "leaves") == "green=2 yellow=0 brown=0\n"
+        assert run("prove", "--local", "--no-stamp", "leaves") == "green=1 yellow=0 brown=0\n"
+        assert run("prove", "--global", "--no-stamp", "leaves") == "green=1 yellow=0 brown=0\n"
+        assert "brown=0" in run("prove", str(project), "--no-stamp")
+        assert run("prove", "--root", str(global_root), "--no-stamp", "leaves") == "green=1 yellow=0 brown=0\n"
         assert "--timeout" in run("prove", "--help")
         assert "--local" in run("prove", "--help")
         global_failure = global_root / "what/is/global-proof.md"
         global_failure.parent.mkdir(parents=True, exist_ok=True)
         global_failure.write_text("Failing global proof.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
-        assert run("prove", "--local", "--no-stamp", "global-proof") == ""
+        assert run("prove", "--local", "--no-stamp", "global-proof") == "green=0 yellow=0 brown=0\n"
         run("prove", "--global", "--no-stamp", "global-proof", expected=1)
         run("prove", "--no-stamp", "global-proof", expected=1)
         global_failure.unlink()
         proof = local / "what/is/proven.md"
         proof.parent.mkdir(parents=True, exist_ok=True)
         proof.write_text("Passing.\n\nProof: (verified at _)\n\n```bash\ntest 1 -eq 1\n```\n")
-        assert run("prove", "--no-stamp", "proven") == ""
+        assert run("prove", "--no-stamp", "proven") == "green=0 yellow=1 brown=0\n"
         assert "verified at _" in proof.read_text()
         run("prove", "proven")
         assert "verified at _" not in proof.read_text()

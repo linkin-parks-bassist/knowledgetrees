@@ -26,8 +26,10 @@ multiple tokens select their disjunction. Use `--local` for the exact current-di
 tree, or `-r PATH`/`--root PATH` for another exact accessible root; positional tokens following
 that option retain the same exact, disjunctive semantics.
 
-Normal success is quiet and returns 0. Every failure returns 1 and prints the
-deduplicated failing leaf paths to standard error, regardless of verbosity. Use `-v`
+Every run prints one aggregate `green=N yellow=N brown=N` line. Each yellow or
+brown leaf is also printed to standard error as `STATE ROOT:relative/path.md`.
+Yellow is a warning and does not by itself change the zero exit status. Brown
+means the tree is busted: the command returns 1. Use `-v`
 or `--verbose` when diagnostic output is needed; verbose mode additionally lists
 every selected leaf, proof result, error, and summary in the former detailed format.
 The verifier runs only scripts explicitly introduced by
@@ -48,7 +50,17 @@ Only proof markers are refreshed. Leaf-level `verified_at` records an independen
 whole-leaf review and is not changed by the verifier. Use `--no-stamp` to execute
 proofs without writing markers. Timestamp writes preserve existing hardlinks.
 
+Every selected leaf has one derived state. Green requires `verified_at`, no elapsed
+expiry, no sticky falsification, valid proof structure, and passing proofs. Yellow
+means re-verification is required: the leaf has no `verified_at`, or `expires_at`
+has passed, or its `expires_every` duration after `verified_at` has elapsed. Agents
+must not rely on yellow contents until they re-verify them. `expires_at` is ISO 8601
+with timezone. `expires_every` accepts durations such as `14d`, `2 weeks`, or
+`two weeks`; when both forms exist, the earlier expiry wins.
+
 Leaf falsification is sticky and makes checks fail until an agent independently
 reviews and repairs the leaf and explicitly clears `falsified_at`. Passing every
 proof is necessary but not sufficient for leaf validation; the verifier never
 promotes the whole leaf to verified or repairs its knowledge automatically.
+Such falsified, malformed, or proof-failing leaves are brown. An agent encountering
+one must diagnose and repair it rather than use or ignore it.

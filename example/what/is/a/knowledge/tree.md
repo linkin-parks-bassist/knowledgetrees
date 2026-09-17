@@ -53,5 +53,10 @@ timestamps do not verify unproved prose. Any failed proof falsifies its leaf; al
 proofs passing is necessary but not sufficient for whole-leaf validation. Independent
 review and explicit repair remain agent responsibilities.
 
+Every leaf is green, yellow, or brown. Green is independently verified, unexpired,
+and proof-clean. Yellow is unverified or has passed an optional `expires_at` or
+`expires_every` boundary and cannot be used until re-verification. Brown is actually
+falsified or proof-failing; it makes the tree busted and must be diagnosed and repaired.
+
 The installed skill-shaped entry point is compatibility bootstrap into this
 substrate, not a precedent for proliferating separately maintained skill documents.

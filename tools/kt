@@ -5,7 +5,7 @@ import argparse
 import difflib
 import errno
 import fcntl
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataclasses import dataclass
 import json
 import hashlib
@@ -347,7 +347,8 @@ def leaf_parts(text):
     match = re.match(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", text, re.S)
     if match:
         body = text[match.end():]
-        for key in ("verified_at", "falsified_at", "status", "blocker", "next_check"):
+        for key in ("verified_at", "falsified_at", "expires_at", "expires_every",
+                    "status", "blocker", "next_check"):
             value = re.search(rf"^\s*{key}:\s*([^\n]+)", match[1], re.M)
             if value:
                 metadata[key] = value[1].strip().strip("\"'")
@@ -1110,6 +1111,12 @@ PROOF_FENCES = {
 }
 OUTPUT_LIMIT = 4096
 PROOF_MARKER = re.compile(r"^Proof:(?: \((verified|falsified) at ([^)]+)\))?$")
+LEAF_STATES = ("green", "yellow", "brown")
+NUMBER_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+    "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
+    "twelve": 12,
+}
 
 
 def discover_knowledge_root(directory):
@@ -1313,6 +1320,50 @@ def positive_timeout(value):
     return timeout
 
 
+def metadata_datetime(value, field):
+    try:
+        parsed = datetime.fromisoformat(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"{field} must be ISO 8601") from error
+    if parsed.utcoffset() is None:
+        raise ValueError(f"{field} must include a timezone")
+    return parsed
+
+
+def expiry_duration(value):
+    match = re.fullmatch(
+        r"\s*(\d+(?:\.\d+)?|" + "|".join(NUMBER_WORDS) +
+        r")\s*(s|sec(?:ond)?s?|m|min(?:ute)?s?|h|hours?|d|days?|w|weeks?)\s*",
+        value.casefold())
+    if not match:
+        raise ValueError("expires_every must be a duration such as 14d, 2 weeks, or two weeks")
+    amount = NUMBER_WORDS[match[1]] if match[1] in NUMBER_WORDS else float(match[1])
+    unit = match[2][0]
+    seconds = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}[unit]
+    return timedelta(seconds=amount * seconds)
+
+
+def lifecycle_state(original, now):
+    metadata, _ = leaf_parts(original)
+    if metadata.get("falsified_at"):
+        return "brown", None
+    try:
+        verified = (metadata_datetime(metadata["verified_at"], "verified_at")
+                    if metadata.get("verified_at") else None)
+        expires = (metadata_datetime(metadata["expires_at"], "expires_at")
+                   if metadata.get("expires_at") else None)
+        if metadata.get("expires_every"):
+            if verified is None:
+                return "yellow", None
+            periodic = verified + expiry_duration(metadata["expires_every"])
+            expires = min(expires, periodic) if expires else periodic
+    except ValueError as error:
+        return "brown", str(error)
+    if verified is None or (expires is not None and now >= expires):
+        return "yellow", None
+    return "green", None
+
+
 def proof_parser_for_cli():
     parser = argparse.ArgumentParser(prog="kt prove", description="Run marked proofs in a knowledge tree, optionally filtered by tokens.")
     parser.add_argument(
@@ -1348,7 +1399,7 @@ def proof_parser_for_cli():
     return parser
 
 
-def verify_proofs(arguments=None):
+def verify_proofs(arguments=None, emit=True):
     parser = proof_parser_for_cli()
     args = parser.parse_args(arguments)
     tokens = validate_tokens(args.tokens, parser)
@@ -1358,14 +1409,14 @@ def verify_proofs(arguments=None):
         if not root.is_dir():
             if args.verbose:
                 print(f"ERROR knowledge root is not a directory: {root}", file=sys.stderr)
-            return 1
+            return (1, {state: 0 for state in LEAF_STATES}, []) if not emit else 1
     else:
         try:
             root = discover_knowledge_root(directory)
         except FileNotFoundError as error:
             if args.verbose:
                 print(f"ERROR {error}", file=sys.stderr)
-            return 1
+            return (1, {state: 0 for state in LEAF_STATES}, []) if not emit else 1
 
     # Keep the execution engine guarded against forced-private roots as well.
     if root_access(root) == "force-private" or any(
@@ -1379,18 +1430,28 @@ def verify_proofs(arguments=None):
                       if path_matches(relative, tokens)]
     failed = 0
     failed_paths = set()
+    states = {state: 0 for state in LEAF_STATES}
+    non_green = []
     proof_count = 0
     for relative in selected_other:
         failed += 1
         failed_paths.add(relative)
+        states["brown"] += 1
+        non_green.append(("brown", relative))
         if args.verbose:
             print(f"ERROR {relative}: non-Markdown file inside knowledge tree")
 
     proof_directory = root.parent
+    now = datetime.now().astimezone()
     for relative, path in selected:
         original, proofs, errors = parse_proofs(path)
         results = []
+        stamp_failed = False
         leaf_falsified = bool(errors)
+        state, lifecycle_error = lifecycle_state(original, now)
+        if lifecycle_error:
+            errors.append((1, lifecycle_error))
+            leaf_falsified = True
         header = original.split("\n---", 1)[0] if original.startswith("---\n") else ""
         if re.search(r"(?m)^\s{0,2}falsified_at:", header):
             failed += 1
@@ -1428,17 +1489,28 @@ def verify_proofs(arguments=None):
             except OSError as error:
                 failed += 1
                 failed_paths.add(relative)
+                stamp_failed = True
                 if args.verbose:
                     print(f"  ERROR stamping proofs: {error}")
+
+        if stamp_failed or leaf_falsified or any(not passed for _, passed in results) or state == "brown":
+            state = "brown"
+        states[state] += 1
+        if state != "green":
+            non_green.append((state, relative))
 
     if args.verbose:
         print(
             f"SUMMARY root={root} leaves={len(selected)} proofs={proof_count} "
             f"failures={failed}")
-    if failed:
-        for relative in sorted(failed_paths, key=str):
-            print(relative, file=sys.stderr)
-    return 1 if failed else 0
+    addressed = [(state, f"{root_identity(root)}:{relative}")
+                 for state, relative in non_green]
+    if emit:
+        print(" ".join(f"{state}={states[state]}" for state in LEAF_STATES))
+        for state, address in sorted(addressed, key=lambda item: item[1]):
+            print(f"{state} {address}", file=sys.stderr)
+        return 1 if states["brown"] else 0
+    return (1 if states["brown"] else 0), states, addressed
 
 
 def prove(arguments):
@@ -1472,13 +1544,20 @@ def prove(arguments):
         allowed = roots()
         if not allowed:
             raise AccessRequired("kt: no accessible proof roots")
-        failed = False
+        totals = {state: 0 for state in LEAF_STATES}
+        non_green = []
         for label, root in allowed:
             if any(child != root and child.is_relative_to(root) and root_access(child, child_label) != "allow"
                    for child_label, child in discovered_roots()):
                 raise AccessRequired(f"kt: proof scope {label!r} contains a restricted registered subtree; narrow the scope or approve it first")
-            failed = verify_proofs(["--root", str(root), *arguments]) != 0 or failed
-        return 1 if failed else 0
+            code, states, paths = verify_proofs(["--root", str(root), *arguments], emit=False)
+            for state in LEAF_STATES:
+                totals[state] += states[state]
+            non_green.extend(paths)
+        print(" ".join(f"{state}={totals[state]}" for state in LEAF_STATES))
+        for state, address in sorted(non_green, key=lambda item: item[1]):
+            print(f"{state} {address}", file=sys.stderr)
+        return 1 if totals["brown"] else 0
     selected = None
     for index, argument in enumerate(arguments):
         if argument in ("--root", "-r") and index + 1 < len(arguments):
