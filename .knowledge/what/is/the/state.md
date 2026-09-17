@@ -254,7 +254,8 @@ public-example, and installed-global proof sweeps have no brown leaves. Installa
 is complete and the installed executable matches repository source. The first install
 surfaced a sticky global falsification caused by a nondeterministic Copilot discovery
 predicate; the predicate was removed from its two global owners after deterministic
-topology checks and repeated full proof sweeps passed. Publication remains unauthorized.
+topology checks and repeated full proof sweeps passed. The owner subsequently
+authorized installation, commit, and publication.
 
 The lifecycle default is corrected: leaves without explicit lifecycle metadata are
 green, including non-verifiable specs, plans, procedures, and opinions. Yellow now
@@ -263,3 +264,7 @@ not imply yellow. Expiry guidance targets factual knowledge liable to change. Al
 regression suites pass; installation is current and byte-identical to repository
 source. Final proof sweeps report project `green=25 yellow=0 brown=0`, example
 `green=56 yellow=0 brown=0`, and global `green=104 yellow=0 brown=0`.
+
+The lifecycle feature and green-default correction are installed and published on
+`main` as commits `c0e9e54` and `efb5809`. No lifecycle implementation,
+installation, or publication work remains.
