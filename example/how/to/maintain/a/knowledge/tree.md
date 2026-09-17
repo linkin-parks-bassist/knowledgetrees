@@ -71,8 +71,9 @@ structure also falsifies the leaf. Legacy `Proof:` markers are accepted. Writes
 preserve hardlink identity; `--no-stamp` makes checks read-only.
 
 `kt prove` always reports green, yellow, and brown totals and prints every non-green
-root-qualified leaf path. Green is independently verified, unexpired, and proof-clean.
-Yellow is unverified or expired and is a warning; do not use it until re-verification.
+root-qualified leaf path. Leaves are green by default, including non-verifiable
+specifications, plans, procedures, and opinions. Yellow is explicitly marked or
+expired and is a warning; do not use it until re-verification.
 Brown is falsified, malformed, or proof-failing and makes `kt prove` fail because
 the tree is busted.
 
@@ -107,6 +108,8 @@ Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
 Leaves may declare an ISO-8601 `expires_at` or an `expires_every` duration measured
 from `verified_at`; elapsed expiry makes them yellow until independently re-verified.
+Agents should add expiry metadata when a factual answer is liable to change. Do not
+add expiry merely because content cannot be mechanically or independently verified.
 
 Have the original contents in context before editing a leaf. Full reads supply
 the revision hash automatically; use kt rewrite ADDRESS HASH CONTENTS. The required

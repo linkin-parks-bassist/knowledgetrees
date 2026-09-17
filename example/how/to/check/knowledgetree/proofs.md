@@ -50,13 +50,17 @@ Only proof markers are refreshed. Leaf-level `verified_at` records an independen
 whole-leaf review and is not changed by the verifier. Use `--no-stamp` to execute
 proofs without writing markers. Timestamp writes preserve existing hardlinks.
 
-Every selected leaf has one derived state. Green requires `verified_at`, no elapsed
-expiry, no sticky falsification, valid proof structure, and passing proofs. Yellow
-means re-verification is required: the leaf has no `verified_at`, or `expires_at`
-has passed, or its `expires_every` duration after `verified_at` has elapsed. Agents
+Every selected leaf has one lifecycle state. A missing `state` defaults to green,
+including for specs, plans, procedures, opinions, and other non-verifiable contents.
+Green also requires no elapsed expiry, no sticky falsification, valid proof structure,
+and passing proofs. Yellow means re-verification is required: the leaf declares
+`state: yellow`, `expires_at` has passed, or its `expires_every` duration after `verified_at` has elapsed. Agents
 must not rely on yellow contents until they re-verify them. `expires_at` is ISO 8601
 with timezone. `expires_every` accepts durations such as `14d`, `2 weeks`, or
 `two weeks`; when both forms exist, the earlier expiry wins.
+Use `state: green`, `state: yellow`, or `state: brown` only when an explicit stored
+classification is useful. Add expiry metadata to facts liable to change; do not
+penalize inherently non-verifiable knowledge for lacking whole-leaf verification.
 
 Leaf falsification is sticky and makes checks fail until an agent independently
 reviews and repairs the leaf and explicitly clears `falsified_at`. Passing every

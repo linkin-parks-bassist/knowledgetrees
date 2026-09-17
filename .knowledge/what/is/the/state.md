@@ -255,3 +255,11 @@ is complete and the installed executable matches repository source. The first in
 surfaced a sticky global falsification caused by a nondeterministic Copilot discovery
 predicate; the predicate was removed from its two global owners after deterministic
 topology checks and repeated full proof sweeps passed. Publication remains unauthorized.
+
+The lifecycle default is corrected: leaves without explicit lifecycle metadata are
+green, including non-verifiable specs, plans, procedures, and opinions. Yellow now
+requires `state: yellow` or elapsed expiry metadata; unverified workflow status does
+not imply yellow. Expiry guidance targets factual knowledge liable to change. All
+regression suites pass; installation is current and byte-identical to repository
+source. Final proof sweeps report project `green=25 yellow=0 brown=0`, example
+`green=56 yellow=0 brown=0`, and global `green=104 yellow=0 brown=0`.

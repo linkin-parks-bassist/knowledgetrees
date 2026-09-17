@@ -243,10 +243,13 @@ built into kt; no separate verifier process or installation is needed.
 from the checkout. Explicit roots require the same access approval as retrieval.
 
 Every proof run prints aggregate `green=N yellow=N brown=N` counts and every
-non-green `ROOT:relative/path.md`. Green means independently verified, unexpired,
-and proof-clean. Yellow means unverified or past optional `expires_at` or
-`expires_every` freshness and cannot be used until re-verification. Brown means
+non-green `ROOT:relative/path.md`. Leaves are green by default, including specs,
+plans, procedures, opinions, and other content that is not mechanically verifiable.
+Optional `state: yellow` marks a leaf for review; elapsed `expires_at` or
+`expires_every` freshness also makes it yellow and unusable until re-verification. Brown means
 falsified, malformed, or proof-failing; it makes the tree busted and must be repaired.
+Agents should add expiry metadata to facts likely to change, while leaving durable
+or non-verifiable knowledge green unless there is a concrete reason for review.
 
 **Agents run the verifier before relying on proof-backed knowledge.** They check the
 local root during bootstrap and when entering a new project scope, then relevant semantic

@@ -178,7 +178,7 @@ def main():
         proof = local / "what/is/proven.md"
         proof.parent.mkdir(parents=True, exist_ok=True)
         proof.write_text("Passing.\n\nProof: (verified at _)\n\n```bash\ntest 1 -eq 1\n```\n")
-        assert run("prove", "--no-stamp", "proven") == "green=0 yellow=1 brown=0\n"
+        assert run("prove", "--no-stamp", "proven") == "green=1 yellow=0 brown=0\n"
         assert "verified at _" in proof.read_text()
         run("prove", "proven")
         assert "verified at _" not in proof.read_text()

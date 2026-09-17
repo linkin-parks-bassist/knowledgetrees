@@ -41,7 +41,9 @@ architecture answer; smallness and source visibility are not exemptions.
 3. Check `scope`, `source`, `verification`, `verified_at`, expiry metadata, and `review_when`.
    Freshness depends on volatility and evidence, not timestamp recency alone. Read
    the assertion and predicate behind every proof before relying on the claim.
-   Run `kt prove --root ROOT TOKEN`. Green may be used. Yellow is a warning that
+   Run `kt prove --root ROOT TOKEN`. Missing lifecycle state defaults to green;
+   specs, plans, procedures, opinions, and other non-verifiable content are not
+   yellow merely because they lack `verified_at`. Green may be used. Yellow is a warning that
    prohibits relying on the contents until re-verification. Brown means the tree
    is busted; stop, diagnose the falsification or failed proof, and repair the leaf.
 4. If `kt` does not find the information, you MUST determine whether a leaf exists.

@@ -41,7 +41,8 @@ notice. Accuracy/preservation reminders belong in the one-shot review hook.
   means no selected leaf is brown; `--verbose` supplies diagnostics. Optional filters are separate
   semantic components, e.g. `kt prove --root .knowledge --no-stamp how to use`;
   every run reports green/yellow/brown totals and prints all yellow/brown addresses.
-  Yellow warns and forbids use pending re-verification; brown fails the command and
+  Missing lifecycle state defaults to green, including non-verifiable contents.
+  Explicit or expired yellow warns and forbids use pending re-verification; brown fails the command and
   requires diagnosis and repair.
   slash-containing leaf paths are not filters. Multiple tokens are disjunctive.
 - Create: `kt add "what is the result" "Checked answer" --local --source "evidence"`.

@@ -101,6 +101,10 @@ Freshness may additionally use either `expires_at` (ISO 8601 with timezone) or
 `expires_every` (for example `14d`, `2 weeks`, or `two weeks`, measured from
 `verified_at`). An elapsed expiry makes the leaf yellow and unusable until
 re-verification. Use expiry only when a real time-based freshness boundary exists.
+Leaves otherwise default to green, including specs, plans, procedures, opinions,
+and other content that is not actually verifiable. Optionally write `state: green`,
+`state: yellow`, or `state: brown` when an explicit stored lifecycle classification
+is useful. Prefer expiries for factual answers liable to change.
 
 ## Narrowly eligible executable proofs
 

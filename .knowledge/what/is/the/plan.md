@@ -42,3 +42,4 @@ The owner authorized commit and push of the complete validated follow-up on
 12. [x] Aggregate lifecycle counts and print every non-green address from `kt prove`.
 13. [x] Enforce yellow non-use and mandatory brown repair in agent guidance.
 14. [x] Run the full regression/proof suite and install the validated update. Publish only with owner authorization.
+15. [x] Correct the default so absent lifecycle metadata is green and only explicit yellow or elapsed expiry requires re-verification.

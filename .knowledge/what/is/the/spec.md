@@ -51,11 +51,14 @@ proofs never changes leaf `verified_at` or establishes whole-leaf validation.
 Keep legacy markers compatible, support read-only checking, preserve hardlinks,
 and leave agentic knowledge repair outside the verifier's scope.
 
-Every leaf has one derived lifecycle state. Green requires independent whole-leaf
-verification, no elapsed expiry, no sticky falsification, valid proof structure,
-and passing proofs. Yellow means re-verification is required because the leaf is
-unverified or an optional `expires_at` timestamp or `expires_every` period has
-elapsed; agents must not use yellow contents before re-verifying them. Brown means
+Every leaf has one lifecycle state. Missing lifecycle state defaults to green,
+including specs, plans, procedures, opinions, and other contents that are not
+actually verifiable. Green requires no elapsed expiry, sticky falsification,
+malformed proof, or failing proof. Yellow means re-verification is required because
+the leaf explicitly declares `state: yellow` or an optional `expires_at` timestamp
+or `expires_every` period has elapsed; agents must not use yellow contents before
+re-verifying them. Agents should optionally add expiry metadata to factual knowledge
+liable to change. Brown means
 the leaf is falsified, malformed, or has a failing proof; the tree is busted and an
 agent encountering it must diagnose and repair it. Every `kt prove` run prints
 aggregate green/yellow/brown counts and every non-green root-qualified path. Yellow

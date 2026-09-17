@@ -73,16 +73,18 @@ with tempfile.TemporaryDirectory(prefix="leaf-state-test-") as temporary:
         "---\nverified_at: '2026-09-17T00:00:00+10:00'\nexpires_every: '2 weeks'\n---\n\nCurrent.\n")
     (root / "expired.md").write_text(
         "---\nverified_at: '2026-08-01T00:00:00+10:00'\nexpires_every: 'two weeks'\n---\n\nOld.\n")
-    (root / "unverified.md").write_text("Needs review.\n")
+    (root / "default-green.md").write_text("A non-verifiable plan is green by default.\n")
+    (root / "explicit-yellow.md").write_text("---\nstate: yellow\n---\n\nNeeds review.\n")
     result = run(root, "--no-stamp")
-    assert result.stdout == "green=1 yellow=2 brown=0\n"
+    assert result.stdout == "green=2 yellow=2 brown=0\n"
     assert "yellow local:expired.md" in result.stderr
-    assert "yellow local:unverified.md" in result.stderr
+    assert "yellow local:explicit-yellow.md" in result.stderr
+    assert "default-green.md" not in result.stderr
 
     (root / "brown.md").write_text(
         "Broken.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
     result = run(root, "--no-stamp", expected=1)
-    assert result.stdout == "green=1 yellow=2 brown=1\n"
+    assert result.stdout == "green=2 yellow=2 brown=1\n"
     assert "brown local:brown.md" in result.stderr
 
 print("proof timestamp integration checks passed")

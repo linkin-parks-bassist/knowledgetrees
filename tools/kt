@@ -347,7 +347,7 @@ def leaf_parts(text):
     match = re.match(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", text, re.S)
     if match:
         body = text[match.end():]
-        for key in ("verified_at", "falsified_at", "expires_at", "expires_every",
+        for key in ("verified_at", "falsified_at", "expires_at", "expires_every", "state",
                     "status", "blocker", "next_check"):
             value = re.search(rf"^\s*{key}:\s*([^\n]+)", match[1], re.M)
             if value:
@@ -1345,7 +1345,10 @@ def expiry_duration(value):
 
 def lifecycle_state(original, now):
     metadata, _ = leaf_parts(original)
-    if metadata.get("falsified_at"):
+    declared = metadata.get("state", "green").casefold()
+    if declared not in LEAF_STATES:
+        return "brown", "state must be green, yellow, or brown"
+    if metadata.get("falsified_at") or declared == "brown":
         return "brown", None
     try:
         verified = (metadata_datetime(metadata["verified_at"], "verified_at")
@@ -1354,12 +1357,12 @@ def lifecycle_state(original, now):
                    if metadata.get("expires_at") else None)
         if metadata.get("expires_every"):
             if verified is None:
-                return "yellow", None
+                return "brown", "expires_every requires verified_at"
             periodic = verified + expiry_duration(metadata["expires_every"])
             expires = min(expires, periodic) if expires else periodic
     except ValueError as error:
         return "brown", str(error)
-    if verified is None or (expires is not None and now >= expires):
+    if declared == "yellow" or (expires is not None and now >= expires):
         return "yellow", None
     return "green", None
 
