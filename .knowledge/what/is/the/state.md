@@ -268,3 +268,12 @@ source. Final proof sweeps report project `green=25 yellow=0 brown=0`, example
 The lifecycle feature and green-default correction are installed and published on
 `main` as commits `c0e9e54` and `efb5809`. No lifecycle implementation,
 installation, or publication work remains.
+
+`kt init` is implemented in repository source. It emits the canonical global procedure and
+exact local orientation/spec/plan/state/next leaves, then the accessible dictionary,
+then the local proof result. Startup hooks now inject only a compact instruction to
+run the command; failure reminders and task-end capture review remain unchanged.
+Full CLI, hook, installer, maintenance, proof, and OpenCode adapter regressions pass.
+The source and installed CLI/hook bytes match. An installed `kt init` smoke test
+prints the six labeled startup leaves, dictionary, and final local proof result in
+the requested order with `green=26 yellow=0 brown=0`. Publication remains pending.

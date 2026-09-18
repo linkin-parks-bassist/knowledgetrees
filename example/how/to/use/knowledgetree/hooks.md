@@ -58,15 +58,13 @@ handler performs no model calls and never runs or writes leaf bodies.
 
 ## Harness contracts and activation
 
-Codex's native `SessionStart` hook reads the canonical bootstrap procedure and
-returns its body as `hookSpecificOutput.additionalContext` developer context.
+Codex's native `SessionStart` hook returns a compact instruction to run `kt init`
+once; it no longer reads or injects the canonical procedure or project orientation.
 It matches startup, resume, clear, and compact, not ordinary user prompts.
-The procedure is already loaded; no bootstrap skill invocation is needed.
 On resume/compaction, preserve completed initialization and restore only lost
 context or changed scope. Review/trust the new definition in `/hooks` and start
 a fresh session to test it. Protocol tests cover all four lifecycle sources;
-live startup compliance remains unconfirmed. Missing/invalid procedure files
-fail open with a diagnostic; they do not grant permissions or run proofs.
+live startup compliance remains unconfirmed. The hook itself does not run proofs.
 
 Codex Bash PostToolUse can supply stdout alone without an exit code. The adapter
 prefers structured failure statuses when available and otherwise uses diagnostic-line
@@ -81,15 +79,11 @@ this is not guaranteed pre-display gating. Use `/hooks` to review and trust new
 definitions: installation does not bypass that requirement.
 [Official Codex hooks](https://learn.chatgpt.com/docs/hooks).
 
-OpenCode's plugin reads the canonical `how/to/use/knowledgetrees.md` at startup
-and includes its procedure body once in each assembled model system context.
-This is harness-owned context, not repeated skill invocation or new conversation
-messages. It is also available after compaction; the compaction hook asks the
+OpenCode's plugin supplies the same compact `kt init` instruction once in each
+assembled model system context. It is also available after compaction; the compaction hook asks the
 summary to preserve completed initialization, checked evidence, and open captures.
 Startup work remains once per fresh session, not per turn. Focused skills still
-apply when triggered. Restart after editing the canonical procedure. Only the
-procedure is loaded, not the entire tree; it may be sent to the configured provider.
-Missing or empty procedure files report a diagnostic and leave other hooks active.
+apply when triggered. Restart after editing the adapter.
 Adapter tests cover injection, duplicate prevention, request/session availability,
 and compaction context; model compliance still requires an uncoached live test.
 
@@ -150,17 +144,12 @@ arming, silent-output limits, and preservation/removal during installer migratio
 Source: tools/kt-hooks, install, tests/test-hooks.py, tests/test-install.py;
 current Codex live stdout-only payload shape and the documented heuristic tradeoff.
 
-## Project orientation at startup
+## Startup initialization
 
-Codex SessionStart and OpenCode system-context bootstrap share the Python startup
-loader. It resolves the supplied cwd and reads only that directory’s
-.knowledge; it never searches parent directories. It appends where/am/i.md verbatim after the canonical procedure,
-labeling the source and retaining the obligation to verify evidence/proofs.
-It never substitutes a parent or global orientation when the local file is missing;
-missing or oversized (over 64 KiB) orientation reports a diagnostic and retains
-the canonical bootstrap. No root means no injected project orientation.
-Codex startup/resume/clear/compact events use the same loader; OpenCode loads it
-at plugin startup and retains a single block in rebuilt system context.
+Codex SessionStart and OpenCode system-context startup provide only the compact
+instruction to run `kt init`. The command, invoked by the agent in the exact working
+directory, prints the canonical global procedure and local startup leaves, then dictionary
+and proof results. Hooks no longer read leaf bodies or inject project orientation.
 OpenCode still requires restart after installed plugin/context changes.
 
 Both harnesses share diagnostic failure detection and Stop/idle bookkeeping.
@@ -170,9 +159,9 @@ review/session isolation. No command wrapping or uncertainty scanner is added.
 Source: tools/kt-hooks; tools/kt-opencode.mjs; tests/test-hooks.py;
 tests/test-opencode-hooks.mjs. Relevant integration checks passed.
 
-Privacy boundary: automatic orientation injection is restricted to the supplied
-session directory. Parent/home orientations are never searched or used as fallback.
-The canonical global procedure remains loaded; this does not inject global orientation.
+Privacy boundary: startup hooks inject no knowledge contents. `kt init` uses only
+the exact current-directory local root for leaf bodies and normal access policy for
+the dictionary; it never searches parent directories for orientation.
 
 ## Review before commit or push
 
@@ -190,7 +179,5 @@ These are API capabilities and timing limits, not demonstrated model compliance.
 Sources: [Codex hooks](https://learn.chatgpt.com/docs/hooks#pretooluse) and
 [OpenCode plugins](https://opencode.ai/docs/plugins/), checked in this session.
 
-Startup reads the current access policy before injecting the global procedure.
-A force-private global root suppresses that injection outside its exact local
-scope; persistent bypass does not override it. Restart an OpenCode backend after
-updating its startup plugin/handler so newly resumed sessions use that behavior.
+Restart an OpenCode backend after updating its startup plugin/handler so newly
+resumed sessions receive the compact initialization instruction.

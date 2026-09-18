@@ -251,6 +251,11 @@ falsified, malformed, or proof-failing; it makes the tree busted and must be rep
 Agents should add expiry metadata to facts likely to change, while leaving durable
 or non-verifiable knowledge green unless there is a concrete reason for review.
 
+`kt init` performs fresh-session initialization in output-first order: it prints
+the canonical global procedure and exact local orientation/spec/plan/state/next leaves,
+then the accessible dictionary, then the `kt prove --local` result. It fails for
+a missing or incomplete exact local root or a brown final proof check.
+
 **Agents run the verifier before relying on proof-backed knowledge.** They check the
 local root during bootstrap and when entering a new project scope, then relevant semantic
 slices before consequential use. A broken proof is a stop-and-repair signal: inspect
@@ -408,8 +413,8 @@ accessible roots on one comma-separated line. It reads no leaf bodies, emits no
 complete paths, and prints each useful segment once. Segments of at most two
 characters and standard grammar/navigation words are omitted, so an agent can see terms such as `obtain` and `sudo-authorization`
 without loading a tree listing. Pass root labels or configured canonical root paths
-to restrict the dictionary, for example `kt dict local global`. The mandatory
-once-per-session bootstrap runs it once before normal semantic discovery.
+to restrict the dictionary, for example `kt dict local global`. `kt init` prints it
+once after startup leaves and before the final local proof result.
 
 Question prefixes make the directories active search boundaries:
 `kt where is vivado` walks `where/is/` and returns the exact leaf if present.
@@ -473,26 +478,19 @@ tool calls are not replayed. If you attach to a separate OpenCode server, restar
 that backend too. See the [OpenCode plugin](https://opencode.ai/docs/plugins/) and
 [CLI](https://opencode.ai/docs/cli/) documentation. Start a new Copilot CLI session.
 
-OpenCode's plugin also loads the canonical `how/to/use/knowledgetrees.md` directly
-into model system context before work. The agent does not need to select a bootstrap
-skill. One procedure block stays in the assembled context, without adding conversation
-messages or extra model turns. Startup orientation and evidence checks remain once
-per fresh session; compaction preserves initialization state rather than rebooting it.
+OpenCode's plugin supplies a compact instruction to run `kt init` once before work.
+It adds no leaf bodies to system context. Startup initialization remains once per
+fresh session; compaction preserves initialization state rather than rebooting it.
 Focused lookup, capture, maintenance, and ingestion skills remain available as needed.
-The procedure and session directory’s project `.knowledge/where/am/i.md` are read at plugin
-startup through the shared loader, so restart after changing them. The orientation
-is included verbatim; its evidence and root proofs still need checking. This context
-can be sent to the configured model provider; it contains the procedure, not the
-whole knowledge tree, and grants no additional permissions. Project orientation
-content is also included and can be sent to the configured provider.
+The agent-run command loads the procedure from its canonical global owner and startup
+leaves from the exact local root; parent directories are not searched. Restart OpenCode after changing its
+plugin. No startup leaf contents are injected by the hook.
 
-Codex's native `SessionStart` hook delivers the same canonical procedure as developer
-context on startup, resume, clear, and after compaction—not on every user prompt.
+Codex's native `SessionStart` hook delivers the same compact `kt init` instruction
+on startup, resume, clear, and after compaction—not on every user prompt.
 Resume and compaction restore context without repeating completed startup work.
 Review/trust the new `SessionStart` definition in `/hooks`, then start a fresh
-session to test startup injection. The hook also includes the session directory’s project
-`.knowledge/where/am/i.md`, only in the session working directory. Parent directories and global orientation
-are never searched automatically. A disabled
+session to test startup behavior. The hook includes no project or global leaf contents. A disabled
 or untrusted hook cannot supply it.
 
 Codex can send Bash output text without an exit code. The post-tool adapter prefers

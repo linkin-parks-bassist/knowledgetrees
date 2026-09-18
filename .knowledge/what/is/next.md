@@ -52,3 +52,6 @@ as 6bb5098. No implementation, installation or publication work remains.
 
 The lifecycle feature and owner-requested green-default correction are validated,
 installed, committed, and published. No lifecycle implementation work remains.
+
+`kt init` and compact startup-hook injection are validated and installed. Review
+the output contract, then commit and publish only with owner authorization.

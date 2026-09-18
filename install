@@ -113,12 +113,11 @@ def agents_text(current: str) -> str:
     block = f"""{AGENTS_BEGIN}
 # Mandatory knowledge-tree bootstrap
 
-Follow the canonical knowledge-tree procedure once per fresh agent session. When the
-harness injects it into context, it is already loaded: do not invoke a bootstrap
-skill again. Otherwise load `knowledgetrees` as the compatibility fallback.
-Perform startup orientation and evidence checks once, not per task or turn.
-Run `kt dict` once at startup to load unique accessible leaf-path segments without
-reading leaf contents or listing whole paths.
+Run `kt init` once per fresh agent session. It loads the canonical global knowledge-tree
+procedure and exact local startup leaves, then prints the path dictionary and local
+proof result. Harness startup hooks provide only this compact instruction; they do
+not inject leaf bodies. Do not repeat initialization per task or turn. If `kt init`
+is unavailable, load `knowledgetrees` as the compatibility fallback.
 New question -> `kt` first unless adequately checked knowledge is already loaded;
 miss -> determine whether a leaf exists; absent -> investigate and add it (or an
 unresolved record) before the next unrelated tool call or completion. Use nearest

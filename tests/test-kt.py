@@ -160,6 +160,31 @@ def main():
         assert str(local) in run("roots", cwd=local)
         global_only = run("roots", cwd=base)
         assert str(global_root) in global_only and "local\tallow\t" not in global_only
+        startup = {
+            "what/is/the/spec.md": "Test specification.\n",
+            "what/is/the/plan.md": "Test plan.\n",
+            "what/is/the/state.md": "Test state.\n",
+            "what/is/next.md": "Test next action.\n",
+        }
+        for relative, body in startup.items():
+            path = local / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(body)
+        procedure = global_root / "how/to/use/knowledgetrees.md"
+        procedure.parent.mkdir(parents=True, exist_ok=True)
+        procedure.write_text("Test canonical procedure.\n")
+        initialized = run("init")
+        labels = ["=== global:how/to/use/knowledgetrees.md ===",
+                  "=== local:where/am/i.md ===",
+                  *("=== local:" + relative + " ===" for relative in startup),
+                  "=== kt dict ===", "=== kt prove --local ==="]
+        assert all(label in initialized for label in labels)
+        assert [initialized.index(label) for label in labels] == sorted(
+            initialized.index(label) for label in labels)
+        assert initialized.index("Test canonical procedure.") < initialized.index("Test orientation.")
+        assert initialized.index("Test orientation.") < initialized.index("Test specification.")
+        assert initialized.rstrip().endswith("brown=0")
+        run("init", cwd=base, expected=3)
         run("proof", expected=2)
         assert run("prove", "--no-stamp", "leaves") == "green=2 yellow=0 brown=0\n"
         assert run("prove", "--local", "--no-stamp", "leaves") == "green=1 yellow=0 brown=0\n"

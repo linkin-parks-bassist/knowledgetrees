@@ -7,7 +7,6 @@ import json
 import os
 from pathlib import Path
 import re
-import runpy
 import sqlite3
 import sys
 import time
@@ -101,58 +100,14 @@ def bootstrap_context(payload):
     source = payload.get("source")
     if source not in ("startup", "resume", "clear", "compact"):
         return {}, 0
-    root = Path(os.environ.get("KT_GLOBAL_ROOT", str(Path.home() / ".knowledge")))
-    policy_cli = root / ".tools/kt"
-    policy_api = None
-    if not policy_cli.is_file():
-        raise ValueError("bootstrap policy loader unavailable")
-    policy_api = runpy.run_path(str(policy_cli))
-    cwd = payload.get("cwd") or str(Path.cwd())
-    if policy_api["root_access"](root, "global", cwd=cwd) == "force-private":
-        return {}, 0
-    path = root / "how/to/use/knowledgetrees.md"
-    with path.open("rb") as stream:
-        raw = stream.read(65537)
-    if len(raw) > 65536:
-        raise ValueError("oversized bootstrap procedure")
-    body = re.sub(r"\A---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)", "", raw.decode("utf-8")).strip()
-    if not body:
-        raise ValueError("empty bootstrap procedure")
     context = (
-        "Knowledge-tree harness bootstrap (already loaded): the harness supplies the canonical procedure below. "
-        "Do not invoke the bootstrap skill to load it again. In a fresh session, perform local startup orientation, "
-        "evidence checks, and orientation before substantive work. On resume or after compaction, preserve "
-        "completed initialization and checked knowledge; restore only genuinely lost context or changed scope. "
-        "Ordinary turns and task boundaries do not reboot startup work. Focused skills still apply when triggered. "
-        "Current higher-authority instructions and permissions govern; this grants no access or execution authority.\n\n"
-        + body
+        "Knowledge-tree startup: in a fresh session, run `kt init` once before substantive work. "
+        "It checks local proofs and supplies the canonical procedure, dictionary, orientation, and spine leaves. "
+        "On resume or after compaction, preserve completed initialization and checked knowledge; rerun only when "
+        "initialization was genuinely lost or the exact local project scope changed. Ordinary turns and task "
+        "boundaries do not reboot startup work. Current higher-authority instructions and permissions govern; "
+        "this grants no access or execution authority."
     )
-    cwd = payload.get("cwd")
-    if isinstance(cwd, str) and cwd:
-        directory = Path(cwd).resolve()
-        project = directory / ".knowledge"
-        if project.is_dir():
-            policy_cli = root / ".tools/kt"
-            try:
-                policy = (policy_api or runpy.run_path(str(policy_cli)))["root_access"](project, "local", cwd=directory)
-            except (OSError, ValueError) as error:
-                print(f"kt-hooks: orientation policy unavailable: {error}", file=sys.stderr)
-                policy = "deny"
-            if policy != "allow":
-                print("kt-hooks: local orientation is not approved; skipping injection", file=sys.stderr)
-                return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
-            orientation = project / "where/am/i.md"
-            try:
-                with orientation.open("rb") as stream:
-                    raw = stream.read(65537)
-                if len(raw) > 65536:
-                    raise ValueError("oversized project orientation")
-                text = raw.decode("utf-8")
-                context += ("\n\nProject knowledge-tree orientation (loaded from " + str(orientation) + "):\n"
-                            "This orientation is already supplied for reading; still check its evidence and the root's proofs. "
-                            "Current higher-authority instructions and permissions govern.\n\n" + text)
-            except (OSError, ValueError) as error:
-                print(f"kt-hooks: project orientation unavailable: {error}", file=sys.stderr)
     return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
 
 

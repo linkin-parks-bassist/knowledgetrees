@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const BOOTSTRAP_MARKER = "Knowledge-tree harness bootstrap (already loaded)";
+const BOOTSTRAP_MARKER = "Knowledge-tree startup:";
 
 export const KnowledgeTreesPlugin = async ({ client, directory }) => {
   const pending = new Map();
@@ -27,7 +27,7 @@ export const KnowledgeTreesPlugin = async ({ client, directory }) => {
     child.stdin.on("error", () => {});
     child.stdin.end(JSON.stringify(payload));
   });
-  // Both harnesses use the same startup loader and explicit-directory orientation rules.
+  // Both harnesses use the same compact instruction; kt init loads knowledge.
   const startup = await run("start", { source: "startup", cwd: directory });
   const bootstrap = startup.additionalContext;
   const remember = (session, result) => {
@@ -63,8 +63,8 @@ export const KnowledgeTreesPlugin = async ({ client, directory }) => {
     },
     "experimental.session.compacting": async (_input, output) => {
       output.context.push("Preserve knowledge-tree initialization state: which roots were oriented, " +
-        "what evidence was checked, and outstanding misses/captures. The harness supplies the canonical procedure " +
-        "in system context after compaction; do not reinvoke the bootstrap skill or rerun completed startup checks " +
+        "what evidence was checked, and outstanding misses/captures. The harness supplies the compact kt init instruction " +
+        "in system context after compaction; do not rerun completed startup checks " +
         "merely because a summary was created. Restore genuinely lost context and check changed scope within permissions.");
     },
     event: async ({ event }) => {

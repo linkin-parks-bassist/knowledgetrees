@@ -20,6 +20,10 @@ notice. Accuracy/preservation reminders belong in the one-shot review hook.
 
 ## Command and address quick reference
 
+- Initialize: `kt init` prints the canonical global procedure and the exact local
+  orientation/spec/plan/state/next leaves, then the accessible dictionary, then the
+  `kt prove --local` result. It fails for a missing or incomplete exact local root,
+  or when the final proof check is brown.
 - Dictionary: `kt dict` prints every useful segment occurring in the final two positions of leaf paths across all
   accessible roots on one sorted, comma-separated line. It reads path names, not
   leaf bodies, and never prints complete paths. Repeated segments appear once;

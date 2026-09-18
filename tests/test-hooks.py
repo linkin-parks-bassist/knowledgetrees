@@ -21,88 +21,18 @@ def main():
     assert "Ensure rewritten knowledge is accurate and no still-valid knowledge was lost." in handler_api["REVIEW"]
     assert "lost. check." not in handler_api["REVIEW"]
     handle = handler_api["handle"]
-    with tempfile.TemporaryDirectory(prefix="kt bootstrap ") as initial, patch.dict(os.environ, {"KT_GLOBAL_ROOT": str(Path(initial) / ".knowledge"), "KT_CONFIG": str(Path(initial) / "config.json")}):
-        initial_root = Path(initial) / ".knowledge"
-        (initial_root / ".tools").mkdir(parents=True)
-        (initial_root / ".tools/kt").write_bytes((REPOSITORY / "tools/kt").read_bytes())
-        (initial_root / "how/to/use").mkdir(parents=True)
-        (initial_root / "how/to/use/knowledgetrees.md").write_bytes((REPOSITORY / "example/how/to/use/knowledgetrees.md").read_bytes())
+    for harness in ("codex", "opencode"):
         for source in ("startup", "resume", "clear", "compact"):
-            output, code = handle("codex", "start", {"source": source})
+            result, code = handle(harness, "start", {"source": source})
             assert code == 0
-            context = output["hookSpecificOutput"]
-            assert context["hookEventName"] == "SessionStart"
-            assert "kt roots" in context["additionalContext"]
-            assert "Run `kt dict` once" in context["additionalContext"]
-            assert "already loaded" in context["additionalContext"]
-            assert "verified_by:" not in context["additionalContext"]
-        assert handle("codex", "start", {"source": "unexpected"}) == ({}, 0)
-        assert handle("copilot", "start", {"source": "startup"}) == ({}, 0)
-    with tempfile.TemporaryDirectory(prefix="kt orientation ") as temporary, patch.dict(os.environ, {"KT_GLOBAL_ROOT": str(REPOSITORY / "example"), "KT_CONFIG": ""}):
-        fixture_global = Path(temporary) / "global"
-        (fixture_global / ".tools").mkdir(parents=True)
-        (fixture_global / ".tools/kt").write_bytes((REPOSITORY / "tools/kt").read_bytes())
-        (fixture_global / "how/to/use").mkdir(parents=True)
-        (fixture_global / "how/to/use/knowledgetrees.md").write_bytes((REPOSITORY / "example/how/to/use/knowledgetrees.md").read_bytes())
-        os.environ["KT_GLOBAL_ROOT"] = str(fixture_global)
-        os.environ["KT_CONFIG"] = str(Path(temporary) / "config.json")
-        directory = Path(temporary) / "project"
-        orientation = directory / ".knowledge/where/am/i.md"
-        orientation.parent.mkdir(parents=True)
-        orientation.write_text("---\nsource: test fixture\n---\nNearest project orientation.\n")
-        nested = directory / "src/deep"
-        nested.mkdir(parents=True)
-        for harness in ("codex", "opencode"):
-            for source in ("startup", "resume", "clear", "compact"):
-                result, code = handle(harness, "start", {"source": source, "cwd": str(directory)})
-                context = result["hookSpecificOutput"]["additionalContext"] if harness == "codex" else result["additionalContext"]
-                assert orientation.read_text() in context
-                assert str(orientation) in context
-        # Privacy boundary: parent orientation must never be injected from a subdirectory.
-        for harness in ("codex", "opencode"):
-            result, _ = handle(harness, "start", {"source": "startup", "cwd": str(nested)})
-            context = result["hookSpecificOutput"]["additionalContext"] if harness == "codex" else result["additionalContext"]
-            assert "Nearest project orientation" not in context
-        # No project root: keep the canonical bootstrap without invented orientation.
-        result, _ = handle("codex", "start", {"source": "startup", "cwd": temporary})
-        assert "Nearest project orientation" not in result["hookSpecificOutput"]["additionalContext"]
-        # A nearer root wins; a missing orientation must not silently select the parent.
-        nearer = nested / ".knowledge"
-        nearer.mkdir()
-        result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
-        assert "Nearest project orientation" not in result["additionalContext"]
-        (nearer / "where/am").mkdir(parents=True)
-        (nearer / "where/am/i.md").write_text("Nested orientation")
-        result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
-        assert "Nested orientation" in result["additionalContext"]
-        Path(os.environ["KT_CONFIG"]).write_text(json.dumps({"roots": {"blocked": {"path": str(nearer), "access": "deny"}}}))
-        result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
-        assert "Nested orientation" not in result["additionalContext"]
-        policy = {"dangerously_skip_permissions": True, "roots": {"blocked": {"path": str(nearer), "access": "deny"}}}
-        Path(os.environ["KT_CONFIG"]).write_text(json.dumps(policy))
-        result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
-        assert "Nested orientation" in result["additionalContext"]
-        policy["roots"]["blocked"]["access"] = "force-private"
-        Path(os.environ["KT_CONFIG"]).write_text(json.dumps(policy))
-        result, _ = handle("opencode", "start", {"source": "startup", "cwd": str(nested)})
-        assert "Nested orientation" in result["additionalContext"], "exact local force-private exception"
-        policy["roots"]["global"] = {"access": "force-private"}
-        Path(os.environ["KT_CONFIG"]).write_text(json.dumps(policy))
-        for harness in ("codex", "opencode"):
-            result, _ = handle(harness, "start", {"source": "startup", "cwd": str(nested)})
-            assert result == {}, "force-private global bootstrap must not leak"
-            result, _ = handle(harness, "start", {"source": "resume", "cwd": str(fixture_global)})
-            assert result == {}, "starting inside an arbitrary root is not local .knowledge scope"
-        exact_home = Path(temporary) / "exact-home"
-        exact_root = exact_home / ".knowledge"
-        (exact_root / ".tools").mkdir(parents=True)
-        (exact_root / ".tools/kt").write_bytes((REPOSITORY / "tools/kt").read_bytes())
-        (exact_root / "how/to/use").mkdir(parents=True)
-        (exact_root / "how/to/use/knowledgetrees.md").write_bytes((REPOSITORY / "example/how/to/use/knowledgetrees.md").read_bytes())
-        os.environ["KT_GLOBAL_ROOT"] = str(exact_root)
-        Path(os.environ["KT_CONFIG"]).write_text(json.dumps({"roots": {"global": {"access": "force-private"}}}))
-        result, _ = handle("opencode", "start", {"source": "resume", "cwd": str(exact_home)})
-        assert "already loaded" in result["additionalContext"], "global is accessible when it is the exact local tree"
+            context = (result["hookSpecificOutput"]["additionalContext"]
+                       if harness == "codex" else result["additionalContext"])
+            assert "run `kt init` once" in context
+            assert "where/am/i.md" not in context
+            assert "kt roots" not in context
+            assert "verified_by:" not in context
+    assert handle("codex", "start", {"source": "unexpected"}) == ({}, 0)
+    assert handle("copilot", "start", {"source": "startup"}) == ({}, 0)
     failure = runpy.run_path(str(HANDLER))["failed"]
     for mode in ("default", "bypassPermissions", "plan", None):
         assert handle("codex", "before", {"permission_mode": mode}) == ({}, 0)

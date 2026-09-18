@@ -1582,6 +1582,41 @@ def open_command(args):
     return open_leaf(args.path, args.revision)
 
 
+STARTUP_LEAVES = (
+    "where/am/i.md",
+    "what/is/the/spec.md",
+    "what/is/the/plan.md",
+    "what/is/the/state.md",
+    "what/is/next.md",
+)
+
+
+def initialize_session(args):
+    root = local_root()
+    if not root.is_dir():
+        raise AccessRequired("kt: no local knowledge root in the current directory")
+    require_root(root, "local")
+    missing = [relative for relative in STARTUP_LEAVES if not (root / relative).is_file()]
+    if missing:
+        raise ValueError("local knowledge root is missing startup leaves: " + ", ".join(missing))
+    procedure = resolve_leaf("global:how/to/use/knowledgetrees.md")
+    print("=== global:how/to/use/knowledgetrees.md ===")
+    contents = procedure.read_text()
+    sys.stdout.write(contents)
+    if contents and not contents.endswith("\n"):
+        print()
+    for relative in STARTUP_LEAVES:
+        print(f"=== local:{relative} ===")
+        contents = (root / relative).read_text()
+        sys.stdout.write(contents)
+        if contents and not contents.endswith("\n"):
+            print()
+    print("=== kt dict ===")
+    dictionary(argparse.Namespace(roots=[]))
+    print("=== kt prove --local ===")
+    return prove(["--local"])
+
+
 def register_command(args):
     register_root(args.path, args.name)
     root = Path(args.path).expanduser().resolve()
@@ -1608,7 +1643,7 @@ def roots_command(args):
             else:
                 print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
         if not PRETTY:
-            print("commands: find | QUESTION | open | dict | add | rewrite | amend (deprecated) | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
+            print("commands: init | find | QUESTION | open | dict | add | rewrite | amend (deprecated) | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
             return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
@@ -1626,6 +1661,8 @@ def command_parser():
     parser.add_argument("--pretty", action="store_true", help="human-oriented layout and terminal colors (default: compact plain text)")
     parser.add_argument("--dangerously-skip-permissions", action="store_true", help="persistently bypass ask/deny after user confirmation; force-private remains enforced")
     commands = parser.add_subparsers(dest="command")
+    initializing = commands.add_parser("init", help="prove and load the local startup knowledge")
+    initializing.set_defaults(handler=initialize_session)
     search = commands.add_parser("find", help="rank keyword matches across project and global roots", description="Search all permitted active roots. No --root option; open the root-qualified address returned by the search.")
     search.set_defaults(handler=find)
     search.add_argument("--pretty", action="store_true", help="human-oriented layout")

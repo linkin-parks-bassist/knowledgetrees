@@ -22,25 +22,21 @@ lost context or changed scope rather than rerunning completed startup work.
 
 Use `kt` from PATH, or `~/.knowledge/.tools/kt` if PATH has not been configured.
 Local knowledge is automatically included in repository lookups; permitted broader
-roots contribute results automatically. At startup run `kt dict` once. It prints
-the sorted unique segments from the final two positions of leaf paths across accessible roots, without
-reading leaf contents or repeating complete paths. This small vocabulary shows
-which terms can be used in later semantic queries. Do not enumerate roots or list
-whole trees at startup. `kt roots` is a diagnostic for root configuration/access
-questions, not a prerequisite.
+roots contribute results automatically. At startup run `kt init` once. It prints
+this canonical procedure, the exact local orientation and four spine leaves, the
+accessible path dictionary, and finally the local proof result. Do not enumerate
+roots or list whole trees at startup. `kt roots` is a diagnostic for root
+configuration/access questions, not a prerequisite.
 
-1. Run `kt dict` once to load the available path vocabulary.
-2. Orient in the current repository through `local:where/am/i.md` and the four
-   spine leaves `what/is/the/{spec,plan,state}.md` and `what/is/next.md`. Use supplied
-   orientation content directly rather than rereading it. Establish missing local
-   canonical branches and spine leaves within permission.
-3. Check the local root's evidence and proofs with `kt prove --local`.
-   Stop on falsification and repair within authority. ROOT means the exact tree
+1. Run `kt init` once to load the procedure, orientation, spec, plan, state, next
+   action, and query vocabulary, then check the final `kt prove --local` result.
+   Stop on brown and repair within authority. Establish missing local canonical
+   branches and startup leaves within permission. ROOT means the exact tree
    directory, not its containing repository; no root inventory is needed.
-4. Query normally. Read and check broader-root answers when needed for the task;
+2. Query normally. Read and check broader-root answers when needed for the task;
    accessibility alone does not require startup orientation or a full proof sweep
    of every available root. Respect access-required responses and force-private.
-5. Entering another project directory scope requires its local orientation and
+3. Entering another project directory scope requires its local initialization and
    verification, not another bootstrap skill invocation. Detailed rules live in maintenance.
 
 ## Knowledge at every scale
