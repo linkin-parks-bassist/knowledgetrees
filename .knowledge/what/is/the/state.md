@@ -276,4 +276,7 @@ run the command; failure reminders and task-end capture review remain unchanged.
 Full CLI, hook, installer, maintenance, proof, and OpenCode adapter regressions pass.
 The source and installed CLI/hook bytes match. An installed `kt init` smoke test
 prints the six labeled startup leaves, dictionary, and final local proof result in
-the requested order with `green=26 yellow=0 brown=0`. Publication remains pending.
+the requested order with `green=26 yellow=0 brown=0`.
+
+The validated `kt init` and compact startup-hook update is published on `main` as
+`d4f2577`. The installed CLI and hook handler already match that implementation.
