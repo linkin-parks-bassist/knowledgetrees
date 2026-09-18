@@ -360,6 +360,21 @@ def words(value):
 
 
 GRAMMATICAL = set("a an the to is are of for in on at with how what where when why who which does do can should i we my our this that it be as and or".split())
+DICTIONARY_STOPWORDS = GRAMMATICAL | set(
+    "about above across after against along also among around before behind below beneath "
+    "beside besides between beyond both by concerning considering despite down during each "
+    "either every except following from here inside into like near neither off onto opposite "
+    "outside over past per regarding round since than then there throughout through toward "
+    "towards under underneath unlike until upon versus via within without "
+    "adopted aggregate approach arguments ask attempt begin behave brought call chosen cleanup "
+    "come correctly current currently deep deferred deliver empty encoded end entire establish "
+    "example follow handled have incomplete intended look made managed missing new next operate "
+    "options output preferred preparation preserve progress progressing qualified released remain "
+    "request requests response retain retained reusable running safely selected separate sequence "
+    "shared size sizes start step structured switching task tasks tracked turn turns use visible work wrong "
+    "directory directories file files folder folders knowledge knowledge-tree knowledgetree "
+    "knowledgetrees leaf leaves root roots tree trees".split()
+)
 
 
 def coverage(terms, haystack):
@@ -457,7 +472,8 @@ def dictionary(args):
                 # the final one. Do not materialize or post-process full paths.
                 candidates = (name[:-3],) if base == root else (base.name, name[:-3])
                 for segment in candidates:
-                    if len(segment) > 2 and segment.casefold() not in GRAMMATICAL:
+                    if (len(segment) > 2 and not segment.isdecimal()
+                            and segment.casefold() not in DICTIONARY_STOPWORDS):
                         segments.add(segment)
     if segments:
         print(", ".join(sorted(segments, key=lambda value: (value.casefold(), value))))
@@ -1584,10 +1600,6 @@ def open_command(args):
 
 STARTUP_LEAVES = (
     "where/am/i.md",
-    "what/is/the/spec.md",
-    "what/is/the/plan.md",
-    "what/is/the/state.md",
-    "what/is/next.md",
 )
 
 

@@ -55,3 +55,9 @@ installed, committed, and published. No lifecycle implementation work remains.
 
 `kt init` and compact startup-hook injection are validated, installed, committed,
 and published as `d4f2577`. No implementation or publication work remains.
+
+Review the terse two-leaf `kt init` payload. Commit and publish the installed
+context-minimization refinement only with owner authorization.
+
+Hardened dictionary filtering and the terse two-leaf `kt init` payload are validated
+and installed. Commit and publish only with owner authorization.

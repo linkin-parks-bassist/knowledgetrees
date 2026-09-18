@@ -174,17 +174,18 @@ workers. Exit status remains authoritative; reminders live in one-shot hooks.
 Provide `kt dict [ROOT...]`. With no roots it considers only the final two segments of each leaf path across
 accessible trees; arguments restrict it to configured root labels or
 canonical paths. Sort segments on one comma-separated line, preserve hyphenated segments, strip
-.md and deduplicate globally. Omit segments of two characters or fewer and standard
-grammar/navigation words. Read no leaf bodies and reveal no full paths or
+.md and deduplicate globally. Omit segments of two characters or fewer, purely
+numeric segments, and a broad dictionary-only list of grammatical, relational,
+generic action/state, and knowledge-tree container words. Read no leaf bodies and reveal no full paths or
 restricted subtree segments. Run kt dict once in fresh-session bootstrap so agents
 receive query vocabulary without unrelated knowledge contents.
 
 ## Session initialization
 
 Provide `kt init`. It requires the exact current-directory local root and the
-canonical global procedure plus local orientation, spec, plan, state, and next leaves.
-It prints those labeled verbatim contents first, then the accessible dictionary, then runs
-and prints `kt prove --local`. Missing startup leaves or a brown final proof check
+canonical global procedure plus exact local orientation. It prints those labeled
+verbatim contents first, then the accessible dictionary, then runs and prints
+`kt prove --local`. A missing procedure/orientation or a brown final proof check
 make the command fail. Startup hooks inject only a compact instruction to run it;
 they no longer read or inject procedure/orientation leaf bodies.
 

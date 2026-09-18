@@ -44,3 +44,4 @@ The owner authorized commit and push of the complete validated follow-up on
 14. [x] Run the full regression/proof suite and install the validated update. Publish only with owner authorization.
 15. [x] Correct the default so absent lifecycle metadata is green and only explicit yellow or elapsed expiry requires re-verification.
 16. [x] Add `kt init` and replace large startup-hook knowledge injection with a compact command instruction.
+17. [x] Harden `kt dict` filtering for low-information dictionary words and purely numeric segments.

@@ -148,7 +148,7 @@ current Codex live stdout-only payload shape and the documented heuristic tradeo
 
 Codex SessionStart and OpenCode system-context startup provide only the compact
 instruction to run `kt init`. The command, invoked by the agent in the exact working
-directory, prints the canonical global procedure and local startup leaves, then dictionary
+directory, prints the canonical global procedure and exact local orientation, then dictionary
 and proof results. Hooks no longer read leaf bodies or inject project orientation.
 OpenCode still requires restart after installed plugin/context changes.
 

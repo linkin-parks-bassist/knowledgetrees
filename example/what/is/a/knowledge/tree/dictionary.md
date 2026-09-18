@@ -1,36 +1,17 @@
 ---
 status: "unverified"
 scope: public knowledge-tree example
-source: "tools/kt dictionary integration tests; fresh Codex SDL2 installation trace supplied by owner, 2026-09-15"
+source: "tools/kt dictionary integration tests; owner stop-word and numeric filtering request, 2026-09-18"
 review_when: Recheck when leaf path rules, root access, kt dict, or live discovery behavior changes.
-updated_at: "2026-09-15T18:06:14+10:00"
+updated_at: "2026-09-18T12:15:05+10:00"
 ---
 
-A knowledge-tree dictionary is the sorted set of useful unique path segments appearing in the final two
-positions of Markdown leaf paths across selected accessible roots. `kt dict` prints
-a single comma-separated line, takes only each leaf path’s final two components, removes the final `.md`,
-preserves hyphenated components, and prints repeated segments only once. It omits segments of two
-characters or fewer and standard grammatical or navigation words such as `a`,
-`to`, `how`, `when`, `what`, and `where`. It reads no leaf bodies and emits no full
-leaf paths.
+A knowledge-tree dictionary is the sorted set of useful unique segments in the final two positions of Markdown leaf paths across selected accessible roots. `kt dict` removes `.md`, preserves meaningful hyphenated and mixed-alphanumeric identifiers, deduplicates globally, and prints one comma-separated line. It reads no leaf bodies and exposes no complete paths.
 
-With no arguments, `kt dict` includes every root currently accessible to kt. Root
-labels or configured canonical root paths restrict the command, for example
-`kt dict local global`. Normal access and force-private rules apply, including to
-registered restricted subtrees inside an allowed root.
+Dictionary filtering is intentionally stronger than lookup filtering. It omits segments of two characters or fewer, segments consisting only of digits, grammatical and navigation words, relational glue such as `about` and `from`, generic action/state words, and knowledge-tree container vocabulary such as `knowledge`, `tree`, `leaf`, `root`, `file`, and `directory`. Normal question lookup keeps its own smaller grammatical set so dictionary compression cannot reduce search recall.
 
-The once-per-session bootstrap runs `kt dict` once. This gives a fresh agent a
-compact vocabulary for later semantic queries without loading unrelated answers or
-a complete tree listing. Dictionary membership indicates only that a segment occurs
-somewhere; it does not reveal a path, establish that a particular leaf exists, or
-replace kt lookup, full reads, evidence review, and proof checks.
+With no arguments, `kt dict` includes every currently accessible root. Root labels or configured canonical paths restrict it, for example `kt dict local global`. Normal access and force-private rules apply, including registered restricted subtrees.
 
-In one live check, a fresh Codex session was asked to install SDL2. It began with
-`kt dict`, queried `what is the package manager` and `how to install packages`, then
-opened `global:how/to/install/packages.md` and
-`global:how/to/obtain/sudo-authorization.md` before running the local proof check.
-It therefore found the intended authorization procedure instead of trying `sudo -n`.
-This demonstrates the complete intended discovery path in one session; it does not
-establish a general success rate. The same observation
-showed that domain-specific global segments increase startup output, motivating
-separate restricted domain roots for knowledge such as Vivado/Vitis procedures.
+`kt init` prints the dictionary after the canonical procedure and exact local orientation. Membership only signals that a potentially informative segment occurs somewhere; it does not reveal a path, prove a leaf exists, or replace lookup, full reads, evidence review, and proof checks.
+
+On the accessible roots measured when the stronger filter was added, output fell from 281 to 185 segments and from 2,811 to 1,991 bytes, a 34.2% segment reduction. Corpus-dependent counts can change as roots and leaf paths change.

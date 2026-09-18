@@ -252,7 +252,7 @@ Agents should add expiry metadata to facts likely to change, while leaving durab
 or non-verifiable knowledge green unless there is a concrete reason for review.
 
 `kt init` performs fresh-session initialization in output-first order: it prints
-the canonical global procedure and exact local orientation/spec/plan/state/next leaves,
+the canonical global procedure and exact local orientation,
 then the accessible dictionary, then the `kt prove --local` result. It fails for
 a missing or incomplete exact local root or a brown final proof check.
 
@@ -411,10 +411,12 @@ scores rank matches, and a miss does not prove knowledge is absent.
 `kt dict` prints the sorted unique vocabulary from the final two segments of leaf paths across
 accessible roots on one comma-separated line. It reads no leaf bodies, emits no
 complete paths, and prints each useful segment once. Segments of at most two
-characters and standard grammar/navigation words are omitted, so an agent can see terms such as `obtain` and `sudo-authorization`
+characters, purely numeric segments, and a broad dictionary-only stop list of
+grammatical, relational, generic action/state, and knowledge-tree container words
+are omitted, so an agent can see terms such as `obtain` and `sudo-authorization`
 without loading a tree listing. Pass root labels or configured canonical root paths
 to restrict the dictionary, for example `kt dict local global`. `kt init` prints it
-once after startup leaves and before the final local proof result.
+once after the procedure and orientation and before the final local proof result.
 
 Question prefixes make the directories active search boundaries:
 `kt where is vivado` walks `where/is/` and returns the exact leaf if present.

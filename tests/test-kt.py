@@ -35,6 +35,10 @@ def main():
         (global_root / "how/to/recover.md").write_text("Recover with amber diagnostics.\n")
         (global_root / "how/to/obtain").mkdir(parents=True)
         (global_root / "how/to/obtain/sudo-authorization.md").write_text("Use the approved procedure.\n")
+        (global_root / "what/about").mkdir(parents=True)
+        (global_root / "what/about/from.md").write_text("Dictionary stop-word fixture.\n")
+        (global_root / "what/is").mkdir(parents=True, exist_ok=True)
+        (global_root / "what/is/2026.md").write_text("Numeric dictionary fixture.\n")
         (global_root / ".tools").mkdir()
         nested = project / "sub/folder"
         nested.mkdir(parents=True)
@@ -91,9 +95,10 @@ def main():
         dictionary = run("dict").strip().split(", ")
         assert dictionary == sorted(set(dictionary), key=lambda value: (value.casefold(), value))
         assert {"obtain", "sudo-authorization"}.issubset(dictionary)
-        assert "explain" in dictionary and "knowledge" in dictionary
+        assert "explain" in dictionary and "knowledge" not in dictionary
         assert "add" not in dictionary, "segments above the final two path positions are excluded"
         assert not {"a", "to", "how", "when", "what", "where"}.intersection(dictionary)
+        assert not {"about", "from", "knowledge", "tree", "leaf", "root", "2026"}.intersection(dictionary)
         assert all(len(segment) > 2 for segment in dictionary)
         assert dictionary.count("obtain") == 1 and "sudo-authorization.md" not in dictionary
         local_dictionary = run("dict", "local").strip().split(", ")
@@ -160,29 +165,18 @@ def main():
         assert str(local) in run("roots", cwd=local)
         global_only = run("roots", cwd=base)
         assert str(global_root) in global_only and "local\tallow\t" not in global_only
-        startup = {
-            "what/is/the/spec.md": "Test specification.\n",
-            "what/is/the/plan.md": "Test plan.\n",
-            "what/is/the/state.md": "Test state.\n",
-            "what/is/next.md": "Test next action.\n",
-        }
-        for relative, body in startup.items():
-            path = local / relative
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(body)
         procedure = global_root / "how/to/use/knowledgetrees.md"
         procedure.parent.mkdir(parents=True, exist_ok=True)
         procedure.write_text("Test canonical procedure.\n")
         initialized = run("init")
         labels = ["=== global:how/to/use/knowledgetrees.md ===",
                   "=== local:where/am/i.md ===",
-                  *("=== local:" + relative + " ===" for relative in startup),
                   "=== kt dict ===", "=== kt prove --local ==="]
         assert all(label in initialized for label in labels)
         assert [initialized.index(label) for label in labels] == sorted(
             initialized.index(label) for label in labels)
         assert initialized.index("Test canonical procedure.") < initialized.index("Test orientation.")
-        assert initialized.index("Test orientation.") < initialized.index("Test specification.")
+        assert "Test specification." not in initialized
         assert initialized.rstrip().endswith("brown=0")
         run("init", cwd=base, expected=3)
         run("proof", expected=2)

@@ -270,13 +270,28 @@ The lifecycle feature and green-default correction are installed and published o
 installation, or publication work remains.
 
 `kt init` is implemented in repository source. It emits the canonical global procedure and
-exact local orientation/spec/plan/state/next leaves, then the accessible dictionary,
+exact local orientation, then the accessible dictionary,
 then the local proof result. Startup hooks now inject only a compact instruction to
 run the command; failure reminders and task-end capture review remain unchanged.
 Full CLI, hook, installer, maintenance, proof, and OpenCode adapter regressions pass.
 The source and installed CLI/hook bytes match. An installed `kt init` smoke test
-prints the six labeled startup leaves, dictionary, and final local proof result in
+prints the two labeled startup leaves, dictionary, and final local proof result in
 the requested order with `green=26 yellow=0 brown=0`.
 
 The validated `kt init` and compact startup-hook update is published on `main` as
 `d4f2577`. The installed CLI and hook handler already match that implementation.
+
+The `kt init` payload is now need-to-know only. The canonical procedure was reduced
+from 1,156 to 494 installed words and contains only tree contents/authority,
+maintenance obligations, lifecycle use, and command guidance. `kt init` now prints
+only that global procedure and exact local orientation before dictionary and proof;
+it no longer preloads spec, plan, state, or next. Installed output fell from 177 to
+89 lines and ends with `green=26 yellow=0 brown=0`. Full regressions pass and the
+installed CLI matches source. This refinement is not yet published.
+
+Dictionary filtering now uses a dedicated stop-word set independent of lookup
+scoring and drops purely numeric segments. The final installed output on current
+accessible roots is 184 segments and 1,974 bytes, down from the 281-segment,
+2,811-byte baseline while preserving topical identifiers and mixed/hyphenated names.
+All regressions pass; installation is current and byte-identical to repository source.
+`kt init` is 89 lines/916 words/7,761 bytes and ends green. Publication remains pending.

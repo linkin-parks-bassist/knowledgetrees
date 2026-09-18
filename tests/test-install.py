@@ -136,9 +136,9 @@ def main() -> None:
         assert canonical.stat().st_ino == shared_skill.stat().st_ino == codex_skill.stat().st_ino
         assert "fresh agent session" in canonical.read_text()
         assert "first move of every task" not in canonical.read_text()
-        assert "Default action: new question -> kt first" in canonical.read_text()
-        assert "MUST determine whether a leaf" in canonical.read_text()
-        assert "before the next unrelated tool call" in canonical.read_text()
+        assert "For every new question, use kt first" in canonical.read_text()
+        assert "A miss is not proof of absence" in canonical.read_text()
+        assert "before the next unrelated tool call or completion" in canonical.read_text()
         for name in ("how/to/add/knowledge/leaves.md", "how/to/maintain/a/knowledge/tree.md",
                      "how/should/an/agent/traverse/a/knowledge/tree.md"):
             assert (knowledge / name).is_file()

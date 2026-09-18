@@ -20,14 +20,15 @@ notice. Accuracy/preservation reminders belong in the one-shot review hook.
 
 ## Command and address quick reference
 
-- Initialize: `kt init` prints the canonical global procedure and the exact local
-  orientation/spec/plan/state/next leaves, then the accessible dictionary, then the
+- Initialize: `kt init` prints the canonical global procedure and exact local
+  orientation, then the accessible dictionary, then the
   `kt prove --local` result. It fails for a missing or incomplete exact local root,
   or when the final proof check is brown.
 - Dictionary: `kt dict` prints every useful segment occurring in the final two positions of leaf paths across all
   accessible roots on one sorted, comma-separated line. It reads path names, not
   leaf bodies, and never prints complete paths. Repeated segments appear once;
-  segments of at most two characters and standard grammar/navigation words are omitted. `kt dict local global`
+  segments of at most two characters, purely numeric segments, and broad
+  grammatical/relational/generic/container stop words are omitted. `kt dict local global`
   restricts output to the named configured roots; canonical configured root paths
   are also accepted. Restricted and force-private material remains excluded.
 - Lookup: `kt how to rewrite a knowledge leaf` or `kt find "rewrite knowledge leaf"`.
