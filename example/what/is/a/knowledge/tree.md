@@ -1,10 +1,7 @@
 ---
-scope: public knowledge-tree example
-source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
-review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
-status: unverified
+status: green
+revised_at: "2026-09-18T13:14:39+10:00"
 ---
-Status: Green
 
 A knowledge tree is an authoritative, semantically structured knowledge substrate.
 Directory choices progressively narrow natural-language questions; Markdown leaves

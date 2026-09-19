@@ -1,10 +1,7 @@
 ---
-status: "unverified"
-source: "tools/kt prove access checks; tools/kt-hooks startup policy"
-review_when: Recheck registry, root identities, or policy precedence changes.
-updated_at: "2026-09-13T13:54:52+10:00"
+status: green
+revised_at: "2026-09-13T13:54:52+10:00"
 ---
-Status: Green
 
 Root discovery uses only the exact current-directory tree, the known global
 root, and explicitly registered roots. It never searches parent directories.

@@ -1,10 +1,7 @@
 ---
-status: unverified
-scope: public knowledge-tree procedure
-source: tools/kt; proof-stamp integration tests
-review_when: Recheck governing semantics or CLI behavior changes.
+status: green
+revised_at: "2026-09-18T13:14:39+10:00"
 ---
-Status: Green
 
 Only by explicit opt-in. Normally `kt prove` checks marked assertions without
 establishing whole-leaf correctness. A leaf declaring `verifiable: true` asserts

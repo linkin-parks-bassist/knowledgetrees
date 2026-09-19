@@ -103,9 +103,9 @@ with tempfile.TemporaryDirectory(prefix="kt-bypass-") as temporary:
             child.mkdir()
             assert str(private) not in run("roots", cwd=child)
             run("add", "what is external", "captured", "--root", str(shared))
-            assert f'scope: "{shared}"' in (shared / "what/is/external.md").read_text()
+            assert 'revised_at:' in (shared / "what/is/external.md").read_text()
             run("add", "what is local", "captured", "--local")
-            assert 'scope: "local"' in (local / "what/is/local.md").read_text()
+            assert 'revised_at:' in (local / "what/is/local.md").read_text()
             # Restoring checks keeps force-private and existing root policies intact.
             with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", return_value="yes"), patch("sys.stdout", new=io.StringIO()):
                 assert api["permissions_command"](argparse.Namespace(dangerously_skip_permissions=False, reset=True)) == 0

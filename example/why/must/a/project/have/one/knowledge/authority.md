@@ -1,12 +1,7 @@
 ---
-verified_at: '2026-09-12T15:22:03+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: sanitized adaptation of the canonical global knowledge-tree methodology
-verification: Checked canonical ownership against the installed procedure and clarified that nested roots compose by scope rather than competing authority.
-review_when: Recheck when the knowledge-tree model or operating procedure changes.
+status: green
+revised_at: "2026-09-18T12:22:12+10:00"
 ---
-Status: Green
 
 A project needs one knowledge authority so agents never have to guess whether a
 document, skill, note, or leaf is current. Parallel documentation systems recreate

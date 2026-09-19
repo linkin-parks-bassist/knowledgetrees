@@ -1,14 +1,9 @@
 ---
+status: green
+revised_at: "2026-09-20T09:06:22+10:00"
 name: knowledgetrees-capture
 description: 'Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs.'
-metadata:
-  updated_at: "2026-09-13T13:52:11+10:00"
-  scope: public knowledge-tree example
-  source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
-  review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
-  status: "unverified"
 ---
-Status: Green
 
 Capture an established reusable answer before the next unrelated tool call or
 completion; necessary verification and capture calls are part of resolving it.
@@ -20,8 +15,8 @@ sentence-derived leaf under that branch so queries exclude unrelated answer kind
 If `kt` fails to find information, determine whether the leaf exists through
 alternate keywords and scoped semantic inspection. If it exists, use or rewrite it;
 if it does not, add it at the correct scope. A lexical miss never establishes absence.
-A checked hit needs no duplicate capture. If unresolved, add `status: unresolved`,
-`checked_at`, blocker, and next check rather than inventing a verified answer.
+A checked hit needs no duplicate capture. If unresolved, record the blocker and
+next check in the answer; the new leaf starts `status: yellow`.
 Do not resume surrounding work with an outstanding capture obligation. The agent's
 own uncertainty remains an additional capture signal, not the only trigger.
 
@@ -91,26 +86,26 @@ Splitting and consolidation both require judgment, not mechanical optimization.
 Orientation and repository spine leaves deliberately aggregate coordinated truths;
 do not thin them into catalogs or inflate them with unrelated archive material.
 
-A verified leaf includes `verified_at` (ISO 8601 with timezone), `verified_by`, `scope`,
-`source`, `verification`, and `review_when`. Put them under `metadata` when the leaf
-also serves as `SKILL.md`. Name evidence actually checked and do not overstate it.
-Whole-leaf `verified_at` normally requires independent review of everything in the
-leaf. The narrow exception is `verifiable: true`: use it only when the leaf contains
-exclusively concrete facts and every claim is covered by at least one eligible proof.
-If every declared proof runs and passes, `kt prove` records `verified_at`, clears
+A new leaf gets `status: yellow` and `revised_at` automatically. `kt prove` records
+the evaluated status; `kt check ADDRESS HASH` records `checked_at` after manual review. Put substantive evidence and origin in the
+answer body when they help establish the claim; the path supplies scope and a full
+read supplies the revision hash. See `what/is/knowledge/leaf/metadata.md`.
+Manual `checked_at` requires independent review of everything in the leaf.
+When a leaf contains exclusively concrete facts and eligible proofs cover every
+claim, mark it `verifiable: true` after reviewing that coverage.
+If every declared proof runs and passes, `kt prove` clears
 sticky falsification, and auto-greens the leaf. A missing, malformed, skipped, or
 failing proof makes it brown. The flag asserts complete coverage; proof execution
-cannot detect uncovered prose. An unresolved reusable question instead records
-`status: unresolved`, `checked_at`, blocker, and next check.
+cannot detect uncovered prose. An unresolved reusable question retains a blocker
+and next check and stays yellow until reviewed.
 
 Freshness may additionally use either `expires_at` (ISO 8601 with timezone) or
 `expires_every` (for example `14d`, `2 weeks`, or `two weeks`, measured from
-`verified_at`). An elapsed expiry makes the leaf yellow and unusable until
+`checked_at`; a legacy `verified_at` remains a compatible fallback). An elapsed expiry makes the leaf yellow and unusable until
 re-verification. Use expiry only when a real time-based freshness boundary exists.
-Leaves otherwise default to green, including specs, plans, procedures, opinions,
-and other content that is not actually verifiable. Optionally write `state: green`,
-`state: yellow`, or `state: brown` when an explicit stored lifecycle classification
-is useful. Prefer expiries for factual answers liable to change.
+Legacy leaves without metadata default to green, including specs, plans,
+procedures, opinions, and other content that is not actually verifiable. Prefer
+expiries for factual answers liable to change.
 
 ## Narrowly eligible executable proofs
 

@@ -1,9 +1,7 @@
 ---
-status: unverified
-source: tools/kt; rewrite integration tests
-review_when: Recheck revision checks, metadata or proof handling.
+status: green
+revised_at: "2026-09-20T08:51:45+10:00"
 ---
-Status: Green
 
 Read a leaf normally with `kt open ROOT:PATH` or an exact sentence-prefix query.
 Every full leaf read supplies `Revision: HASH` on stderr for the same bytes returned
@@ -40,9 +38,8 @@ ordinary intervening edits by non-locking writers. This is not transactional aga
 arbitrary direct file writes or power loss. In-place writes preserve hardlinks.
 Access policies apply to reading and rewriting; symlink aliases cannot be rewritten.
 
-Identical submissions are no-ops unless new source is supplied. Changed content
-loses whole-leaf verified_at, verified_by and verification fields and becomes
-unverified (or remains unresolved). updated_at records editing, not verification.
+Identical submissions are no-ops. Changed content loses prior whole-leaf
+verification and check times, sets `revised_at`, and becomes `status: yellow`.
 Unchanged assertion-paragraph plus fenced predicate retains its original proof
 marker, regardless of any replacement timestamp supplied. New or changed proofs
 are reset to `Proof: (verified at _)` and must be checked separately. Rewriting

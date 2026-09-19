@@ -1,14 +1,9 @@
 ---
+status: green
+revised_at: "2026-09-20T08:51:45+10:00"
 name: knowledgetrees-maintenance
 description: 'Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed.'
-metadata:
-  updated_at: "2026-09-14T22:44:44+10:00"
-  status: "unverified"
-  scope: public knowledge-tree example
-  source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
-  review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
-Status: Green
 
 Maintain current truth in place within current authority. Knowledge records facts
 and procedure; it neither grants execution permission nor resurrects superseded
@@ -71,15 +66,16 @@ proof stamps `Proof: (verified at …)`; a failed or timed-out execution stamps
 structure also falsifies the leaf. Legacy `Proof:` markers are accepted. Writes
 preserve hardlink identity; `--no-stamp` makes checks read-only.
 
-`kt prove` always reports green, yellow, and brown totals and prints every non-green
-root-qualified leaf path. Leaves are green by default, including non-verifiable
+`kt prove` always reports green, yellow, and brown totals and prints brown
+root-qualified leaf paths. Leaves are green by default, including non-verifiable
 specifications, plans, procedures, and opinions. Yellow is explicitly marked or
 expired and is a warning; do not use it until re-verification.
 Brown is falsified, malformed, or proof-failing and makes `kt prove` fail because
 the tree is busted.
-Normal evaluation persists the color as `Status: Green|Yellow|Brown` immediately
-after front matter. `--no-stamp` is read-only. Content rewrites remove the prior
-evaluated line until the leaf is checked again.
+Normal evaluation persists `status: green|yellow|brown` in front matter.
+`kt check ADDRESS HASH` records `checked_at` only after manual review.
+`--no-stamp` is read-only. Content rewrites set `status: yellow` and
+`revised_at` until the leaf is checked again.
 
 Stop relying on falsified knowledge. An agent encountering a brown leaf must inspect
 evidence and repair or remove false,
@@ -87,8 +83,7 @@ malformed, or unsafe claims and predicates only within authorized scope. Review 
 whole leaf independently before explicitly clearing `falsified_at`; rerun until
 checks pass. Passing every proof is necessary but not sufficient for an unflagged
 leaf. A reviewed `verifiable: true` leaf is the narrow exception: complete passing
-proofs set `verified_at` and clear falsification automatically, refreshing time on
-later checks only when expiry metadata is present. The verifier
+proofs clear falsification automatically. The verifier
 cannot judge whether the flag's complete-coverage assertion is truthful and does
 not perform agentic repair.
 
@@ -114,7 +109,7 @@ replace agent review. A review with no new knowledge needs no invented leaf.
 Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
 Leaves may declare an ISO-8601 `expires_at` or an `expires_every` duration measured
-from `verified_at`; elapsed expiry makes them yellow until independently re-verified.
+from manual `checked_at`; a legacy `verified_at` remains a compatible fallback. Elapsed expiry makes them yellow until independently re-verified.
 Agents should add expiry metadata when a factual answer is liable to change. Do not
 add expiry merely because content cannot be mechanically or independently verified.
 

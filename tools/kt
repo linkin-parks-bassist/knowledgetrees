@@ -348,7 +348,7 @@ def leaf_parts(text):
     if match:
         body = text[match.end():]
         for key in ("verified_at", "falsified_at", "expires_at", "expires_every", "state", "verifiable",
-                    "status", "blocker", "next_check"):
+                    "status", "blocker", "next_check", "revised_at", "checked_at"):
             value = re.search(rf"^\s*{key}:\s*([^\n]+)", match[1], re.M)
             if value:
                 metadata[key] = value[1].strip().strip("\"'")
@@ -783,15 +783,15 @@ def invalidate_review(text, original, source=None):
         raise ValueError("unclosed front matter")
     header = match[1] if match else ""
     body = text[match.end():] if match else text
-    nested = re.search(r"(?m)^metadata:\s*$", header) is not None
-    indent = "  " if nested else ""
+    nested = False
+    indent = ""
     # Remove old whole-leaf review fields, including indented block continuations.
     lines = header.splitlines()
     cleaned = []
     index = 0
     while index < len(lines):
         line = lines[index]
-        field = re.match(r"^( *)(verified_at|verified_by|verification):", line)
+        field = re.match(r"^( *)(status|verified_at|verified_by|verification|checked_at|updated_at|created_at|scope|source|review_when):", line)
         if field:
             width = len(field[1])
             index += 1
@@ -800,7 +800,16 @@ def invalidate_review(text, original, source=None):
             continue
         cleaned.append(line)
         index += 1
-    header = "\n".join(cleaned)
+    flattened = []
+    inside_metadata = False
+    for line in cleaned:
+        if line.strip() == "metadata:":
+            inside_metadata = True
+            continue
+        if inside_metadata and line and not line.startswith(" "):
+            inside_metadata = False
+        flattened.append(line[2:] if inside_metadata and line.startswith("  ") else line)
+    header = "\n".join(flattened)
 
     def set_field(key, value):
         nonlocal header
@@ -816,14 +825,14 @@ def invalidate_review(text, original, source=None):
             header = "\n".join(fields)
         elif nested:
             header = re.sub(r"(?m)^metadata:\s*$", lambda _: "metadata:\n" + entry, header, count=1)
+        elif key == "status":
+            header = entry + ("\n" + header if header.strip() else "")
         else:
             header = header.rstrip() + ("\n" if header.strip() else "") + entry
 
     status, _ = leaf_parts(text)
-    set_field("status", "unresolved" if status.get("status") == "unresolved" else "unverified")
-    set_field("updated_at", datetime.now().astimezone().isoformat(timespec="seconds"))
-    if source:
-        set_field("source", source)
+    set_field("status", "yellow")
+    set_field("revised_at", datetime.now().astimezone().isoformat(timespec="seconds"))
     # Do not let a submitted replacement silently clear sticky falsification.
     previous, _ = leaf_parts(original)
     if previous.get("falsified_at"):
@@ -847,7 +856,7 @@ def rewrite_leaf(args):
         if snapshot.digest != expected:
             raise RevisionConflict("kt: leaf changed; reread with kt open and merge before rewriting")
         original = original_bytes.decode("utf-8")
-        if replacement == original and not args.source:
+        if replacement == original:
             return 0
         _, old_records = proof_records(original)
         previous = {identity: marker for _, identity, marker in old_records if identity is not None}
@@ -977,8 +986,7 @@ def combine_leaves(args):
         check_leaf_snapshot(source, snapshot,
                             message="kt: combine input changed; no output saved; reread inputs")
     now = datetime.now().astimezone().isoformat(timespec="seconds")
-    metadata = {"status": "unresolved" if unresolved else "unverified", "updated_at": now, "scope": root_identity(require_leaf_root(destination)[1]),
-        "source": "Combined in input order: " + "; ".join(provenance)}
+    metadata = {"status": "yellow", "revised_at": now}
     if falsified:
         metadata["falsified_at"] = falsified
     if unresolved:
@@ -990,7 +998,7 @@ def combine_leaves(args):
         if not args.expect:
             raise ValueError("existing destination requires --expect from kt open --revision")
         rewrite_leaf(argparse.Namespace(path=str(destination), hash=args.expect,
-            contents=content, source=metadata["source"], dry_run=args.dry_run,
+            contents=content, source=None, dry_run=args.dry_run,
             reset_proofs=True))
         if args.dry_run:
             print("Would remove source leaves except the destination.", file=sys.stderr)
@@ -1077,11 +1085,9 @@ def capture(args):
     if not args.unresolved and (args.blocker or args.next_check):
         raise ValueError("--blocker and --next-check require --unresolved")
     now = datetime.now().astimezone().isoformat(timespec="seconds")
-    metadata = {"status": "unresolved" if args.unresolved else "unverified",
-                "created_at": now, "scope": args.scope or root_identity(root),
-                "source": args.source or "caller-supplied answer; evidence not recorded"}
+    metadata = {"status": "yellow", "revised_at": now}
     if args.unresolved:
-        metadata.update(checked_at=now, blocker=args.blocker, next_check=args.next_check)
+        metadata.update(blocker=args.blocker, next_check=args.next_check)
     content = "---\n" + "".join(f"{k}: {json.dumps(v, ensure_ascii=False)}\n"
                                  for k, v in metadata.items()) + "---\n\n" + answer.rstrip() + "\n"
     if args.dry_run:
@@ -1249,18 +1255,60 @@ def remove_lifecycle_status(text):
 
 
 def set_lifecycle_status(text, state):
-    label = state.capitalize()
-    front = re.match(r"\A---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)", text)
-    offset = front.end() if front else 0
-    current = re.match(r"(?:\r?\n)*Status: (Green|Yellow|Brown)[ \t]*(?:\r?\n|$)",
-                       text[offset:])
-    if current and current[1] == label:
-        return text
     text = remove_lifecycle_status(text)
-    front = re.match(r"\A---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)", text)
-    offset = front.end() if front else 0
-    prefix, body = text[:offset], text[offset:].lstrip("\r\n")
-    return prefix + f"Status: {label}\n" + ("\n" + body if body else "")
+    if not text.startswith("---\n"):
+        text = "---\n---\n\n" + text
+    finish = text.find("\n---", 3)
+    if finish < 0:
+        raise OSError("cannot stamp status: unclosed metadata front matter")
+    header = text[4:finish]
+    field = re.compile(r"(?m)^status:.*$")
+    value = f"status: {state}"
+    if field.search(header):
+        header = field.sub(value, header, count=1)
+    else:
+        header = value + ("\n" + header if header else "")
+    tail = text[finish + 4:].lstrip("\r\n")
+    return "---\n" + header + "\n---\n\n" + tail
+
+
+def stamp_checked_at(text, timestamp):
+    finish = text.find("\n---", 3)
+    if finish < 0:
+        raise OSError("cannot stamp check time: unclosed metadata front matter")
+    header = text[4:finish]
+    field = re.compile(r"(?m)^checked_at:.*$")
+    value = f"checked_at: '{timestamp}'"
+    if field.search(header):
+        header = field.sub(value, header, count=1)
+    else:
+        header = header.rstrip() + ("\n" if header.strip() else "") + value
+    return "---\n" + header + text[finish:]
+
+
+def check_leaf(args):
+    """Record an explicit human/agent review of the complete answer."""
+    path = resolve_leaf(args.path, writable=True)
+    if not re.fullmatch(r"[a-f0-9]{64}", args.hash):
+        raise ValueError("revision must be the SHA-256 hash supplied by a leaf read")
+    with path.open("r+") as stream:
+        fcntl.flock(stream, fcntl.LOCK_EX)
+        original = stream.read()
+        if revision(original.encode()) != args.hash:
+            raise RevisionConflict("kt: leaf changed; reread it before recording a check")
+        updated = remove_lifecycle_status(original)
+        updated = re.sub(r"(?m)^\s{0,2}falsified_at:.*(?:\n|$)", "", updated)
+        updated = re.sub(r"(?m)^\s{0,2}verified_at:.*(?:\n|$)", "", updated)
+        updated = set_lifecycle_status(updated, "yellow")
+        updated = stamp_checked_at(updated, datetime.now().astimezone().isoformat(timespec="seconds"))
+        if args.dry_run:
+            sys.stdout.write("".join(difflib.unified_diff(original.splitlines(True),
+                             updated.splitlines(True), fromfile=str(path), tofile=str(path))))
+            return 0
+        stream.seek(0)
+        stream.write(updated)
+        stream.truncate()
+    return 0
 
 
 def mark_leaf_verified(text, timestamp, refresh=False):
@@ -1274,14 +1322,7 @@ def mark_leaf_verified(text, timestamp, refresh=False):
     indent = "  " if nested else ""
     falsified = re.compile(rf"(?m)^{indent}falsified_at:.*(?:\n|$)")
     header = falsified.sub("", header)
-    verified = re.compile(rf"(?m)^{indent}verified_at:.*$")
-    value = f"{indent}verified_at: '{timestamp}'"
-    if verified.search(header) and refresh:
-        header = verified.sub(value, header)
-    elif not verified.search(header) and nested:
-        header = re.sub(r"(?m)^metadata:\s*$", f"metadata:\n{value}", header, count=1)
-    elif not verified.search(header):
-        header = header.rstrip() + "\n" + value
+    header = re.sub(rf"(?m)^{indent}verified_at:.*(?:\n|$)", "", header)
     return "---\n" + header.rstrip() + text[finish:]
 
 
@@ -1384,7 +1425,11 @@ def metadata_datetime(value, field):
     except (TypeError, ValueError) as error:
         raise ValueError(f"{field} must be ISO 8601") from error
     if parsed.utcoffset() is None:
-        raise ValueError(f"{field} must include a timezone")
+        # Legacy metadata often records only a local calendar date. New kt writes
+        # timezone-aware timestamps, but old dates must remain readable.
+        if field == "expires_at" and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            parsed += timedelta(days=1)
+        parsed = parsed.astimezone()
     return parsed
 
 
@@ -1405,21 +1450,25 @@ def lifecycle_state(original, now):
     metadata, _ = leaf_parts(original)
     declared = metadata.get("state", "green").casefold()
     if declared not in LEAF_STATES:
-        return "brown", "state must be green, yellow, or brown"
+        return "yellow", None
     if metadata.get("falsified_at") or declared == "brown":
         return "brown", None
     try:
-        verified = (metadata_datetime(metadata["verified_at"], "verified_at")
-                    if metadata.get("verified_at") else None)
         expires = (metadata_datetime(metadata["expires_at"], "expires_at")
                    if metadata.get("expires_at") else None)
+        checked = metadata.get("checked_at") or metadata.get("verified_at")
+        if expires is not None and now >= expires and metadata.get("checked_at"):
+            manual_checked = metadata_datetime(metadata["checked_at"], "checked_at")
+            if manual_checked >= expires:
+                expires = None
         if metadata.get("expires_every"):
-            if verified is None:
-                return "brown", "expires_every requires verified_at"
+            if checked is None:
+                return "yellow", None
+            verified = metadata_datetime(checked, "checked_at")
             periodic = verified + expiry_duration(metadata["expires_every"])
             expires = min(expires, periodic) if expires else periodic
     except ValueError as error:
-        return "brown", str(error)
+        return "yellow", None
     if declared == "yellow" or (expires is not None and now >= expires):
         return "yellow", None
     return "green", None
@@ -1506,6 +1555,9 @@ def verify_proofs(arguments=None, emit=True):
     now = datetime.now().astimezone()
     for relative, path in selected:
         original, proofs, errors = parse_proofs(path)
+        if not original.strip():
+            states["green"] += 1
+            continue
         metadata, _ = leaf_parts(original)
         raw_verifiable = metadata.get("verifiable", "false").casefold()
         verifiable = raw_verifiable == "true"
@@ -1586,7 +1638,8 @@ def verify_proofs(arguments=None, emit=True):
     if emit:
         print(" ".join(f"{state}={states[state]}" for state in LEAF_STATES))
         for state, address in sorted(addressed, key=lambda item: item[1]):
-            print(f"{state} {address}", file=sys.stderr)
+            if state == "brown":
+                print(f"{state} {address}", file=sys.stderr)
         return 1 if states["brown"] else 0
     return (1 if states["brown"] else 0), states, addressed
 
@@ -1634,7 +1687,8 @@ def prove(arguments):
             non_green.extend(paths)
         print(" ".join(f"{state}={totals[state]}" for state in LEAF_STATES))
         for state, address in sorted(non_green, key=lambda item: item[1]):
-            print(f"{state} {address}", file=sys.stderr)
+            if state == "brown":
+                print(f"{state} {address}", file=sys.stderr)
         return 1 if totals["brown"] else 0
     selected = None
     for index, argument in enumerate(arguments):
@@ -1730,7 +1784,7 @@ def roots_command(args):
             else:
                 print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
         if not PRETTY:
-            print("commands: boot | init | find | QUESTION | open | dict | add | rewrite | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
+            print("commands: boot | init | find | QUESTION | open | dict | add | rewrite | check | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
             return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
@@ -1738,7 +1792,7 @@ def roots_command(args):
         print('kt find "how to add knowledge leaves"')
         print("kt open global:how/to/add/knowledge/leaves.md")
         print("kt prove [directory] [tokens] [--no-stamp]")
-        print('kt add "how to do the thing" "The answer." --source "checked evidence"')
+        print('kt add "how to do the thing" "The answer."')
     return 0
 
 
@@ -1771,8 +1825,13 @@ def command_parser():
     replacing.add_argument("path", help="existing leaf address")
     replacing.add_argument("hash", help="required SHA-256 revision supplied by the leaf read")
     replacing.add_argument("contents", help="complete replacement Markdown; use -- before positional arguments beginning with -")
-    replacing.add_argument("--source", help="actual evidence for the revised answer")
+    replacing.add_argument("--source", help=argparse.SUPPRESS)
     replacing.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
+    checking = commands.add_parser("check", help="record a manual review of the complete leaf")
+    checking.set_defaults(handler=check_leaf)
+    checking.add_argument("path", help="existing leaf address")
+    checking.add_argument("hash", help="required SHA-256 revision supplied by the full read")
+    checking.add_argument("--dry-run", action="store_true")
     for name in ("rm", "mv"):
         maintenance = commands.add_parser(name, help="remove a leaf" if name == "rm" else "move a leaf without overwriting")
         maintenance.set_defaults(handler=relocate_leaf)
@@ -1795,8 +1854,8 @@ def command_parser():
     scope.add_argument("--global", dest="global_root", action="store_true")
     scope.add_argument("--local", "--project", dest="project", action="store_true")
     scope.add_argument("--root", help="existing knowledge root (for example, example/)")
-    adding.add_argument("--scope", help="scope description; defaults to the selected root category")
-    adding.add_argument("--source", help="actual evidence/provenance supplied by the caller")
+    adding.add_argument("--scope", help=argparse.SUPPRESS)
+    adding.add_argument("--source", help=argparse.SUPPRESS)
     adding.add_argument("--dry-run", action="store_true", help="preview path and complete leaf without writing")
     adding.add_argument("--unresolved", action="store_true")
     adding.add_argument("--blocker")

@@ -1,10 +1,7 @@
 ---
-scope: public knowledge-tree example
-source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
-review_when: Recheck when the knowledge-tree model or operating procedure changes.
-status: unverified
+status: green
+revised_at: "2026-09-18T12:22:12+10:00"
 ---
-Status: Green
 
 Semantic atomicity is guidance, not a maintenance rule. A reasoning agent decides in
 context whether two related pieces of knowledge belong in one leaf or two. Relevant

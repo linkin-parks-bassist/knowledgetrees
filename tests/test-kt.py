@@ -58,7 +58,7 @@ def main():
         captured = local / "how/to/do/the/thing.md"
         assert result == "" and captured.is_file()
         saved = captured.read_text()
-        assert 'status: "unverified"' in saved and 'source: "test evidence"' in saved
+        assert 'status: \"yellow\"' in saved and 'revised_at:' in saved and 'source:' not in saved
         assert "verified_at:" not in saved and "Proof:" not in saved
         assert run("how to do the thing") == saved
         run("add", "how to do the thing", "overwrite", expected=2)
@@ -68,15 +68,15 @@ def main():
         run("add", "where is multi-word tooling", "Here.", "--root", str(global_root),
             "--scope", "public example", "--source", "quoted \"source\"\nwith newline")
         explicit = (global_root / "where/is/multi-word/tooling.md").read_text()
-        assert 'scope: "public example"' in explicit and str(base) not in explicit
-        assert 'source: "quoted \\"source\\"\\nwith newline"' in explicit
+        assert 'revised_at:' in explicit and str(base) not in explicit
+        assert 'source:' not in explicit
         preview = run("add", "when to preview", "Preview first.", "--dry-run")
-        assert 'status: "unverified"' in preview and not (local / "when").exists()
+        assert 'status: \"yellow\"' in preview and not (local / "when").exists()
         run("add", "where is mystery", "Not established.", "--unresolved", expected=2)
         run("add", "where is mystery", "Not established.", "--unresolved",
             "--blocker", "missing evidence", "--next-check", "inspect configuration")
         unresolved = (local / "where/is/mystery.md").read_text()
-        assert 'status: "unresolved"' in unresolved and "checked_at:" in unresolved
+        assert 'status: \"yellow\"' in unresolved and 'blocker:' in unresolved
         for unsafe in ("../escape", "where/is/escape", "where_is_escape", "---", "bad\nquestion"):
             run("add", unsafe, "No.", expected=2)
         run("add", "what is empty", "   ", expected=2)
@@ -216,7 +216,7 @@ def main():
         assert "verified at _" in proof.read_text()
         run("prove", "proven")
         assert "verified at _" in proof.read_text()
-        assert proof.read_text().startswith("Status: Green\n\n")
+        assert proof.read_text().startswith("---\nstatus: green\n")
         proof.write_text("Failing.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
         run("prove", "--no-stamp", "proven", expected=1)
         assert "falsified_at:" not in proof.read_text()

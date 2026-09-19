@@ -1,11 +1,7 @@
 ---
-scope: knowledgetrees repository
-source: "Owner manual refresh preference; local script and inode verification, 2026-09-14"
-review_when: Recheck when repository purpose, layout, or publication state changes.
-status: "unverified"
-updated_at: "2026-09-14T22:46:24+10:00"
+status: green
+revised_at: "2026-09-14T22:46:24+10:00"
 ---
-Status: Green
 
 This is the project knowledge root for the `knowledgetrees` public repository maintained in this working directory.
 

@@ -1,12 +1,9 @@
 ---
-verified_at: '2026-09-12T13:51:10+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: distilled from Superpowers 6.3.0 brainstorming and spec-review methodology
-verification: Compared the leaf with the quarantined specification review loop and the knowledge-tree current-truth rule.
-review_when: Recheck when specification maintenance practice changes.
+status: green
+revised_at: "2026-09-20T08:51:45+10:00"
 ---
-Status: Green
+
+Adapted from Superpowers 6.3.0 (brainstorming and spec-review).
 
 Reread the current specification before editing it. Determine whether new evidence
 changes a governing requirement, resolves an ambiguity, narrows scope, or merely

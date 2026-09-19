@@ -1,10 +1,7 @@
 ---
-status: unverified
-scope: public knowledge-tree example
-source: sanitized adaptation of the canonical global knowledge-tree methodology
-review_when: Recheck when root creation or verifier conventions change.
+status: green
+revised_at: "2026-09-19T23:45:10+10:00"
 ---
-Status: Green
 
 Run `kt init [ORIENTATION]` from the project directory to create the empty local spine. The optional argument supplies literal `where/am/i.md` contents. It refuses to overwrite an existing tree.
 

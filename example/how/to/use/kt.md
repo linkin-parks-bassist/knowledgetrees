@@ -1,11 +1,7 @@
 ---
-status: "unverified"
-scope: public knowledge-tree example
-source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
-review_when: Recheck after changes to the kt CLI or root discovery.
-updated_at: "2026-09-13T13:54:30+10:00"
+status: green
+revised_at: "2026-09-20T08:51:45+10:00"
 ---
-Status: Green
 
 ## Success output policy
 
@@ -50,14 +46,14 @@ Accuracy/preservation reminders belong in the one-shot review hook.
   global knowledge; `--root ROOT` selects another exact accessible tree. Exit 0
   means no selected leaf is brown; `--verbose` supplies diagnostics. Optional filters are separate
   semantic components, e.g. `kt prove --root .knowledge --no-stamp how to use`;
-  every run reports green/yellow/brown totals and prints all yellow/brown addresses.
-  Normal evaluation writes `Status: Green|Yellow|Brown` immediately after leaf front
-  matter; `--no-stamp` preserves bytes.
+  every run reports green/yellow/brown totals and prints brown addresses only.
+  Normal evaluation writes `status` in front matter; `kt check` writes `checked_at`;
+  `--no-stamp` preserves bytes.
   Missing lifecycle state defaults to green, including non-verifiable contents.
   Explicit or expired yellow warns and forbids use pending re-verification; brown fails the command and
   requires diagnosis and repair.
   slash-containing leaf paths are not filters. Multiple tokens are disjunctive.
-- Create: `kt add "what is the result" "Checked answer" --local --source "evidence"`.
+- Create: `kt add "what is the result" "Checked answer" --local`.
   Creation supports `--local`, `--global`, or `--root ROOT`; it refuses existing leaves.
 - Rewrite inline: `kt rewrite ADDRESS HASH "Complete replacement Markdown"`.
   HASH is a required positional revision supplied automatically on stderr by full
@@ -65,6 +61,8 @@ Accuracy/preservation reminders belong in the one-shot review hook.
   produce no stdout or stderr (exit 0), without echoing either body. No-ops are
   also silent; dry-run shows the diff and failures report diagnostics. Accuracy and
   preservation reminders belong to the one-shot task-end capture-review hook.
+- Manual check: `kt check ADDRESS HASH` records `checked_at` for the complete
+  answer read at HASH. It does not run proofs; follow it with `kt prove`.
 - Help: `kt COMMAND --help` describes options for that command. Options do not
   automatically transfer between commands. `kt open` takes an address, not `--root`.
 

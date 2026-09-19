@@ -1,12 +1,7 @@
 ---
-verified_at: '2026-09-12T20:16:19+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: sanitized operational recommendations and the canonical knowledge-tree contract
-verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
-review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
+status: green
+revised_at: "2026-09-18T13:44:14+10:00"
 ---
-Status: Green
 
 Behavioral evaluation must use the installed harness alone: give an ordinary task
 without telling the agent to consult knowledge or naming the expected answer paths.

@@ -1,12 +1,9 @@
 ---
-verified_at: '2026-09-12T13:51:10+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: distilled from Superpowers 6.3.0 writing-plans methodology
-verification: Compared the leaf with the quarantined writing-plans skill and retained its reusable planning guidance without its harness-specific workflow.
-review_when: Recheck when implementation-planning practice changes.
+status: green
+revised_at: "2026-09-20T08:51:45+10:00"
 ---
-Status: Green
+
+Adapted from Superpowers 6.3.0 (writing-plans).
 
 Start from an approved specification or a clearly bounded requirement. If the work
 contains independent subsystems, split it into separately useful plans before adding

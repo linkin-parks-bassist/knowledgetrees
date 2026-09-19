@@ -1,9 +1,6 @@
 ---
-status: "unverified"
-scope: knowledgetrees repository
-source: "Authorized Projects parent-folder relocation and focused verification 2026-09-14"
-review_when: Update after material repository changes.
-updated_at: "2026-09-19T23:50:16+10:00"
+status: "yellow"
+revised_at: "2026-09-20T09:08:08+10:00"
 ---
 
 The public repository's operational root is .knowledge/. The visible example/
@@ -231,9 +228,9 @@ as 6bb5098.
 
 Green/yellow/brown lifecycle support is implemented in the repository source.
 `expires_at` accepts timezone-aware ISO 8601; `expires_every` accepts compact or
-plain-English seconds-through-weeks durations measured from `verified_at`. `kt prove`
-aggregates all selected roots, always prints the three totals, prints every yellow
-or brown root-qualified leaf, warns without failing for yellow, and fails for brown.
+plain-English seconds-through-weeks durations measured from manual `checked_at` (with legacy `verified_at` compatibility). `kt prove`
+aggregates all selected roots, always prints the three totals, prints brown
+root-qualified leaves, warns without listing paths for yellow, and fails for brown.
 All regression suites pass. Public guidance and the project spec are updated. Local,
 public-example, and installed-global proof sweeps have no brown leaves. Installation
 is complete and the installed executable matches repository source. The first install
@@ -281,11 +278,10 @@ accessible roots is 184 segments and 1,974 bytes, down from the 281-segment,
 All regressions pass; installation is current and byte-identical to repository source.
 `kt init` is 89 lines/916 words/7,761 bytes and ends green. Publication remains pending.
 
-Normal `kt prove` now writes `Status: Green|Yellow|Brown` immediately after front
-matter for every evaluated leaf. Legacy absence remains green by default, workflow
-`status:` and lifecycle `state:` retain separate meanings, `--no-stamp` remains
-byte-preserving, hardlinks stay attached, and content rewrites remove stale evaluated
-status until the next check. Focused proof/rewrite regressions pass; full validation
+Normal `kt prove` writes `status: green|yellow|brown` in front matter for every
+evaluated leaf. Manual `kt check` alone writes `checked_at`. Legacy absence remains green by default;
+`--no-stamp` remains byte-preserving, hardlinks stay attached, and content rewrites
+set yellow and refresh `revised_at`. Focused proof/rewrite regressions pass; full validation
 and installation now pass. Evaluated project, example, and installed-global trees
 report `green=26`, `green=56`, and `green=104` respectively, with no yellow or brown
 leaves. The installed CLI matches source. Publication remains owner-gated.
@@ -300,7 +296,7 @@ pass. Installation is current, and a direct installed smoke run reached
 Leaves may now opt into complete proof-driven verification with front-matter
 `verifiable: true`. A flagged leaf requires at least one proof and becomes green
 only when every declared proof runs and passes with valid structure; success records
-whole-leaf `verified_at` and clears sticky falsification. Missing, malformed, or
+no leaf-level verification time and clears sticky falsification. Missing, malformed, or
 failing proofs make it brown. Unflagged leaves retain conservative behavior.
 Regression coverage includes auto-green recovery and invalid/empty declarations.
 The full regression suite passes, all three proof scopes are green, and the installed
@@ -324,9 +320,9 @@ proof sweeps report project `green=25`, example `green=55`, and installed global
 
 `kt prove` now avoids steady-state writes. Passing proof timestamps refresh only
 for leaves with expiry metadata; non-expiring markers stay untouched. Sticky
-`falsified_at` retains its first failure time. `Status:` changes only when absent or
-the color changes. Successful `verifiable: true` checks create `verified_at` once
-and refresh it later only for expiring leaves. Failure/recovery transitions still
+`falsified_at` retains its first failure time. `status` records the evaluated color,
+and manual `kt check` records `checked_at`. Successful `verifiable: true` checks
+clear falsification without stamping a leaf-level proof time. Failure/recovery transitions still
 persist necessary evidence. Regression tests assert unchanged mtimes, and complete
 project/example proof sweeps produced no Markdown mtime changes.
 The installed CLI matches source, the global tree remains `green=103`, and a full
@@ -339,3 +335,44 @@ The startup hook now runs `kt boot` and injects its complete output for Codex an
 The `kt init`/`kt boot` split and hook-injected boot output are implemented, validated, and installed. Codex/OpenCode hook, CLI, installer, rewrite, proof-stamp, and privacy regression suites pass. Installed hook smoke output includes both startup leaves and the final green proof summary. Local, example, and installed-global proof sweeps are green; instruction sync reports no drift. Published on `main` as `91fc9af`.
 
 The validated implementation and guidance were committed and pushed to `main` as `91fc9af`. Local installation remains current.
+
+## Compact metadata conversion (2026-09-20)
+
+The active schema is `status` and `revised_at`, with manual `checked_at` set only
+by `kt check ADDRESS HASH`. Optional expiry is measured from manual `checked_at`;
+legacy `verified_at` remains readable as a fallback. `kt prove` updates status and
+individual proof markers without advancing manual check time. It marks expired
+leaves yellow and reports their count without listing yellow paths. Manual
+`kt check` followed by `kt prove` re-greens renewed answers, including one-time
+`expires_at` deadlines already passed. Old-style metadata remains readable.
+
+All eleven existing non-private registered tree roots were converted in two batches. The
+first batch changed 239 leaves; the second changed 832. External backups with
+hash manifests were written before changes. Audit compared every backup hash,
+post-conversion hash, answer body, and device/inode; all matched the intended
+conversion. Second previews found zero remaining conversions. Explicit manual
+check times, including legacy `verified_at` paired with `verified_by`, were
+retained. One registered agent-ecosystem root is absent on disk and force-private
+roots were excluded. Filesystem inventory also found only archived knowledge-tree
+snapshots outside these active roots; those backups were left untouched. The
+one-time converter and its procedure were then removed.
+
+The initial checker could falsely brown a proof-free leaf with date-only
+`checked_at`. It now accepts legacy local dates, parses check time only when
+expiry needs it, and treats malformed freshness as yellow without falsification.
+The CointOS project leaf affected by the earlier false marker was repaired
+without changing its answer or claiming a manual check. Subsequent scoped proof
+sweeps reported green across local, example, user-global, installed CointOS,
+Avnet, pigen, CointOS project, AMD, kestrel, kestrel interface, and kestrel core;
+no yellow or brown leaves. AMD was checked by the built-in proof engine under
+the owner's explicit conversion authorization because its ordinary kt registry
+access remains approval-required. Registry access settings were not changed.
+Final Python and OpenCode regressions pass, instruction sync reports zero drift,
+source and installed kt bytes match, and Git whitespace checks pass. Guidance
+now directs authors to mark an entirely proof-covered factual leaf
+`verifiable: true` after reviewing coverage. Focused tests confirm that passing
+proofs make such a leaf green from yellow or brown and failing proofs make it
+brown. The owner authorized installation, commit, and push. `./install --force`
+completed with 51 reusable leaves; local, public-example, user-global, and
+installed CointOS proof sweeps are green. Installed kt matches source and
+instruction sync reports no drift. The repository commit and push are pending.

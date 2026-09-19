@@ -1,12 +1,7 @@
 ---
-verified_at: '2026-09-12T13:51:10+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: sanitized adaptation of the canonical global knowledge-tree methodology
-verification: Compared the generic answer with the installed knowledgetrees procedure and removed host-specific provenance.
-review_when: Recheck when the knowledge-tree model or operating procedure changes.
+status: green
+revised_at: "2026-09-18T12:22:12+10:00"
 ---
-Status: Green
 
 Before deleting an ingested source, walk each substantive source section and map
 every reusable claim to a leaf that directly contains its answer. Check details, not

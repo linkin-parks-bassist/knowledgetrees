@@ -122,7 +122,7 @@ def main() -> None:
         for branch in ("how/", "what/", "where/", "why/", "does/", "is/"):
             assert branch in orientation.read_text()
         assert canonical.is_file()
-        assert "scope: personal global" in canonical.read_text()
+        assert "revised_at:" in canonical.read_text()
         for leaf in knowledge.rglob("*.md"):
             assert "scope: public knowledge-tree example" not in leaf.read_text()
         assert not (knowledge / "what" / "is" / "the" / "spec.md").exists()
@@ -134,7 +134,7 @@ def main() -> None:
         assert not codex_skill.is_symlink()
         assert canonical.stat().st_dev == shared_skill.stat().st_dev == codex_skill.stat().st_dev
         assert canonical.stat().st_ino == shared_skill.stat().st_ino == codex_skill.stat().st_ino
-        assert "fresh agent session" in canonical.read_text()
+        assert "kt boot" in canonical.read_text()
         assert "first move of every task" not in canonical.read_text()
         assert "For every new question, use kt first" in canonical.read_text()
         assert "A miss is not proof of absence" in canonical.read_text()
@@ -162,7 +162,7 @@ def main() -> None:
         for name, relative in installed_skills.items():
             owner = knowledge / relative
             assert f"name: {name}" in owner.read_text()
-            assert "metadata:\n" in owner.read_text()
+            assert "status:" in owner.read_text()
             assert "  ---" not in owner.read_text(), "frontmatter delimiter must not be nested"
             assert owner.read_text().count("\n---\n") == 1
             assert "kt" in owner.read_text()
@@ -196,9 +196,8 @@ def main() -> None:
         rerun = run(*home_arguments, answer="")
         assert len(json.loads(codex_hooks.read_text())["hooks"]["Stop"]) == 2
         assert "[n/Y]" not in rerun.stdout
-        assert orientation.read_text() == (
-            "Status: Green\n\nLocal environment orientation.\n"
-        )
+        assert orientation.read_text().startswith("---\nstatus: green\n")
+        assert orientation.read_text().endswith("Local environment orientation.\n")
         assert not retired.exists()
         assert agents_path.read_text().count(
             "BEGIN KNOWLEDGETREES BOOTSTRAP"

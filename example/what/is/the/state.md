@@ -1,12 +1,7 @@
 ---
-verified_at: '2026-09-12T20:16:19+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: direct inspection of the example corpus
-verification: Confirmed the visible location, empty orientation starter, session-boundary bootstrap procedure, installer guidance, adapted methodology leaves, and passing verifier sweep.
-review_when: Update after material example changes.
+status: green
+revised_at: "2026-09-18T12:22:12+10:00"
 ---
-Status: Green
 
 The visible example contains the complete curated generic knowledge-tree corpus and
 adapted planning, specification, update, and clarification leaves. Its marked

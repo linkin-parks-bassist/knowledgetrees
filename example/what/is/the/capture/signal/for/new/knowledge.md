@@ -1,12 +1,7 @@
 ---
-verified_at: '2026-09-12T13:51:10+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: sanitized adaptation of the canonical global knowledge-tree methodology
-verification: Compared the generic answer with the installed knowledgetrees procedure and removed host-specific provenance.
-review_when: Recheck when the knowledge-tree model or operating procedure changes.
+status: green
+revised_at: "2026-09-18T12:22:12+10:00"
 ---
-Status: Green
 
 An agent's resolved uncertainty is the capture signal. If the answer was not
 immediately available and a future agent could plausibly ask the same question,

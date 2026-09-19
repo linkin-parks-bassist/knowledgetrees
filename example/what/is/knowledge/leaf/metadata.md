@@ -1,0 +1,10 @@
+---
+status: green
+revised_at: "2026-09-20T09:06:23+10:00"
+---
+
+A leaf's front matter has automated `status: green|yellow|brown` and `revised_at` (timezone-aware ISO 8601). Optional metadata fields are manual `checked_at`, `expires_at` or `expires_every`, and the deliberate `verifiable: true` assertion of complete proof coverage. `kt add`, `kt rewrite`, and `kt combine` set revision time. `kt prove` evaluates status from current proof results but does not change `checked_at`. A content rewrite sets status yellow until the answer is checked again. `--no-stamp` writes nothing.
+
+`kt check ADDRESS HASH` records `checked_at` after an agent has manually reviewed the complete answer from the revision named by HASH. It clears sticky falsification and sets status yellow; run `kt prove` afterward to evaluate current proofs. `expires_at` or `expires_every` is optional for changeable facts. `expires_every` is anchored to `checked_at`; without a manual check it remains yellow. A manual check after a fixed `expires_at` satisfies that one-time deadline. Proof verification times stay on their individual `Proof:` markers. Mark a factual leaf `verifiable: true` when its entire content is covered by eligible proofs, after reviewing that coverage. Passing proofs then clear sticky falsification and make the leaf green. No leaf-level proof verification timestamp is needed. `falsified_at` preserves a failure until independent repair or complete passing proofs on a verifiable leaf.
+
+Use the Markdown answer for substantive evidence, origins, caveats, unresolved blockers, and next checks. Root identity comes from the leaf path. The SHA-256 revision comes from a full read. Do not maintain `scope`, `source`, `review_when`, author, or revision hashes as metadata. Existing legacy fields remain readable during migration, including date-only `checked_at` and `verified_at` as an expiry anchor until the leaf is manually checked. A malformed freshness value requires a yellow review, not sticky falsification.

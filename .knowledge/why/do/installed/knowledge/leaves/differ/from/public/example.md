@@ -1,10 +1,7 @@
 ---
-status: unverified
-scope: knowledgetrees repository
-source: "Read-only installer dry run; example/global body and metadata comparison; Git history, 2026-09-15"
-review_when: Recheck after reconciling installed global knowledge with the public example or changing installer/refresh rendering.
+status: green
+revised_at: "2026-09-18T12:22:12+10:00"
 ---
-Status: Green
 
 The installed global knowledge tree retains original personal formulations from
 before the public repository was created. The repository example contains sanitized

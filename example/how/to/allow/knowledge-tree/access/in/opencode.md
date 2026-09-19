@@ -1,12 +1,7 @@
 ---
-verified_at: '2026-09-12T16:50:03+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: https://opencode.ai/docs/permissions/; installer implementation and integration checks
-verification: Reviewed scoped permission merging and consent-before-write behavior.
-review_when: Recheck after OpenCode permission semantics or installer policy changes.
+status: green
+revised_at: "2026-09-18T12:22:12+10:00"
 ---
-Status: Green
 
 Grant knowledge-tree access only after informed consent. Read contents may reach
 the configured model provider. The installer asks `[n/Y]` before any writes;

@@ -1,13 +1,9 @@
 ---
+status: green
+revised_at: "2026-09-18T13:44:14+10:00"
 name: knowledgetrees-ingestion
 description: 'Use when ingesting legacy knowledge: find existing owners with kt, establish leaf existence on misses, capture absent answers, audit coverage, and retire redundant sources only when authorized.'
-metadata:
-  scope: public knowledge-tree example
-  source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
-  review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
-  status: unverified
 ---
-Status: Green
 
 Treat a legacy document as temporary ingestion material, not a parallel canonical
 knowledge authority. Establish its coverage boundary and inventory only enough to

@@ -1,12 +1,7 @@
 ---
-verified_at: '2026-09-12T14:54:05+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: current example-corpus maintenance state
-verification: Confirmed session-boundary bootstrap semantics are incorporated and no further example-specific content change is pending.
-review_when: Update when an example-specific improvement is approved.
+status: green
+revised_at: "2026-09-18T12:22:12+10:00"
 ---
-Status: Green
 
 No example-specific content change is currently queued. When a generic methodology
 improvement is approved, update its semantic owner and the affected example spine,

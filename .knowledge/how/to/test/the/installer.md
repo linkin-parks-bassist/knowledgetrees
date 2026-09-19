@@ -1,11 +1,7 @@
 ---
-scope: knowledgetrees repository
-source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
-review_when: Recheck when installer behavior, target paths, or test coverage changes.
-status: "unverified"
-updated_at: "2026-09-13T13:54:30+10:00"
+status: green
+revised_at: "2026-09-20T08:51:45+10:00"
 ---
-Status: Green
 
 Run `python3 -B tests/test-install.py`. The test uses temporary target homes and
 checks dry-run behavior, knowledge installation, spine exclusion, empty-orientation
@@ -26,11 +22,10 @@ their installed stamps are retained until the verifier checks them again. Falsif
 markers, sticky leaf falsification flags, prose edits, and other metadata changes
 remain protected content differences. Reinstallation tests cover both cases.
 
-When normal proof evaluation writes lifecycle `Status:` lines, evaluate the public
-source tree before installer idempotency tests. Otherwise the first installation
-stamps destination copies and the second correctly sees them as different from the
-unstamped source. A preserved body-only orientation likewise gains
-`Status: Green` without losing its text.
+Normal proof evaluation writes `status` in front matter. Installer
+idempotency compares answers while allowing successful check-time and green/yellow
+transitions. A preserved body-only orientation gains front matter without losing
+its text.
 
 
 Codex skill enablement must preserve the newline between an `enabled` setting and

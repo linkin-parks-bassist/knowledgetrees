@@ -1,14 +1,9 @@
 ---
+status: green
+revised_at: "2026-09-20T09:06:22+10:00"
 name: knowledgetrees
 description: "Initialize once; use knowledge trees as the sole maintained knowledge source for their scope."
-metadata:
-  status: "unverified"
-  updated_at: "2026-09-18T12:07:21+10:00"
-  scope: public knowledge-tree example and distributable skill
-  source: "Owner request for terse need-to-know bootstrap, 2026-09-18; kt CLI contract"
-  review_when: Recheck when core kt commands or maintenance rules change.
 ---
-Status: Green
 
 Knowledge trees are the sole maintained knowledge source for their scope. Context is temporary working memory. Source files and external documents are evidence, not competing internal knowledge stores. Keep the tree current whenever implementation, requirements, plans, or facts change.
 
@@ -24,9 +19,11 @@ The startup hook runs `kt boot` and injects its complete output at startup and l
 
 For every new question, use kt first unless checked knowledge is already loaded. Use natural question prefixes: `where is`, `how to`, `when to`, `what is`, `why is`/`why does`, `does`, and `is`. A miss is not proof of absence: retry useful terms and inspect plausible paths. Read an existing owner or establish that none exists. Investigate and capture an absent answer before the next unrelated tool call or completion; record unresolved answers with their blocker and next check. Never create a duplicate owner.
 
-Read metadata and relevant proofs before consequential reliance. `kt prove` writes the evaluated color near the top as `Status: Green|Yellow|Brown`; `--no-stamp` is read-only. Green is usable. Yellow requires re-verification before use. Brown is falsified or proof-broken and must be repaired. Add optional expiry metadata to facts liable to change.
+Read metadata and relevant proofs before consequential reliance. `kt prove` writes `status: green|yellow|brown` in front matter; `--no-stamp` is read-only. Green is usable. Yellow requires re-verification before use. Brown is falsified or proof-broken and must be repaired. Add optional expiry metadata to facts liable to change. `revised_at` records the last content change; `kt check ADDRESS HASH` records `checked_at` only after manual review of the whole answer.
 
-Use `verifiable: true` only when a leaf contains exclusively concrete facts and every claim is covered by its proofs. Such a leaf requires at least one proof; when every proof runs and passes, `kt prove` clears sticky falsification, records `verified_at`, and auto-greens it. Missing, malformed, skipped, or failing proofs make it brown. The flag asserts complete proof coverage; it cannot detect uncovered prose.
+Mark a leaf `verifiable: true` when it contains exclusively concrete facts and every claim is covered by its proofs; review that coverage before marking it. Such a leaf requires at least one proof; when every proof runs and passes, `kt prove` clears sticky falsification and auto-greens it. Missing, malformed, skipped, or failing proofs make it brown. The flag asserts complete proof coverage; it cannot detect uncovered prose. Proof timestamps stay on individual markers.
+
+A leaf can state testable facts about repository code and attach `Proof:` commands that run the repository test suite or focused tests. Keep the claimed behavior and the test evidence together; use `verifiable: true` only when those tests cover every factual claim in the leaf.
 
 After substantive repository work, update `what/is/the/state.md` and `what/is/next.md`. Preserve still-valid knowledge when rewriting.
 

@@ -1,12 +1,9 @@
 ---
-verified_at: '2026-09-12T13:51:10+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: distilled from Superpowers 6.3.0 brainstorming methodology
-verification: Compared the leaf with the quarantined clarification workflow and narrowed it to decisions that materially affect outcomes.
-review_when: Recheck when collaborative requirements practice changes.
+status: green
+revised_at: "2026-09-20T08:51:45+10:00"
 ---
-Status: Green
+
+Adapted from Superpowers 6.3.0 (clarification workflow).
 
 Ask for clarification when an unresolved answer could materially change scope,
 behavior, architecture, interfaces, acceptance criteria, risk, or an externally

@@ -73,7 +73,7 @@ true
         run("rewrite", "project:how/to/test.md", token, revised, "--source", "new experimental evidence")
         updated = path.read_text()
         assert "verified_at:" not in updated and "verified_by:" not in updated and "verification:" not in updated
-        assert "  status: \"unverified\"" in updated and "new experimental evidence" in updated
+        assert "status: \"yellow\"" in updated and "revised_at:" in updated
         assert "older-failure" in updated, "sticky falsification cannot be silently cleared"
         assert "Status:" not in updated, "editing invalidates the last evaluated lifecycle status"
         assert updated.count("Proof: (verified at 2026-09-12T12:00:00+00:00)") == 1
@@ -98,7 +98,7 @@ true
         bare.write_text("Old body")
         token = run("open", "project:bare.md", "--revision").stderr.strip().removeprefix("Revision: ")
         run("rewrite", "project:bare.md", token, "New body\n")
-        assert 'status: "unverified"' in bare.read_text()
+        assert 'status: "yellow"' in bare.read_text()
         assert "New body" in bare.read_text()
         fresh = hashlib.sha256(bare.read_bytes()).hexdigest()
         for invalid in ("", "---\nunclosed"):
@@ -118,7 +118,7 @@ true
         assert rewritten.stderr == ""
         assert path.stat().st_ino == inode and alias.read_text() == path.read_text()
         assert "Inline answer\nwith multiple lines" in path.read_text()
-        assert "older-failure" in path.read_text() and "inline evidence" in path.read_text()
+        assert "older-failure" in path.read_text() and "revised_at:" in path.read_text()
         run("rewrite", "project:how/to/test.md", token, "stale", expected=4)
         current = path.read_text()
         token = hashlib.sha256(current.encode()).hexdigest()

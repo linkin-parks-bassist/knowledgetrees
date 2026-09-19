@@ -242,21 +242,23 @@ built into kt; no separate verifier process or installation is needed.
 `kt prove --help` lists options. Before installation, run `tools/kt prove`
 from the checkout. Explicit roots require the same access approval as retrieval.
 
-Every proof run prints aggregate `green=N yellow=N brown=N` counts and every
-non-green `ROOT:relative/path.md`. Leaves are green by default, including specs,
+Every proof run prints aggregate `green=N yellow=N brown=N` counts and the path
+of each brown leaf. Yellow paths are read from leaves when needed. Leaves are green by default, including specs,
 plans, procedures, opinions, and other content that is not mechanically verifiable.
-Optional `state: yellow` marks a leaf for review; elapsed `expires_at` or
+An unreviewed new or revised leaf starts `status: yellow`; elapsed `expires_at` or
 `expires_every` freshness also makes it yellow and unusable until re-verification. Brown means
 falsified, malformed, or proof-failing; it makes the tree busted and must be repaired.
 Agents should add expiry metadata to facts likely to change, while leaving durable
 or non-verifiable knowledge green unless there is a concrete reason for review.
-Normal proof evaluation also writes `Status: Green`, `Status: Yellow`, or
-`Status: Brown` immediately below each leaf front matter. Legacy leaves without the
-line remain green by default until evaluated; `--no-stamp` writes nothing.
+Normal proof evaluation writes `status: green|yellow|brown` in front matter.
+`revised_at` records the last content change; `kt check ADDRESS HASH` records
+`checked_at` after manual review. Legacy leaves without
+metadata remain green by default until evaluated; `--no-stamp` writes nothing.
 
-A leaf containing only concrete, fully proved facts may declare `verifiable: true`.
+A leaf containing only concrete facts whose every claim is covered by eligible proofs
+should declare `verifiable: true` after that coverage has been reviewed.
 It must contain at least one eligible proof. If every proof runs and passes,
-`kt prove` records `verified_at`, clears sticky falsification, and auto-greens the
+`kt prove` clears sticky falsification and auto-greens the
 leaf. Missing, malformed, skipped, or failed proofs make it brown. The author is
 responsible for ensuring every claim is covered; the flag cannot detect uncovered
 prose.
@@ -284,13 +286,13 @@ that the marked predicates passed—not that every unproved statement is true.
 Passing proof timestamps refresh only for leaves with expiry metadata; non-expiring
 leaves keep their existing markers unchanged. Failed proofs receive
 `Proof: (falsified at …)` and set the leaf's sticky `falsified_at` once rather than
-churning it on every sweep. `Status:` is written only when absent or changed.
+churning it on every sweep. `status` records the current evaluated color.
 Unflagged leaves require independent review to clear falsification:
 even if every proof later passes, the leaf remains falsified. Passing every proof is
 necessary but not sufficient for an unflagged leaf. A reviewed `verifiable: true`
 declaration asserts complete coverage; only then may all passing proofs clear
-falsification and set whole-leaf `verified_at`. Later successful checks refresh it
-only for expiring leaves. The verifier cannot independently
+falsification. Manual whole-leaf review is recorded by `kt check ADDRESS HASH`
+as `checked_at`; only that time anchors recurring expiry. The verifier cannot independently
 infer whether every statement is covered. Use `--no-stamp` for a read-only check.
 
 To check the public example, first approve its root in your own terminal:
@@ -454,20 +456,20 @@ with `--min-coverage`. Exact-path reads and explicit branch listing remain disti
 Capture a new answer in one call:
 
 ```sh
-kt add "how to prepare the demo" "Run the project's documented demo command." --source "checked project instructions"
+kt add "how to prepare the demo" "Run the project's documented demo command."
 ```
 
 `kt capture` works too. The full question becomes `how/to/prepare/the/demo.md`.
 Capture defaults to the session directory’s project tree, otherwise global; select `--global`,
-`--project`, or `--root example` explicitly. Use `--scope` for a scope description,
+`--project`, or `--root example` explicitly. Use the answer body for source evidence,
 `--dry-run` to preview, or `-` as the answer to read multiline Markdown from stdin.
 Existing leaves are protected: read their owner and carry its hash into rewrite,
 preserving still-valid knowledge.
-New leaves receive a creation timestamp and `status: unverified`, not an invented
+New leaves receive `revised_at` and `status: yellow`, not an invented
 verification claim. Capture neither executes nor manufactures proofs. Independently
 review the whole answer and check eligible proofs before relying on it.
 For unresolved answers, add `--unresolved --blocker "missing evidence" --next-check
-"specific next investigation"`; the record receives a separate checked timestamp.
+"specific next investigation"`; the record remains yellow until checked.
 
 The agent default is **new question → `kt` first**, unless adequately checked
 knowledge is already loaded. If `kt` does not find the information, the agent must
@@ -729,7 +731,7 @@ policy/discovery work on misses while keeping new invocations fresh.
 ## Success output policy
 
 Under normal operation, silence = success and success = silence, following kt
-prove. Successful create/rewrite/remove/move/combine/register operations and
+prove. Successful create/rewrite/check/remove/move/combine/register operations and
 identical no-ops emit no stdout or stderr; check exit 0. Access/permissions changes
 retain required consent prompts and disclosures, without post-save receipts.
 Reads, searches, help, policy inspection, dry-run previews and explicitly verbose
@@ -753,8 +755,8 @@ kt rewrite local:how/to/build.md HASH 'Complete revised Markdown'
 There is no rewrite --expect option. If the leaf changed since the read, rewrite
 exits 4 without writing; reread and merge. A matching hash confirms unchanged
 contents, rather than measuring read recency. Keep the original in context and
-preserve still-valid knowledge. Contents may include literal newlines. --source
-records evidence and --dry-run previews the diff. Quote shell arguments correctly;
+preserve still-valid knowledge. Contents may include literal newlines. Put evidence
+in the answer; --dry-run previews the diff. Quote shell arguments correctly;
 operating-system argument size limits apply.
 
 Successful rewrites and identical no-ops produce no stdout or stderr; exit 0
@@ -762,6 +764,13 @@ signals success. Neither body is echoed. Dry-run still shows the diff and failur
 report diagnostics.
 The one-shot task-end capture-review hook carries the accuracy and preservation
 reminder once per work cycle. Mandatory proof checks remain intact.
+
+After manually reviewing the complete answer from a full read, record that review
+with `kt check ADDRESS HASH`. This sets `checked_at` and leaves status yellow until
+`kt prove` evaluates current proofs. Proof runs never advance manual check time.
+
+Old metadata continues to work without conversion. Empty orientation leaves
+remain empty.
 
 Rewrite preserves hardlinks, invalidates whole-leaf review, and resets new or
 changed proof stamps. It does not execute proofs or clear sticky falsification.

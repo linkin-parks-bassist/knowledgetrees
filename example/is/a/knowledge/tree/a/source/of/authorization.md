@@ -1,10 +1,7 @@
 ---
-status: unverified
-scope: public knowledge-tree procedure
-source: canonical knowledge-tree procedure; governing permission contract
-review_when: Recheck governing semantics or CLI behavior changes.
+status: green
+revised_at: "2026-09-18T12:22:12+10:00"
 ---
-Status: Green
 
 No. Knowledge records facts and procedures; it does not grant access, execution,
 or publication authority. Current user authorization and higher-authority

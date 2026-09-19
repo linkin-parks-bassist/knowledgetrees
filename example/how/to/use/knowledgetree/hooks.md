@@ -1,12 +1,7 @@
 ---
-status: unverified
-updated_at: '2026-09-12T12:34:09+00:00'
-scope: public knowledge-tree example
-source: repository handler and installer; official Codex hooks, OpenCode plugins, and GitHub Copilot hooks documentation
-verification: Tested diagnostic heuristics, explicit status precedence, failure bookkeeping, one-shot review, and retirement of the managed pre-tool wrapper. Live unwrapped diagnostic output delivered failure guidance; other harness model adoption remains unconfirmed.
-review_when: Recheck after harness hook-schema or lifecycle changes.
+status: green
+revised_at: "2026-09-12T12:34:09+00:00"
 ---
-Status: Green
 
 Install failure-triggered lookup/capture reminders and one-shot task-end capture
 reviews with the knowledge-tree installer. For an existing root, use

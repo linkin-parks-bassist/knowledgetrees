@@ -1,12 +1,9 @@
 ---
-verified_at: '2026-09-12T13:51:10+10:00'
-verified_by: codex /root
-scope: public knowledge-tree example
-source: distilled from Superpowers 6.3.0 brainstorming methodology
-verification: Compared the leaf with the quarantined brainstorming skill and retained its reusable specification guidance without mandatory ceremony.
-review_when: Recheck when specification practice changes.
+status: green
+revised_at: "2026-09-20T08:51:45+10:00"
 ---
-Status: Green
+
+Adapted from Superpowers 6.3.0 (brainstorming).
 
 First establish whether the proposed work is cohesive enough for one specification.
 If it spans independent systems, separate them and specify the first useful slice.

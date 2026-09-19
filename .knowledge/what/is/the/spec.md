@@ -1,11 +1,7 @@
 ---
-scope: knowledgetrees repository
-source: "Owner all-scales requirement and checked source/install edits, 2026-09-14"
-review_when: Recheck when the requested contents or publication workflow changes.
-status: "unverified"
-updated_at: "2026-09-19T23:48:03+10:00"
+status: green
+revised_at: "2026-09-20T08:51:45+10:00"
 ---
-Status: Green
 
 The repository must be a local Git repository connected to its intended public
 GitHub repository. It must contain:
@@ -51,8 +47,8 @@ when the leaf has expiry metadata. A failed proof records
 metadata whose original timestamp does not churn. Unflagged leaves require independent agent review to clear
 it, and passing proofs alone never establishes whole-leaf validation. A reviewed
 `verifiable: true` declaration opts a fully proof-covered factual leaf into automatic
-`verified_at` creation, falsification clearing, and expiry-driven refresh when every
-proof runs and passes. Status lines change only when absent or the evaluated color changes.
+falsification clearing when every proof runs and passes. Evaluation writes `status`
+in front matter; an explicit `kt check ADDRESS HASH` records manual `checked_at`.
 Keep legacy markers compatible, support read-only checking, preserve hardlinks,
 and leave agentic knowledge repair outside the verifier's scope.
 
@@ -66,13 +62,23 @@ re-verifying them. Agents should optionally add expiry metadata to factual knowl
 liable to change. Brown means
 the leaf is falsified, malformed, or has a failing proof; the tree is busted and an
 agent encountering it must diagnose and repair it. Every `kt prove` run prints
-aggregate green/yellow/brown counts and every non-green root-qualified path. Yellow
+aggregate green/yellow/brown counts and every brown root-qualified path. Yellow
 is a warning; brown makes the command fail.
-Normal evaluation writes `Status: Green`, `Status: Yellow`, or `Status: Brown`
-immediately after each leaf front matter. This generated body line is distinct from
-workflow `status:` and explicit lifecycle `state:` metadata. Legacy absence remains
-compatible and defaults green; `--no-stamp` is read-only. Rewriting content removes
-the prior evaluated line until the next proof run. Writes preserve hardlinks.
+Normal evaluation writes `status: green|yellow|brown` in front matter.
+`kt check ADDRESS HASH` sets timezone-aware `checked_at` after manual review.
+An elapsed expiry makes the leaf yellow without listing its path in routine proof
+output. A manual check renews a recurring expiry or satisfies a passed one-time
+deadline.
+`kt add`, `kt rewrite`, and `kt combine` set
+`revised_at` and start new or changed answers as yellow. Legacy absence remains
+compatible and defaults green; `--no-stamp` is read-only. Writes preserve
+hardlinks. Optional `falsified_at`, `verifiable`, and expiry fields
+retain their verification and freshness roles. Scope comes from the path; evidence
+and source belong in the answer. Do not require manual author, provenance,
+review conditions, or revision hashes in metadata. A full read supplies its hash.
+Legacy date-only check times remain readable. An invalid freshness value makes
+the leaf yellow for review; it must not create sticky falsification, especially
+on a leaf with no proofs.
 
 Every repository leaf must be suitable for public release: it must not name the
 repository owner as an individual, expose home-directory identifiers, or include
@@ -197,11 +203,11 @@ Bare kt prove checks all accessible roots. Provide `kt prove --local` for only t
 exact current-directory tree and `kt prove --global` for only global knowledge;
 retain --root ROOT for another exact accessible tree. Fresh-session bootstrap uses
 --local to keep mandatory startup verification bounded. All modes report lifecycle
-counts and non-green paths while retaining access/force-private enforcement and proof semantics.
+counts and brown paths while retaining access/force-private enforcement and proof semantics.
 
 Support optional Boolean front-matter `verifiable: true` for leaves containing only
 concrete facts whose every claim is proof-covered. Require at least one eligible
 proof. If all proofs execute and pass with valid structure, clear sticky
-falsification, set whole-leaf `verified_at`, and evaluate green. Missing, malformed,
+falsification and evaluate green without stamping a leaf-level proof time. Missing, malformed,
 skipped, or failing proofs evaluate brown. Unflagged leaves retain conservative
 behavior: passing proofs alone never verify the whole leaf.

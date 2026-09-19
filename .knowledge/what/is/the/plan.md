@@ -1,11 +1,7 @@
 ---
-status: "unverified"
-scope: knowledgetrees repository
-source: "Owner sole kt prove requirement; validated installation and tests"
-review_when: Update when task scope or completion changes.
-updated_at: "2026-09-13T13:56:19+10:00"
+status: green
+revised_at: "2026-09-20T08:51:45+10:00"
 ---
-Status: Green
 
 The original knowledge-first installation/publication, proof stamping, retrieval,
 hooks, root-access registry, and standalone rewrite work is complete. The
@@ -40,7 +36,7 @@ The owner authorized commit and push of the complete validated follow-up on
 2026-09-15. Installation and all final checks are complete; publish the commit.
 
 11. [x] Define green/yellow/brown leaf lifecycle states and expiry metadata.
-12. [x] Aggregate lifecycle counts and print every non-green address from `kt prove`.
+12. [x] Aggregate lifecycle counts and print brown addresses from `kt prove`.
 13. [x] Enforce yellow non-use and mandatory brown repair in agent guidance.
 14. [x] Run the full regression/proof suite and install the validated update. Publish only with owner authorization.
 15. [x] Correct the default so absent lifecycle metadata is green and only explicit yellow or elapsed expiry requires re-verification.

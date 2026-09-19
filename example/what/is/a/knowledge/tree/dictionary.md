@@ -1,11 +1,7 @@
 ---
-status: "unverified"
-scope: public knowledge-tree example
-source: "tools/kt dictionary integration tests; owner stop-word and numeric filtering request, 2026-09-18"
-review_when: Recheck when leaf path rules, root access, kt dict, or live discovery behavior changes.
-updated_at: "2026-09-18T12:15:05+10:00"
+status: green
+revised_at: "2026-09-18T12:15:05+10:00"
 ---
-Status: Green
 
 A knowledge-tree dictionary is the sorted set of useful unique segments in the final two positions of Markdown leaf paths across selected accessible roots. `kt dict` removes `.md`, preserves meaningful hyphenated and mixed-alphanumeric identifiers, deduplicates globally, and prints one comma-separated line. It reads no leaf bodies and exposes no complete paths.
 
