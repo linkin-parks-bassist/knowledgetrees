@@ -6,6 +6,7 @@ source: sanitized adaptation of the canonical global knowledge-tree methodology
 verification: Compared the generic answer with the installed knowledgetrees procedure and removed host-specific provenance.
 review_when: Recheck when the knowledge-tree model or operating procedure changes.
 ---
+Status: Green
 
 A knowledge tree is not an index because following a leaf to a large document merely
 defers the expensive retrieval problem. The leaf itself must answer its semantic

@@ -8,6 +8,7 @@ metadata:
   source: "Owner request for terse need-to-know bootstrap, 2026-09-18; kt CLI contract"
   review_when: Recheck when core kt commands or maintenance rules change.
 ---
+Status: Green
 
 Knowledge trees are the sole maintained knowledge source for their scope. Context is temporary working memory. Source files and external documents are evidence, not competing internal knowledge stores. Keep the tree current whenever implementation, requirements, plans, or facts change.
 
@@ -15,19 +16,24 @@ Trees contain direct Markdown answers at every scale: orientation, specification
 
 ## Start
 
-Run `kt init` once per fresh agent session and again only after genuinely lost initialization or a change of exact project scope. It prints this procedure, the exact local orientation, the accessible path dictionary, and the local proof result. Brown means stop and repair. Retrieve spec, plan, state, next, and other leaves only when the task needs them.
+`kt init [ORIENTATION]` creates a new `.knowledge/` tree in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches and empty spec, plan, state, and next leaves. Its optional argument becomes the literal contents of `where/am/i.md`. It refuses an existing tree.
+
+The startup hook runs `kt boot` and injects its complete output at startup and lifecycle refreshes. Consume it through the final proof summary. If the hook is unavailable, run `kt boot` directly and consume its entire output without truncation. A failed boot requires diagnosis before relying on the tree. It prints this procedure, the exact local orientation, the accessible path dictionary, and the local proof result. Brown means stop and repair. Retrieve spec, plan, state, next, and other leaves only when the task needs them.
 
 ## Retrieve and maintain
 
 For every new question, use kt first unless checked knowledge is already loaded. Use natural question prefixes: `where is`, `how to`, `when to`, `what is`, `why is`/`why does`, `does`, and `is`. A miss is not proof of absence: retry useful terms and inspect plausible paths. Read an existing owner or establish that none exists. Investigate and capture an absent answer before the next unrelated tool call or completion; record unresolved answers with their blocker and next check. Never create a duplicate owner.
 
-Read metadata and relevant proofs before consequential reliance. Green is usable. Yellow requires re-verification before use. Brown is falsified or proof-broken and must be repaired. Add optional expiry metadata to facts liable to change.
+Read metadata and relevant proofs before consequential reliance. `kt prove` writes the evaluated color near the top as `Status: Green|Yellow|Brown`; `--no-stamp` is read-only. Green is usable. Yellow requires re-verification before use. Brown is falsified or proof-broken and must be repaired. Add optional expiry metadata to facts liable to change.
+
+Use `verifiable: true` only when a leaf contains exclusively concrete facts and every claim is covered by its proofs. Such a leaf requires at least one proof; when every proof runs and passes, `kt prove` clears sticky falsification, records `verified_at`, and auto-greens it. Missing, malformed, skipped, or failing proofs make it brown. The flag asserts complete proof coverage; it cannot detect uncovered prose.
 
 After substantive repository work, update `what/is/the/state.md` and `what/is/next.md`. Preserve still-valid knowledge when rewriting.
 
 ## Commands
 
-- `kt init` — print startup knowledge, dictionary, then local proof result.
+- `kt init [ORIENTATION]` — create the local tree and empty spine; optionally write orientation contents.
+- `kt boot` — print all startup knowledge, dictionary, then local proof result; never truncate or filter it.
 - `kt QUESTION` — retrieve by natural question path; `kt how to _` lists a branch.
 - `kt find WORDS` — broad lexical search across accessible roots.
 - `kt open ADDRESS` — print a leaf verbatim and emit its revision hash.

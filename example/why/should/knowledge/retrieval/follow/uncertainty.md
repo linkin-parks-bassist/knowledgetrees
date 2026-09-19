@@ -6,6 +6,7 @@ source: sanitized adaptation of the canonical global knowledge-tree methodology
 verification: Compared the generic answer with the installed knowledgetrees procedure and removed host-specific provenance.
 review_when: Recheck when the knowledge-tree model or operating procedure changes.
 ---
+Status: Green
 
 Uncertainty identifies the exact distinction an agent needs next, so it is the
 cheapest routing signal through a semantic tree. Following that distinction avoids

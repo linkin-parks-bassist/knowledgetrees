@@ -4,6 +4,7 @@ source: "tools/kt prove access checks; tools/kt-hooks startup policy"
 review_when: Recheck registry, root identities, or policy precedence changes.
 updated_at: "2026-09-13T13:54:52+10:00"
 ---
+Status: Green
 
 Root discovery uses only the exact current-directory tree, the known global
 root, and explicitly registered roots. It never searches parent directories.
@@ -75,7 +76,7 @@ identities, paths, snippets, and rankings. Merely starting in a subdirectory doe
 not expose a protected ancestor. The private root becomes visible/accessible only
 when it is the exact local tree. Explicit blocked reads and capture use generic
 errors without echoing the private path. Registered protected subtrees cannot leak
-through search, symlink aliases, amendment, capture, or broader proof execution.
+through search, symlink aliases, rewrite, capture, or broader proof execution.
 Startup loads the same
 policy and suppresses a force-private global bootstrap outside local scope.
 

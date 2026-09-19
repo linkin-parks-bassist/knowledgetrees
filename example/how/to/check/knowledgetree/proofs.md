@@ -5,6 +5,7 @@ source: "tools/kt built-in proof engine; installer; owner removal of separate ve
 review_when: Recheck proof engine or access enforcement changes.
 updated_at: "2026-09-13T13:54:30+10:00"
 ---
+Status: Green
 
 Use `kt prove` to check marked proofs. Verification is built into kt; it does
 not launch or require a separately installed verifier. Bare `kt prove` checks all accessible roots. Use explicit selectors to narrow it:
@@ -32,23 +33,33 @@ Yellow is a warning and does not by itself change the zero exit status. Brown
 means the tree is busted: the command returns 1. Use `-v`
 or `--verbose` when diagnostic output is needed; verbose mode additionally lists
 every selected leaf, proof result, error, and summary in the former detailed format.
+Normal evaluation also writes `Status: Green`, `Status: Yellow`, or `Status: Brown`
+as a body line immediately after front matter. It is distinct from YAML workflow
+`status:` and explicit lifecycle `state:`.
 The verifier runs only scripts explicitly introduced by
 `Proof:`, checks that tree payload files are Markdown leaves, and treats discovery,
 structure, timeout, or proof failures as failure. A semantic filter matching no
 leaves succeeds as an empty check. Proofs run from the directory containing
 `.knowledge`, with a ten-second default timeout per proof.
 
-Write new markers as `Proof: (verified at _)`. Every successful proof execution
-replaces the placeholder or previous timestamp with ISO 8601 local time including
-timezone. Failed proofs receive `Proof: (falsified at …)`, and a failing proof or
-malformed proof structure sets leaf-level `falsified_at` metadata. Bare `Proof:`
-remains compatible; both verified and falsified markers are rechecked on later runs.
+Write new markers as `Proof: (verified at _)`. Successful proofs refresh their ISO
+8601 check times only on leaves with `expires_at` or `expires_every`; non-expiring
+leaves retain existing passing markers unchanged. Failed proofs receive
+`Proof: (falsified at …)`, and a failing proof or malformed proof structure sets
+sticky leaf-level `falsified_at` once without repeatedly changing its timestamp.
+When a repaired non-expiring proof transitions from falsified to passing, its marker
+returns to `Proof: (verified at _)` without inventing recurring timestamp churn.
+Bare markers remain compatible and every proof is still executed on every check.
 Write failures or concurrent content changes
 make verification fail rather than silently losing an update.
 
-Only proof markers are refreshed. Leaf-level `verified_at` records an independent
-whole-leaf review and is not changed by the verifier. Use `--no-stamp` to execute
-proofs without writing markers. Timestamp writes preserve existing hardlinks.
+Proof markers are updated only for expiry refreshes or outcome transitions. The
+evaluated `Status:` line is written only when absent or changed. Leaf-level
+`verified_at` normally records an independent whole-leaf review; the verifier
+adds it on the first successful `verifiable: true` check and refreshes it on later
+checks only when the leaf has expiry metadata. Use `--no-stamp` to
+execute proofs without writing markers, verification/falsification metadata, or
+lifecycle status. Writes preserve existing hardlinks.
 
 Every selected leaf has one lifecycle state. A missing `state` defaults to green,
 including for specs, plans, procedures, opinions, and other non-verifiable contents.
@@ -68,3 +79,11 @@ proof is necessary but not sufficient for leaf validation; the verifier never
 promotes the whole leaf to verified or repairs its knowledge automatically.
 Such falsified, malformed, or proof-failing leaves are brown. An agent encountering
 one must diagnose and repair it rather than use or ignore it.
+
+Exception: `verifiable: true` declares that the leaf contains only concrete facts
+and that its proofs completely cover every claim. It requires at least one eligible
+proof. When all proofs actually run and pass with valid structure, `kt prove`
+records whole-leaf `verified_at`, clears sticky `falsified_at`, and writes
+`Status: Green`. A missing, malformed, skipped, or failing proof makes the leaf
+brown. Use the flag only after reviewing proof coverage; passing code cannot prove
+an uncovered sentence.

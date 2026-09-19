@@ -6,6 +6,7 @@ source: sanitized adaptation of the canonical global knowledge-tree methodology
 verification: Compared the generic answer with the installed knowledgetrees procedure and removed host-specific provenance.
 review_when: Recheck when the knowledge-tree model or operating procedure changes.
 ---
+Status: Green
 
 The economic goal is to make the next relevant answer cheap for an agent to find and
 load. A successful tree minimizes discovery calls, irrelevant tokens, repeated

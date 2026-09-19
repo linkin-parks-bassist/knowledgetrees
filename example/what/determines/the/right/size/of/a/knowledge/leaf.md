@@ -6,6 +6,7 @@ source: sanitized adaptation of the canonical global knowledge-tree methodology
 verification: Compared the generic answer with the installed knowledgetrees procedure and removed host-specific provenance.
 review_when: Recheck when the knowledge-tree model or operating procedure changes.
 ---
+Status: Green
 
 There is no context-free right leaf size. A reasoning agent should weigh semantic
 relation, likely discovery paths, expected joint use, lifecycle, and retrieval cost.

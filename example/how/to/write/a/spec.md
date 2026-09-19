@@ -6,6 +6,7 @@ source: distilled from Superpowers 6.3.0 brainstorming methodology
 verification: Compared the leaf with the quarantined brainstorming skill and retained its reusable specification guidance without mandatory ceremony.
 review_when: Recheck when specification practice changes.
 ---
+Status: Green
 
 First establish whether the proposed work is cohesive enough for one specification.
 If it spans independent systems, separate them and specify the first useful slice.

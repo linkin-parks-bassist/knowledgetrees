@@ -6,6 +6,7 @@ source: direct inspection of the example corpus
 verification: Confirmed the visible location, empty orientation starter, session-boundary bootstrap procedure, installer guidance, adapted methodology leaves, and passing verifier sweep.
 review_when: Update after material example changes.
 ---
+Status: Green
 
 The visible example contains the complete curated generic knowledge-tree corpus and
 adapted planning, specification, update, and clarification leaves. Its marked

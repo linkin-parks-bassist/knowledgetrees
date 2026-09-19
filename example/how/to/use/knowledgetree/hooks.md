@@ -6,6 +6,7 @@ source: repository handler and installer; official Codex hooks, OpenCode plugins
 verification: Tested diagnostic heuristics, explicit status precedence, failure bookkeeping, one-shot review, and retirement of the managed pre-tool wrapper. Live unwrapped diagnostic output delivered failure guidance; other harness model adoption remains unconfirmed.
 review_when: Recheck after harness hook-schema or lifecycle changes.
 ---
+Status: Green
 
 Install failure-triggered lookup/capture reminders and one-shot task-end capture
 reviews with the knowledge-tree installer. For an existing root, use
@@ -24,7 +25,7 @@ and sticky leaf falsification flags remain protected differences.
 
 The shared installed handler is executable at `~/.knowledge/.tools/kt-hooks`.
 
-Proof: (verified at 2026-09-15T22:29:17+10:00)
+Proof: (verified at 2026-09-18T13:49:02+10:00)
 
 ```sh
 test -x "$HOME/.knowledge/.tools/kt-hooks"
@@ -58,13 +59,12 @@ handler performs no model calls and never runs or writes leaf bodies.
 
 ## Harness contracts and activation
 
-Codex's native `SessionStart` hook returns a compact instruction to run `kt init`
-once; it no longer reads or injects the canonical procedure or project orientation.
-It matches startup, resume, clear, and compact, not ordinary user prompts.
-On resume/compaction, preserve completed initialization and restore only lost
-context or changed scope. Review/trust the new definition in `/hooks` and start
-a fresh session to test it. Protocol tests cover all four lifecycle sources;
-live startup compliance remains unconfirmed. The hook itself does not run proofs.
+Codex's native `SessionStart` hook runs `kt boot` and injects its complete output,
+including the canonical procedure, exact local orientation, dictionary, and final
+local proof summary. It matches startup, resume, clear, and compact, not ordinary
+user prompts. A failed boot is shown as a diagnostic and must be repaired before
+relying on the tree. Review/trust the new definition in `/hooks` and start a fresh
+session to test it. Protocol tests cover all four lifecycle sources.
 
 Codex Bash PostToolUse can supply stdout alone without an exit code. The adapter
 prefers structured failure statuses when available and otherwise uses diagnostic-line
@@ -79,89 +79,26 @@ this is not guaranteed pre-display gating. Use `/hooks` to review and trust new
 definitions: installation does not bypass that requirement.
 [Official Codex hooks](https://learn.chatgpt.com/docs/hooks).
 
-OpenCode's plugin supplies the same compact `kt init` instruction once in each
-assembled model system context. It is also available after compaction; the compaction hook asks the
-summary to preserve completed initialization, checked evidence, and open captures.
-Startup work remains once per fresh session, not per turn. Focused skills still
-apply when triggered. Restart after editing the adapter.
-Adapter tests cover injection, duplicate prevention, request/session availability,
-and compaction context; model compliance still requires an uncoached live test.
+OpenCode's plugin supplies the same complete `kt boot` output in assembled model
+system context. It remains available after compaction; the compaction hook asks the
+summary to preserve checked evidence and open captures. Focused skills still apply
+when triggered. Restart after editing the adapter. Adapter tests cover injection,
+duplicate prevention, request/session availability, and compaction context.
 
-OpenCode's adapter inspects shell result metadata and terminal tool-part events,
-queues failed-tool guidance into subsequent model context, and requests a synthetic
-capture-review prompt on `session.idle`. It preserves the selected agent/model
-when available and guards its follow-up cycle. Restart the harness to load the local
-plugin. After fully quitting OpenCode, relaunch with `opencode --continue` (last
-session) or `opencode --session SESSION_ID` (a specific session). The installed
-plugin applies to resumed sessions even if they predate installation: its hooks
-handle subsequent activity and its bootstrap is added to the next model request.
-It does not replay historical tool calls. If the TUI attaches to a separate
-`opencode serve` or `opencode web` process, restart that backend too; reconnecting
-the terminal alone does not reload its plugins. This follows the documented
-startup loading and CLI resume/attach behavior plus the adapter's per-request
-injection; a live pre-installation-session resume test remains unverified.
-[Official OpenCode CLI](https://opencode.ai/docs/cli/).
-Requests can fail if the session is unavailable or the model cannot run;
-errors are reported, not retried in a loop.
-[Official OpenCode plugins](https://opencode.ai/docs/plugins/).
-
-Copilot CLI uses `postToolUse` for completed results, `postToolUseFailure` for tool
-errors, and `agentStop` for completion review. Command failure hooks return recovery
-context with exit `2`; normal results use `additionalContext`. Start a new CLI
-session to load hooks. User-level hooks can be disabled by the harness's own policy
-or `disableAllHooks`; the installer does not weaken such controls.
-[Official Copilot hooks](https://docs.github.com/en/copilot/reference/hooks-reference).
-
-Only supported tool paths and detectable failure statuses can trigger reminders.
-Missing session ids or broken storage fail open with diagnostics, never by sharing
-state between sessions. This is a local reliability mechanism, not an adversarial
-enforcement boundary. It does not authorize access, edits, escalation, publication,
-or automatic proof execution. Local Copilot CLI installation does not configure
-VS Code or ephemeral Copilot cloud jobs.
-
-## Unwrapped failure detection
-
-Use unwrapped PostToolUse with structured-status precedence and diagnostic-line
-heuristics, plus existing Stop bookkeeping. No pre-tool command rewriting remains;
-legacy `codex before` calls are inert. The installer removes only its managed
-pre-tool definition and preserves unrelated hooks, including mixed hook groups.
-
-Explicit exit status wins, including zero even when expected error text appears.
-Otherwise inspect diagnostic shapes: error/fatal prefixes, compiler error locations,
-Python traceback and exception lines, shell command/syntax/path failures, npm,
-make/CMake/ninja failures, build-failure markers, and common network/file diagnostics.
-Strip ANSI formatting and bound heuristic input to 256 KiB. Plain mentions of
-errors, ordinary warnings, and zero-error summaries do not trigger reminders.
-This is best-effort detection: silent nonzero Bash exits remain undetectable from
-stdout-only transport, and printed or quoted diagnostic examples can false-trigger.
-
-Completed calls and detected failures still update session counters and hashed
-receipts. Repeated callbacks are deduplicated; detected failures arm the one-shot
-Stop review. Ordinary prompts rearm the cycle; review prompts do not loop.
-No raw commands, outputs, or diagnostic bodies are stored. Test coverage includes
-positive/negative diagnostics, success precedence, failure deduplication, stop
-arming, silent-output limits, and preservation/removal during installer migration.
 Source: tools/kt-hooks, install, tests/test-hooks.py, tests/test-install.py;
 current Codex live stdout-only payload shape and the documented heuristic tradeoff.
 
 ## Startup initialization
 
-Codex SessionStart and OpenCode system-context startup provide only the compact
-instruction to run `kt init`. The command, invoked by the agent in the exact working
-directory, prints the canonical global procedure and exact local orientation, then dictionary
-and proof results. Hooks no longer read leaf bodies or inject project orientation.
-OpenCode still requires restart after installed plugin/context changes.
+Codex SessionStart and OpenCode system-context startup run `kt boot` in the exact
+working directory and inject its complete output: canonical global procedure,
+exact local orientation, dictionary, and local proof result. A failed boot is
+reported in context. OpenCode still requires restart after installed plugin changes.
 
 Both harnesses share diagnostic failure detection and Stop/idle bookkeeping.
-OpenCode tests cover metadata-free diagnostics through tool.execute.after and
-terminal tool-part events, explicit exit-zero precedence, and existing one-shot
-review/session isolation. No command wrapping or uncertainty scanner is added.
-Source: tools/kt-hooks; tools/kt-opencode.mjs; tests/test-hooks.py;
-tests/test-opencode-hooks.mjs. Relevant integration checks passed.
-
-Privacy boundary: startup hooks inject no knowledge contents. `kt init` uses only
-the exact current-directory local root for leaf bodies and normal access policy for
-the dictionary; it never searches parent directories for orientation.
+Startup uses the exact current-directory local root for orientation and normal
+access policy for the dictionary; it never searches parent directories. The
+injected contents follow that same scope and access boundary.
 
 ## Review before commit or push
 

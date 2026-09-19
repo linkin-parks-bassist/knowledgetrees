@@ -6,6 +6,7 @@ source: public example design and curated knowledge-tree corpus
 verification: Checked the example branches, intentionally empty orientation starter, public-safety boundary, and packaged skill and verifier interfaces.
 review_when: Recheck when the example's intended coverage changes.
 ---
+Status: Green
 
 The example must visibly demonstrate a knowledge root with `how`, `what`, `where`,
 and `why` branches and an intentionally empty `where/am/i.md` for the adopting user

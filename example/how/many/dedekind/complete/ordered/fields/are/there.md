@@ -6,5 +6,6 @@ source: standard uniqueness theorem for Dedekind-complete ordered fields
 verification: Checked the classification statement up to ordered-field isomorphism.
 review_when: Recheck when a machine-checked proof is added.
 ---
+Status: Green
 
 One.

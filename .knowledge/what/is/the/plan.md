@@ -5,9 +5,10 @@ source: "Owner sole kt prove requirement; validated installation and tests"
 review_when: Update when task scope or completion changes.
 updated_at: "2026-09-13T13:56:19+10:00"
 ---
+Status: Green
 
 The original knowledge-first installation/publication, proof stamping, retrieval,
-hooks, root-access registry, and standalone amendment work is complete. The
+hooks, root-access registry, and standalone rewrite work is complete. The
 repository owner authorizes committing/pushing this session's CLI improvements.
 
 1. [x] Expose verification only through kt prove and compact lookup output with --pretty.
@@ -25,8 +26,8 @@ Retain private operational knowledge in its scope; keep example/ public-safe and
 its orientation empty. Do not automatically enable bypass or supply terminal
 access confirmations. Continuously maintain current state and answer owners.
 
-The owner authorized commit, push and install of the inline rewrite, deprecated
-amend compatibility, local-startup and all-scales guidance updates on 2026-09-15.
+The owner authorized commit, push and install of the inline rewrite,
+local-startup and all-scales guidance updates on 2026-09-15.
 Implementation, regression checks, proof checks and local installation are complete;
 the validated changes are committed for authorized publication.
 
@@ -45,3 +46,7 @@ The owner authorized commit and push of the complete validated follow-up on
 15. [x] Correct the default so absent lifecycle metadata is green and only explicit yellow or elapsed expiry requires re-verification.
 16. [x] Add `kt init` and replace large startup-hook knowledge injection with a compact command instruction.
 17. [x] Harden `kt dict` filtering for low-information dictionary words and purely numeric segments.
+18. [x] Persist evaluated lifecycle color visibly inside each leaf with legacy/read-only compatibility.
+19. [x] Add opt-in `verifiable: true` whole-leaf auto-verification when every declared proof runs and passes.
+20. [x] Remove the deprecated editing command and compatibility leaf; retain `kt rewrite` as the sole editing interface.
+21. [x] Eliminate routine `kt prove` timestamp and status write churn while retaining expiry refreshes and state transitions.

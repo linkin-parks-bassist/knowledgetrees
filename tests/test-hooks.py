@@ -21,16 +21,29 @@ def main():
     assert "Ensure rewritten knowledge is accurate and no still-valid knowledge was lost." in handler_api["REVIEW"]
     assert "lost. check." not in handler_api["REVIEW"]
     handle = handler_api["handle"]
-    for harness in ("codex", "opencode"):
-        for source in ("startup", "resume", "clear", "compact"):
-            result, code = handle(harness, "start", {"source": source})
-            assert code == 0
-            context = (result["hookSpecificOutput"]["additionalContext"]
-                       if harness == "codex" else result["additionalContext"])
-            assert "run `kt init` once" in context
-            assert "where/am/i.md" not in context
-            assert "kt roots" not in context
-            assert "verified_by:" not in context
+    with tempfile.TemporaryDirectory(prefix="kt boot hook test ") as temporary:
+        root = Path(temporary)
+        global_root = root / "global"
+        (global_root / "how/to/use").mkdir(parents=True)
+        (global_root / "how/to/use/knowledgetrees.md").write_text("Canonical procedure fixture.\n")
+        (root / "config.json").write_text(json.dumps({"roots": {"global": {"path": str(global_root), "access": "allow"}}}))
+        project = root / "project"
+        (project / ".knowledge/where/am").mkdir(parents=True)
+        (project / ".knowledge/where/am/i.md").write_text("Project orientation fixture.\n")
+        with patch.dict(os.environ, {"KT_BOOT_CLI": str(REPOSITORY / "tools/kt"),
+                                  "KT_GLOBAL_ROOT": str(global_root),
+                                  "KT_CONFIG": str(root / "config.json")}):
+            for harness in ("codex", "opencode"):
+                for source in ("startup", "resume", "clear", "compact"):
+                    result, code = handle(harness, "start", {"source": source, "cwd": str(project)})
+                    assert code == 0
+                    context = (result["hookSpecificOutput"]["additionalContext"]
+                               if harness == "codex" else result["additionalContext"])
+                    assert "Canonical procedure fixture." in context
+                    assert "Project orientation fixture." in context
+                    assert context.rstrip().endswith("brown=0")
+            failed_boot, _ = handle("codex", "start", {"source": "startup", "cwd": str(root)})
+            assert "Boot failed" in failed_boot["hookSpecificOutput"]["additionalContext"]
     assert handle("codex", "start", {"source": "unexpected"}) == ({}, 0)
     assert handle("copilot", "start", {"source": "startup"}) == ({}, 0)
     failure = runpy.run_path(str(HANDLER))["failed"]

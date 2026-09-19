@@ -6,6 +6,7 @@ source: sanitized adaptation of the canonical global knowledge-tree methodology
 verification: Compared the generic answer with the installed knowledgetrees procedure and removed host-specific provenance.
 review_when: Recheck when the knowledge-tree model or operating procedure changes.
 ---
+Status: Green
 
 A migration has failed if monolithic documents remain necessary, leaves mainly point
 to those documents, a whole document is copied into another leaf, multiple knowledge

@@ -148,7 +148,7 @@ def main() -> None:
         agents = agents_path.read_text()
         assert "Existing user instructions" in agents
         assert agents.count("BEGIN KNOWLEDGETREES BOOTSTRAP") == 1
-        assert "fresh agent session" in agents
+        assert "startup hook runs `kt boot`" in agents
         assert "New question -> `kt` first" in agents
         assert "determine whether a leaf exists" in agents
         assert "first move of every task" not in agents
@@ -190,10 +190,16 @@ def main() -> None:
         assert permissions["edit"][str(target_home / ".agents") + "/**"] == "ask"
 
         orientation.write_text("Local environment orientation.\n")
+        retired = knowledge / "how/to/amend/a/knowledge/leaf.md"
+        retired.parent.mkdir(parents=True, exist_ok=True)
+        retired.write_text("Retired compatibility guidance.\n")
         rerun = run(*home_arguments, answer="")
         assert len(json.loads(codex_hooks.read_text())["hooks"]["Stop"]) == 2
         assert "[n/Y]" not in rerun.stdout
-        assert orientation.read_text() == "Local environment orientation.\n"
+        assert orientation.read_text() == (
+            "Status: Green\n\nLocal environment orientation.\n"
+        )
+        assert not retired.exists()
         assert agents_path.read_text().count(
             "BEGIN KNOWLEDGETREES BOOTSTRAP"
         ) == 1

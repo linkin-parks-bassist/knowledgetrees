@@ -5,6 +5,7 @@ review_when: Recheck when repository purpose, layout, or publication state chang
 status: "unverified"
 updated_at: "2026-09-14T22:46:24+10:00"
 ---
+Status: Green
 
 This is the project knowledge root for the `knowledgetrees` public repository maintained in this working directory.
 

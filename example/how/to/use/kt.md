@@ -5,6 +5,7 @@ source: "tools/kt built-in proof engine; installer; owner removal of separate ve
 review_when: Recheck after changes to the kt CLI or root discovery.
 updated_at: "2026-09-13T13:54:30+10:00"
 ---
+Status: Green
 
 ## Success output policy
 
@@ -15,15 +16,19 @@ retain required consent prompts and disclosures, without post-save receipts.
 Reads, searches, help, policy inspection, dry-run previews and explicitly verbose
 proof checks return the requested information. Failures retain diagnostics and
 nonzero exit statuses; silence alone is not sufficient without checking status.
-Deprecated amend retains its legacy stdout for living workers plus its deprecation
-notice. Accuracy/preservation reminders belong in the one-shot review hook.
+Accuracy/preservation reminders belong in the one-shot review hook.
 
 ## Command and address quick reference
 
-- Initialize: `kt init` prints the canonical global procedure and exact local
+- Create: `kt init [ORIENTATION]` creates `.knowledge/` in the current directory with empty canonical branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. The argument, if given, is written literally. Existing trees are preserved.
+
+- Initialize: `kt boot` prints the canonical global procedure and exact local
   orientation, then the accessible dictionary, then the
   `kt prove --local` result. It fails for a missing or incomplete exact local root,
-  or when the final proof check is brown.
+  or when the final proof check is brown. Run it directly and consume all output;
+  never pipe it through `head`, `tail`, a pager, a filter, or any command that
+  truncates or partially captures it. Initialization is incomplete unless the final
+  proof summary is displayed.
 - Dictionary: `kt dict` prints every useful segment occurring in the final two positions of leaf paths across all
   accessible roots on one sorted, comma-separated line. It reads path names, not
   leaf bodies, and never prints complete paths. Repeated segments appear once;
@@ -46,6 +51,8 @@ notice. Accuracy/preservation reminders belong in the one-shot review hook.
   means no selected leaf is brown; `--verbose` supplies diagnostics. Optional filters are separate
   semantic components, e.g. `kt prove --root .knowledge --no-stamp how to use`;
   every run reports green/yellow/brown totals and prints all yellow/brown addresses.
+  Normal evaluation writes `Status: Green|Yellow|Brown` immediately after leaf front
+  matter; `--no-stamp` preserves bytes.
   Missing lifecycle state defaults to green, including non-verifiable contents.
   Explicit or expired yellow warns and forbids use pending re-verification; brown fails the command and
   requires diagnosis and repair.
@@ -58,10 +65,6 @@ notice. Accuracy/preservation reminders belong in the one-shot review hook.
   produce no stdout or stderr (exit 0), without echoing either body. No-ops are
   also silent; dry-run shows the diff and failures report diagnostics. Accuracy and
   preservation reminders belong to the one-shot task-end capture-review hook.
-- Deprecated compatibility: `kt amend` remains supported for existing workers;
-  new work uses rewrite. Legacy syntax with a required revision: `kt open ADDRESS`, then
-  `kt amend ADDRESS --expect HASH --body-file FILE`. HASH is the revision on stderr;
-  FILE contains complete replacement Markdown. Read the deprecated amendment compatibility section first.
 - Help: `kt COMMAND --help` describes options for that command. Options do not
   automatically transfer between commands. `kt open` takes an address, not `--root`.
 

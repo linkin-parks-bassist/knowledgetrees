@@ -6,6 +6,7 @@ source: sanitized adaptation of the canonical global knowledge-tree methodology
 verification: Checked canonical ownership against the installed procedure and clarified that nested roots compose by scope rather than competing authority.
 review_when: Recheck when the knowledge-tree model or operating procedure changes.
 ---
+Status: Green
 
 A project needs one knowledge authority so agents never have to guess whether a
 document, skill, note, or leaf is current. Parallel documentation systems recreate

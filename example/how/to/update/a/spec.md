@@ -6,6 +6,7 @@ source: distilled from Superpowers 6.3.0 brainstorming and spec-review methodolo
 verification: Compared the leaf with the quarantined specification review loop and the knowledge-tree current-truth rule.
 review_when: Recheck when specification maintenance practice changes.
 ---
+Status: Green
 
 Reread the current specification before editing it. Determine whether new evidence
 changes a governing requirement, resolves an ambiguity, narrows scope, or merely

@@ -168,7 +168,7 @@ def main():
         procedure = global_root / "how/to/use/knowledgetrees.md"
         procedure.parent.mkdir(parents=True, exist_ok=True)
         procedure.write_text("Test canonical procedure.\n")
-        initialized = run("init")
+        initialized = run("boot")
         labels = ["=== global:how/to/use/knowledgetrees.md ===",
                   "=== local:where/am/i.md ===",
                   "=== kt dict ===", "=== kt prove --local ==="]
@@ -178,7 +178,22 @@ def main():
         assert initialized.index("Test canonical procedure.") < initialized.index("Test orientation.")
         assert "Test specification." not in initialized
         assert initialized.rstrip().endswith("brown=0")
-        run("init", cwd=base, expected=3)
+        run("boot", cwd=base, expected=3)
+        fresh = base / "fresh"
+        fresh.mkdir()
+        assert run("init", "A new orientation.\n", cwd=fresh) == ""
+        assert (fresh / ".knowledge/where/am/i.md").read_text() == "A new orientation.\n"
+        assert all((fresh / ".knowledge" / branch).is_dir() for branch in
+                   ("how", "what", "where", "why", "does", "is"))
+        assert all((fresh / ".knowledge" / leaf).read_bytes() == b"" for leaf in
+                   ("what/is/the/spec.md", "what/is/the/plan.md",
+                    "what/is/the/state.md", "what/is/next.md"))
+        run("init", cwd=fresh, expected=2)
+        assert (fresh / ".knowledge/where/am/i.md").read_text() == "A new orientation.\n"
+        empty = base / "empty"
+        empty.mkdir()
+        run("init", cwd=empty)
+        assert (empty / ".knowledge/where/am/i.md").read_bytes() == b""
         run("proof", expected=2)
         assert run("prove", "--no-stamp", "leaves") == "green=2 yellow=0 brown=0\n"
         assert run("prove", "--local", "--no-stamp", "leaves") == "green=1 yellow=0 brown=0\n"
@@ -200,7 +215,8 @@ def main():
         assert run("prove", "--no-stamp", "proven") == "green=1 yellow=0 brown=0\n"
         assert "verified at _" in proof.read_text()
         run("prove", "proven")
-        assert "verified at _" not in proof.read_text()
+        assert "verified at _" in proof.read_text()
+        assert proof.read_text().startswith("Status: Green\n\n")
         proof.write_text("Failing.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
         run("prove", "--no-stamp", "proven", expected=1)
         assert "falsified_at:" not in proof.read_text()

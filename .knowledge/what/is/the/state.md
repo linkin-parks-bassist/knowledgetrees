@@ -3,9 +3,8 @@ status: "unverified"
 scope: knowledgetrees repository
 source: "Authorized Projects parent-folder relocation and focused verification 2026-09-14"
 review_when: Update after material repository changes.
-updated_at: "2026-09-14T23:12:16+10:00"
+updated_at: "2026-09-19T23:49:29+10:00"
 ---
-
 The public repository's operational root is .knowledge/. The visible example/
 corpus is distributable methodology and deliberately keeps where/am/i.md empty.
 Project spec/plan/state must not be copied into example/. The owner published
@@ -14,7 +13,7 @@ this repository and authorizes publication of this session's CLI improvements.
 ## CLI and access
 
 kt is a dependency-free, self-contained Python CLI. It handles sentence-prefix
-lookup, ranked keyword search, verbatim reads, capture, revision-checked amendment,
+lookup, ranked keyword search, verbatim reads, capture, revision-checked rewrite,
 leaf removal/movement/coalescing, root registration/access, and built-in proofs.
 Default lookup output is compact plain text; --pretty opts into the human layout.
 Exact questions/open stay verbatim. Lexical coverage is not semantic confidence.
@@ -25,7 +24,7 @@ parents. Ordinary ask/deny/grant policies persist. A user-confirmed persistent
 --dangerously-skip-permissions setting bypasses ordinary restrictions; force-private
 wins over bypass/grants and makes roots invisible/inaccessible outside exact local
 scope. Protected registered subtrees are guarded during lookup, absolute/qualified
-reads, symlinks, capture, amendment, maintenance, proofs, and startup. No bypass
+reads, symlinks, capture, rewrite, maintenance, proofs, and startup. No bypass
 setting has been enabled by the agent.
 
 rm/mv require --expect revisions and support dry-run. mv refuses overwrites,
@@ -75,7 +74,7 @@ That API limit is documented; no boundary blocker or command rewriting is instal
 Diagnostic heuristics can miss silent failures and misread diagnostic examples.
 Live model compliance/resume behavior remains less established than protocol tests.
 
-Regression suites cover CLI, access, bypass/privacy identities, amendment,
+Regression suites cover CLI, access, bypass/privacy identities, rewrite,
 maintenance/coalescing, installer, shared hooks, OpenCode adapter, and the built-in proof engine. All suites passed after the refactor. Read-only proof sweeps passed
 for the project, installed global root, and public example. The CLI and shared hook handler are deployed with identical source bytes; the
 access registry was unchanged. The owner-authorized implementation update was committed and pushed to main
@@ -142,33 +141,18 @@ revision positionally; no rewrite --expect. Conflicts preserve the leaf. Success
 is silent on success and identical no-ops (exit 0), echoing neither body. The existing one-shot
 capture-review hook carries the accuracy/preservation reminder once per work cycle. No-op
 output is brief; dry-run remains a diff. Original contents must be in context
-before editing. Mandatory proof checks remain intact. Deprecated amend retains
-its required --expect syntax and behavior for living workers. Root inventory and
-unrelated-root startup sweeps remain removed. Guidance and README reflect this
-contract. The preceding version was published as f230b4d; this interface update
-is not yet published. Local installation and instruction refresh are complete;
-CLI, amendment/rewrite, access, bypass/privacy, maintenance, installer and harness
-hook tests pass. Project, installed global and public example proof checks pass.
-Evidence: source and regression/proof checks, 2026-09-15.
-
-Legacy amend CLI calls now emit a brief deprecation notice on stderr pointing
-to the updated rewrite procedure. Rewrite/internal combine calls stay free of
-that notice; legacy stdout and behavior are preserved.
-
-The deprecation notice is installed locally with refreshed guidance. Amendment
-and maintenance tests plus project/global proof checks pass; publication remains
-pending alongside the positional-hash rewrite changes.
-
-Silent rewrite and one-shot preservation-reminder changes are installed locally.
-Focused amendment and hook tests plus project/global proof checks pass; the
-follow-up interface work remains uncommitted.
+before editing. Mandatory proof checks remain intact. Root inventory and unrelated-
+root startup sweeps remain removed. Guidance and README reflect this contract. The
+preceding version was published as f230b4d. Local installation and instruction
+refresh are complete; rewrite, access, bypass/privacy, maintenance, installer and
+harness-hook tests pass. Project, installed-global and public-example proof checks
+pass. Evidence: source and regression/proof checks, 2026-09-15.
 
 Normal operation follows kt prove: mutation success/no-ops are silent, with
-requested data/previews, errors and consent prompts retained. Legacy amend
-continues its compatibility stdout plus deprecation notice.
+requested data/previews, errors and consent prompts retained.
 
 The normal-success silence policy is installed locally and reflected in README,
-usage and bootstrap. CLI, amendment, maintenance, access, bypass/privacy and
+usage and bootstrap. CLI, rewrite, maintenance, access, bypass/privacy and
 installer regressions pass; project/global/example proofs pass. Executables match
 source and instruction refresh checks are clean. Follow-up changes are uncommitted.
 
@@ -182,7 +166,7 @@ and restricted subtree exclusion. This work is not yet installed or published.
 
 The dictionary implementation is installed locally. Installed and source output match for the current accessible roots.
 Curated guidance is synchronized; installed executable matches source. CLI,
-access, bypass/privacy, rewrite/amend, maintenance, installer, hook and proof-stamp
+access, bypass/privacy, rewrite, maintenance, installer, hook and proof-stamp
 tests pass. Project, installed-global and public-example proofs pass. Dictionary
 publication remains pending with the other uncommitted follow-up changes.
 
@@ -210,7 +194,7 @@ reload is still needed to clear the warning shown before repair.
 
 
 The owner authorized committing and publishing the complete follow-up. Final
-validation passed for CLI, rewrite/amend, maintenance, access, bypass/privacy,
+validation passed for CLI, rewrite, maintenance, access, bypass/privacy,
 installer, Codex/OpenCode hooks and proof timestamps. Project, installed-global and
 public-example proofs pass. The installed 51-leaf canonical corpus matches current
 rendered repository guidance; Codex TOML parses with 13 skill entries; installed kt
@@ -295,3 +279,60 @@ accessible roots is 184 segments and 1,974 bytes, down from the 281-segment,
 2,811-byte baseline while preserving topical identifiers and mixed/hyphenated names.
 All regressions pass; installation is current and byte-identical to repository source.
 `kt init` is 89 lines/916 words/7,761 bytes and ends green. Publication remains pending.
+
+Normal `kt prove` now writes `Status: Green|Yellow|Brown` immediately after front
+matter for every evaluated leaf. Legacy absence remains green by default, workflow
+`status:` and lifecycle `state:` retain separate meanings, `--no-stamp` remains
+byte-preserving, hardlinks stay attached, and content rewrites remove stale evaluated
+status until the next check. Focused proof/rewrite regressions pass; full validation
+and installation now pass. Evaluated project, example, and installed-global trees
+report `green=26`, `green=56`, and `green=104` respectively, with no yellow or brown
+leaves. The installed CLI matches source. Publication remains owner-gated.
+
+`kt init` is now explicitly indivisible. Canonical procedure, generated AGENTS
+bootstrap, and startup-hook context prohibit piping it through head/tail, pagers,
+filters, truncation, or partial capture; initialization is incomplete until the
+final proof summary is displayed. Hook, OpenCode adapter, installer, and CLI tests
+pass. Installation is current, and a direct installed smoke run reached
+`green=26 yellow=0 brown=0`.
+
+Leaves may now opt into complete proof-driven verification with front-matter
+`verifiable: true`. A flagged leaf requires at least one proof and becomes green
+only when every declared proof runs and passes with valid structure; success records
+whole-leaf `verified_at` and clears sticky falsification. Missing, malformed, or
+failing proofs make it brown. Unflagged leaves retain conservative behavior.
+Regression coverage includes auto-green recovery and invalid/empty declarations.
+The full regression suite passes, all three proof scopes are green, and the installed
+CLI matches repository source.
+
+README, spec, plan, state, next, canonical usage, leaf-creation, proof, maintenance,
+and proof-test guidance now describe the same lifecycle and `verifiable: true`
+contract. Installation is synchronized. A nondeterministic live OpenCode discovery
+command was removed from two personal-global proof sets in favor of their existing
+deterministic topology/configuration evidence; two consecutive installs complete
+with `green=104 yellow=0 brown=0`.
+
+`kt rewrite` is now the sole editing interface. The deprecated command, wrapper,
+legacy output branches, dedicated compatibility leaf, stale guidance, and old test
+name are removed. Internal combine reuses the rewrite handler directly. The
+installer retires an existing installed compatibility leaf and regression coverage
+checks that removal. The full suite passes; deployment and final proof counts are
+complete. Two consecutive installations succeed with 50 reusable leaves. Final
+proof sweeps report project `green=25`, example `green=55`, and installed global
+`green=103`, with no yellow or brown leaves. Installed CLI bytes match source.
+
+`kt prove` now avoids steady-state writes. Passing proof timestamps refresh only
+for leaves with expiry metadata; non-expiring markers stay untouched. Sticky
+`falsified_at` retains its first failure time. `Status:` changes only when absent or
+the color changes. Successful `verifiable: true` checks create `verified_at` once
+and refresh it later only for expiring leaves. Failure/recovery transitions still
+persist necessary evidence. Regression tests assert unchanged mtimes, and complete
+project/example proof sweeps produced no Markdown mtime changes.
+The installed CLI matches source, the global tree remains `green=103`, and a full
+writable global sweep likewise produced no Markdown mtime changes.
+
+The owner changed the CLI contract on 2026-09-19: `kt init` now creates the empty local tree and spine with optional orientation contents; `kt boot` retains the former startup output. Repository code, hooks, bootstrap text, and focused tests have been updated. Publication and local installation remain pending.
+
+The startup hook now runs `kt boot` and injects its complete output for Codex and OpenCode. Failure output is surfaced in context. Documentation and integration tests are being updated before installation/publication.
+
+The `kt init`/`kt boot` split and hook-injected boot output are implemented, validated, and installed. Codex/OpenCode hook, CLI, installer, rewrite, proof-stamp, and privacy regression suites pass. Installed hook smoke output includes both startup leaves and the final green proof summary. Local, example, and installed-global proof sweeps are green; instruction sync reports no drift. Publication is the next step.

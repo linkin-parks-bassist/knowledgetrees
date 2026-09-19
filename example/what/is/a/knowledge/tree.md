@@ -4,6 +4,7 @@ source: "Owner explicit all-scales knowledge requirement; canonical procedure re
 review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 status: unverified
 ---
+Status: Green
 
 A knowledge tree is an authoritative, semantically structured knowledge substrate.
 Directory choices progressively narrow natural-language questions; Markdown leaves
@@ -50,8 +51,9 @@ are not competing internal knowledge stores.
 
 Executable proofs connect eligible atomic factual claims to reality. Their passing
 timestamps do not verify unproved prose. Any failed proof falsifies its leaf; all
-proofs passing is necessary but not sufficient for whole-leaf validation. Independent
-review and explicit repair remain agent responsibilities.
+proofs passing is necessary but not sufficient unless a reviewed `verifiable: true`
+declaration asserts that every claim is covered. Independent review and explicit
+repair remain agent responsibilities for unflagged leaves and proof coverage.
 
 Every leaf is green, yellow, or brown. Green is the default, including for specs,
 plans, procedures, opinions, and other content that is not actually verifiable;

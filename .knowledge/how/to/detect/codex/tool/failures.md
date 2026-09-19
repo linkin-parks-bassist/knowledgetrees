@@ -3,6 +3,7 @@ status: unverified
 source: tools/kt-hooks; install; integration tests; owner request
 review_when: Recheck diagnostic patterns or hook payload changes.
 ---
+Status: Green
 
 Use unwrapped PostToolUse with structured-status precedence and diagnostic-line
 heuristics, plus existing Stop bookkeeping. No pre-tool command rewriting remains;

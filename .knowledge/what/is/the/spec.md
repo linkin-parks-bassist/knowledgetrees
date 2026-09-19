@@ -3,8 +3,9 @@ scope: knowledgetrees repository
 source: "Owner all-scales requirement and checked source/install edits, 2026-09-14"
 review_when: Recheck when the requested contents or publication workflow changes.
 status: "unverified"
-updated_at: "2026-09-14T22:50:12+10:00"
+updated_at: "2026-09-19T23:48:03+10:00"
 ---
+Status: Green
 
 The repository must be a local Git repository connected to its intended public
 GitHub repository. It must contain:
@@ -44,10 +45,14 @@ The two trees have separate ownership. `.knowledge/` is the real operational roo
 for this repository. `example/` is the visible, distributable public specimen and
 must not become a mirror of repository-specific plan or state.
 
-The verifier timestamps individual proof outcomes using `Proof: (verified at …)`
-or `Proof: (falsified at …)`. A failed proof falsifies the whole leaf via sticky
-`falsified_at` metadata; only independent agent review may clear it. Passing all
-proofs never changes leaf `verified_at` or establishes whole-leaf validation.
+The verifier runs every selected proof but refreshes passing proof timestamps only
+when the leaf has expiry metadata. A failed proof records
+`Proof: (falsified at …)` and falsifies the whole leaf via sticky `falsified_at`
+metadata whose original timestamp does not churn. Unflagged leaves require independent agent review to clear
+it, and passing proofs alone never establishes whole-leaf validation. A reviewed
+`verifiable: true` declaration opts a fully proof-covered factual leaf into automatic
+`verified_at` creation, falsification clearing, and expiry-driven refresh when every
+proof runs and passes. Status lines change only when absent or the evaluated color changes.
 Keep legacy markers compatible, support read-only checking, preserve hardlinks,
 and leave agentic knowledge repair outside the verifier's scope.
 
@@ -63,6 +68,11 @@ the leaf is falsified, malformed, or has a failing proof; the tree is busted and
 agent encountering it must diagnose and repair it. Every `kt prove` run prints
 aggregate green/yellow/brown counts and every non-green root-qualified path. Yellow
 is a warning; brown makes the command fail.
+Normal evaluation writes `Status: Green`, `Status: Yellow`, or `Status: Brown`
+immediately after each leaf front matter. This generated body line is distinct from
+workflow `status:` and explicit lifecycle `state:` metadata. Legacy absence remains
+compatible and defaults green; `--no-stamp` is read-only. Rewriting content removes
+the prior evaluated line until the next proof run. Writes preserve hardlinks.
 
 Every repository leaf must be suitable for public release: it must not name the
 repository owner as an individual, expose home-directory identifiers, or include
@@ -95,9 +105,10 @@ full canonical root directory path. Full paths avoid collisions for external tre
 Keep project and registered names as compatibility input aliases. Startup policy
 loading must use the same persistent bypass and force-private rules as the CLI.
 
-Amendment must accept a complete replacement through a file or stdin, require an
-expected content revision, preserve hardlinks and root access policies, invalidate
-stale whole-leaf/proof verification, and work without Git or an interactive editor.
+Rewrite must accept complete replacement Markdown inline, require the positional
+content revision supplied by a full read, preserve hardlinks and root access
+policies, invalidate stale whole-leaf/proof verification, and work without Git or
+an interactive editor.
 
 ## Agent-oriented output
 
@@ -131,7 +142,7 @@ the destination when it is an input. It resets inherited proof stamps and retain
 falsification and unresolved blockers. Source revisions are checked before saving
 and deletion; concurrent edits are retained. Multi-file deletion is not transactional
 and interrupted cleanup may leave source leaves alongside the saved answer.
-Existing destination replacement requires --expect and uses amendment conflict
+Existing destination replacement requires --expect and uses rewrite conflict
 checks/hardlink preservation. Creation refuses overwrites; dry-run writes nothing.
 All inputs and output enforce access and forced privacy.
 
@@ -155,18 +166,14 @@ Echo neither body; success and identical no-ops must produce no stdout or stderr
 reminders in the existing one-shot task-end capture-review hook.
 Retain --source, --dry-run, hardlinks, access controls, concurrent-write checks,
 review invalidation, proof handling and mandatory proof checks. Original contents
-must be in context before editing. Keep deprecated amend's required --expect and
-existing behavior for living workers until they finish.
-
-Legacy amend calls must also emit a brief deprecation notice directing workers
-to updated rewrite guidance; preserve existing stdout and command behavior.
+must be in context before editing. The deprecated `kt amend` command and its
+compatibility procedure must be absent; `kt rewrite` is the sole editing command.
 
 ## Normal success output
 
 Mutation success and no-ops must be silent; requested data, proof lifecycle reports,
 previews/verbose checks, errors and consent
-prompts remain. Preserve legacy amend stdout plus deprecation notice for living
-workers. Exit status remains authoritative; reminders live in one-shot hooks.
+prompts remain. Exit status remains authoritative; reminders live in one-shot hooks.
 
 
 ## Path-segment dictionary
@@ -180,15 +187,9 @@ generic action/state, and knowledge-tree container words. Read no leaf bodies an
 restricted subtree segments. Run kt dict once in fresh-session bootstrap so agents
 receive query vocabulary without unrelated knowledge contents.
 
-## Session initialization
+## Tree creation and session boot
 
-Provide `kt init`. It requires the exact current-directory local root and the
-canonical global procedure plus exact local orientation. It prints those labeled
-verbatim contents first, then the accessible dictionary, then runs and prints
-`kt prove --local`. A missing procedure/orientation or a brown final proof check
-make the command fail. Startup hooks inject only a compact instruction to run it;
-they no longer read or inject procedure/orientation leaf bodies.
-
+Provide `kt init [ORIENTATION]` to create `.knowledge/` in the working directory with empty canonical branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. Optional ORIENTATION is literal file contents. Refuse an existing tree. Provide `kt boot` for the former session startup behavior: canonical global procedure, exact local orientation, dictionary, then local proof result. Startup hooks run boot and inject its complete output, including the final proof summary. A failure is reported in context.
 
 ## Proof root selection
 
@@ -197,3 +198,10 @@ exact current-directory tree and `kt prove --global` for only global knowledge;
 retain --root ROOT for another exact accessible tree. Fresh-session bootstrap uses
 --local to keep mandatory startup verification bounded. All modes report lifecycle
 counts and non-green paths while retaining access/force-private enforcement and proof semantics.
+
+Support optional Boolean front-matter `verifiable: true` for leaves containing only
+concrete facts whose every claim is proof-covered. Require at least one eligible
+proof. If all proofs execute and pass with valid structure, clear sticky
+falsification, set whole-leaf `verified_at`, and evaluate green. Missing, malformed,
+skipped, or failing proofs evaluate brown. Unflagged leaves retain conservative
+behavior: passing proofs alone never verify the whole leaf.

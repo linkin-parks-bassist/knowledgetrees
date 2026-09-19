@@ -15,6 +15,7 @@ try {
   await copyFile(fileURLToPath(new URL("../tools/kt-hooks", import.meta.url)), join(process.env.KT_GLOBAL_ROOT, ".tools/kt-hooks"));
   await copyFile(fileURLToPath(new URL("../tools/kt", import.meta.url)), join(process.env.KT_GLOBAL_ROOT, ".tools/kt"));
   process.env.KT_CONFIG = join(temporary, "access-config.json");
+  await writeFile(process.env.KT_CONFIG, JSON.stringify({ roots: { global: { path: process.env.KT_GLOBAL_ROOT, access: "allow" } } }));
   await mkdir(join(process.env.KT_GLOBAL_ROOT, "how/to/use"), { recursive: true });
   await copyFile(fileURLToPath(new URL("../example/how/to/use/knowledgetrees.md", import.meta.url)),
     join(process.env.KT_GLOBAL_ROOT, "how/to/use/knowledgetrees.md"));
@@ -27,9 +28,10 @@ try {
   const startup = { system: ["existing harness instructions"] };
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);
   assert.equal(startup.system[0], "existing harness instructions");
-  assert.match(startup.system[1], /run `kt init` once/);
-  assert.doesNotMatch(startup.system[1], /kt roots/);
-  assert.doesNotMatch(startup.system[1], /Project orientation fixture/);
+  assert.match(startup.system[1], /Knowledge-tree startup: `kt boot` output follows/);
+  assert.match(startup.system[1], /Project orientation fixture/);
+  assert.match(startup.system[1], /final proof summary/);
+  assert.match(startup.system[1], /global:how\/to\/use\/knowledgetrees.md/);
   assert.doesNotMatch(startup.system[1], /verified_by:/);
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);
   assert.equal(startup.system.length, 2, "no duplicate bootstrap blocks in assembled context");

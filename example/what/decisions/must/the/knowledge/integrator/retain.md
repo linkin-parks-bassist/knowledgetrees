@@ -6,6 +6,7 @@ source: sanitized adaptation of the canonical global knowledge-tree methodology
 verification: Compared the generic answer with the installed knowledgetrees procedure and removed host-specific provenance.
 review_when: Recheck when the knowledge-tree model or operating procedure changes.
 ---
+Status: Green
 
 The knowledge integrator retains responsibility for corpus coverage, semantic branch
 shape, leaf atomicity, relevance, cross-leaf coherence, authority conflicts,

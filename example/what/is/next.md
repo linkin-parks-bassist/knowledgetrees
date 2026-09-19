@@ -6,6 +6,7 @@ source: current example-corpus maintenance state
 verification: Confirmed session-boundary bootstrap semantics are incorporated and no further example-specific content change is pending.
 review_when: Update when an example-specific improvement is approved.
 ---
+Status: Green
 
 No example-specific content change is currently queued. When a generic methodology
 improvement is approved, update its semantic owner and the affected example spine,

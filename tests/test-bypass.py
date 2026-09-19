@@ -88,7 +88,7 @@ with tempfile.TemporaryDirectory(prefix="kt-bypass-") as temporary:
                          ("open", "local:private/missing.md"),
                          ("add", "what is hidden", "new", "--root", str(private)),
                          ("add", "private hidden", "new"),
-                         ("amend", str(private / "where/is/answer.md"), "--expect", "0" * 64),
+                         ("rewrite", str(private / "where/is/answer.md"), "0" * 64, "replacement"),
                          ("prove", "--root", str(private), "--no-stamp"),
                          ("prove", "--root", str(local), "--no-stamp")):
                 output = run(*args, expected=3)

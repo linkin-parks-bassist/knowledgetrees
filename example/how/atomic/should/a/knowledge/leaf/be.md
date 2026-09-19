@@ -4,6 +4,7 @@ source: "Owner explicit all-scales knowledge requirement; canonical procedure re
 review_when: Recheck when the knowledge-tree model or operating procedure changes.
 status: unverified
 ---
+Status: Green
 
 Semantic atomicity is guidance, not a maintenance rule. A reasoning agent decides in
 context whether two related pieces of knowledge belong in one leaf or two. Relevant

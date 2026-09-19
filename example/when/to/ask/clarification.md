@@ -6,6 +6,7 @@ source: distilled from Superpowers 6.3.0 brainstorming methodology
 verification: Compared the leaf with the quarantined clarification workflow and narrowed it to decisions that materially affect outcomes.
 review_when: Recheck when collaborative requirements practice changes.
 ---
+Status: Green
 
 Ask for clarification when an unresolved answer could materially change scope,
 behavior, architecture, interfaces, acceptance criteria, risk, or an externally

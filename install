@@ -23,6 +23,7 @@ EXCLUDED_EXAMPLE_LEAVES = {
     Path("what/is/the/spec.md"),
     Path("what/is/the/state.md"),
 }
+RETIRED_LEAVES = {Path("how/to/amend/a/knowledge/leaf.md")}
 AGENTS_BEGIN = "<!-- BEGIN KNOWLEDGETREES BOOTSTRAP -->"
 AGENTS_END = "<!-- END KNOWLEDGETREES BOOTSTRAP -->"
 SKILL_LEAVES = {
@@ -113,18 +114,19 @@ def agents_text(current: str) -> str:
     block = f"""{AGENTS_BEGIN}
 # Mandatory knowledge-tree bootstrap
 
-Run `kt init` once per fresh agent session. It loads the canonical global knowledge-tree
-procedure and exact local orientation, then prints the path dictionary and local
-proof result. Harness startup hooks provide only this compact instruction; they do
-not inject leaf bodies. Do not repeat initialization per task or turn. If `kt init`
-is unavailable, load `knowledgetrees` as the compatibility fallback.
+The startup hook runs `kt boot` in the current working directory and injects its complete
+output: canonical global procedure, exact local orientation, dictionary, and local
+proof result. Consume it through the final proof summary. If the hook is unavailable,
+run `kt boot` directly and consume its complete output without truncation. A failed
+boot must be diagnosed before relying on that tree. Do not repeat a completed boot
+per task or turn. If the command is unavailable, load `knowledgetrees` as the
+compatibility fallback.
 New question -> `kt` first unless adequately checked knowledge is already loaded;
 miss -> determine whether a leaf exists; absent -> investigate and add it (or an
 unresolved record) before the next unrelated tool call or completion. Use nearest
 project and global roots; the skills own proof checks, scope, paths, and maintenance.
 Full leaf reads supply a revision hash; edit with `kt rewrite ADDRESS HASH CONTENTS`
-and preserve still-valid knowledge already in context. `kt amend`
-is deprecated but retained for living legacy workers.
+and preserve still-valid knowledge already in context.
 Current higher-authority instructions and permissions always govern.
 {AGENTS_END}"""
     return replace_managed_block(current, block)
@@ -362,10 +364,13 @@ def main(arguments: list[str] | None = None) -> int:
         if relative in EXCLUDED_EXAMPLE_LEAVES:
             continue
         leaf_installs.append((source, knowledge_root / relative, rendered_leaf(source)))
+    retired_targets = ([] if args.hooks_only else
+                       [knowledge_root / relative for relative in RETIRED_LEAVES])
 
     kt_bytes = kt_source.read_bytes()
     conflicts: list[Path] = []
     file_targets = [destination for _source, destination, _content in leaf_installs]
+    file_targets.extend(retired_targets)
     file_targets.extend((kt_target, kt_command, *skill_targets))
     hook_files = []
     if not args.no_hooks:
@@ -450,6 +455,9 @@ def main(arguments: list[str] | None = None) -> int:
 
     if args.dry_run:
         print(f"Would install {len(leaf_installs)} reusable leaves into {knowledge_root}")
+        for destination in retired_targets:
+            if path_exists(destination):
+                print(f"Would remove retired leaf {destination}")
         print(f"Would install kt at {kt_target} and link {kt_command}")
         for destination, _content, _mode in hook_files:
             print(f"Would install lookup/capture reminders at {destination}")
@@ -475,6 +483,9 @@ def main(arguments: list[str] | None = None) -> int:
     for _source, destination, content in leaf_installs:
         if destination.is_symlink() or not same_leaf_bytes(destination, content):
             atomic_write(destination, content, 0o644)
+    for destination in retired_targets:
+        if path_exists(destination):
+            destination.unlink()
     if kt_target.is_symlink() or not same_bytes(kt_target, kt_bytes):
         atomic_write(kt_target, kt_bytes, 0o755)
     else:

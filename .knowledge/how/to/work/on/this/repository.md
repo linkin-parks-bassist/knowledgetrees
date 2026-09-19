@@ -5,6 +5,7 @@ review_when: Recheck when repository layout or publication workflow changes.
 status: "unverified"
 updated_at: "2026-09-13T13:54:30+10:00"
 ---
+Status: Green
 
 Use `.knowledge` for this repository's operational knowledge and `example/` for the
 visible distributable corpus. Run `kt prove --local` for the project root and `kt prove --root example` for the example. Update

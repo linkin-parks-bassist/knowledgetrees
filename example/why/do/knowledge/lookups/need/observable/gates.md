@@ -6,6 +6,7 @@ source: sanitized operational recommendations and the canonical knowledge-tree c
 verification: Reviewed kt-first lookup, mandatory miss classification, capture timing, retained root/proof/scope obligations, and installed hardlink identity.
 review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
+Status: Green
 
 Behavioral evaluation must use the installed harness alone: give an ordinary task
 without telling the agent to consult knowledge or naming the expected answer paths.
@@ -36,7 +37,7 @@ proceed without duplication; gate plus miss means capture after safe discovery a
 verification, before continuing.
 A failed `kt` lookup must first be classified as existing-but-unretrieved knowledge
 or an absent leaf. Only the latter requires a new leaf; existing owners are read
-or amended. Necessary verification/capture calls may precede resuming unrelated work.
+or rewritten. Necessary verification/capture calls may precede resuming unrelated work.
 
 Treat this as an operating design, not a claim that a model's future behavior is
 mechanically proved. Evaluate fresh-session transcripts for actual descent before

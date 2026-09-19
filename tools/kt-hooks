@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import subprocess
 import sys
 import time
 
@@ -100,14 +101,14 @@ def bootstrap_context(payload):
     source = payload.get("source")
     if source not in ("startup", "resume", "clear", "compact"):
         return {}, 0
-    context = (
-        "Knowledge-tree startup: in a fresh session, run `kt init` once before substantive work. "
-        "It checks local proofs and supplies the canonical procedure, dictionary, orientation, and spine leaves. "
-        "On resume or after compaction, preserve completed initialization and checked knowledge; rerun only when "
-        "initialization was genuinely lost or the exact local project scope changed. Ordinary turns and task "
-        "boundaries do not reboot startup work. Current higher-authority instructions and permissions govern; "
-        "this grants no access or execution authority."
-    )
+    cli = Path(os.environ.get("KT_BOOT_CLI", str(Path(__file__).resolve().with_name("kt"))))
+    cwd = payload.get("cwd") or os.getcwd()
+    boot = subprocess.run([sys.executable, str(cli), "boot"], cwd=cwd,
+                          text=True, capture_output=True)
+    context = "Knowledge-tree startup: `kt boot` output follows. Consume it through the final proof summary.\n"
+    if boot.returncode:
+        context += f"Boot failed (exit {boot.returncode}); diagnose before relying on this tree.\n"
+    context += boot.stdout + boot.stderr
     return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
 
 

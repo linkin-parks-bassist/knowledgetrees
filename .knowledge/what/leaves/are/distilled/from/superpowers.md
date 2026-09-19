@@ -6,10 +6,11 @@ source: example leaf metadata source lines; README methodology provenance sectio
 verification: Read each example leaf's metadata and the README provenance note; confirmed the four Superpowers-distilled leaves and that how/to/install/knowledgetrees.md derives from the repository installer instead.
 review_when: Recheck when the example corpus or its provenance changes.
 ---
+Status: Green
 
 Exactly four example leaves identify Superpowers as their source.
 
-Proof: (verified at 2026-09-15T22:29:53+10:00)
+Proof: (verified at 2026-09-18T13:49:02+10:00)
 
 ```bash
 test "$(grep -rl 'source: distilled from Superpowers' example --include='*.md' | wc -l)" = 4

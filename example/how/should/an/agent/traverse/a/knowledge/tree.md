@@ -7,6 +7,7 @@ metadata:
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
   status: unverified
 ---
+Status: Green
 
 For every new question, use `kt` before external search or host probes, unless the
 answer is already present in adequately checked loaded knowledge. A known path

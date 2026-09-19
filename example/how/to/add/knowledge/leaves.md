@@ -8,6 +8,7 @@ metadata:
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
   status: "unverified"
 ---
+Status: Green
 
 Capture an established reusable answer before the next unrelated tool call or
 completion; necessary verification and capture calls are part of resolving it.
@@ -93,8 +94,13 @@ do not thin them into catalogs or inflate them with unrelated archive material.
 A verified leaf includes `verified_at` (ISO 8601 with timezone), `verified_by`, `scope`,
 `source`, `verification`, and `review_when`. Put them under `metadata` when the leaf
 also serves as `SKILL.md`. Name evidence actually checked and do not overstate it.
-Whole-leaf `verified_at` requires independent review of everything in the leaf; proof
-execution alone never earns it. An unresolved reusable question instead records
+Whole-leaf `verified_at` normally requires independent review of everything in the
+leaf. The narrow exception is `verifiable: true`: use it only when the leaf contains
+exclusively concrete facts and every claim is covered by at least one eligible proof.
+If every declared proof runs and passes, `kt prove` records `verified_at`, clears
+sticky falsification, and auto-greens the leaf. A missing, malformed, skipped, or
+failing proof makes it brown. The flag asserts complete coverage; proof execution
+cannot detect uncovered prose. An unresolved reusable question instead records
 `status: unresolved`, `checked_at`, blocker, and next check.
 
 Freshness may additionally use either `expires_at` (ISO 8601 with timezone) or

@@ -1,9 +1,10 @@
 ---
 status: "unverified"
-created_at: "2026-09-18T11:54:05+10:00"
-updated_at: "2026-09-18T12:09:02+10:00"
 scope: "knowledgetrees repository"
-source: "Repository owner request and context-minimization clarification 2026-09-18; tools/kt implementation and regression coverage"
+source: "Owner command split request, 2026-09-19; tools/kt and CLI tests"
+review_when: Recheck when root creation changes.
+updated_at: "2026-09-19T23:45:40+10:00"
 ---
+Status: Green
 
-`kt init` performs minimal fresh-session startup. It prints labeled verbatim contents for `global:how/to/use/knowledgetrees.md` and the exact local `where/am/i.md`, then prints the accessible path-segment dictionary, and finally runs and prints `kt prove --local` so health is the last output. It does not preload spec, plan, state, next, or other task-specific leaves; retrieve those only when needed. It fails if no exact local root exists, the canonical global procedure is inaccessible, local orientation is missing, or the final proof verification is brown. Startup hooks inject only a compact instruction to run `kt init`; they inject no leaf bodies.
+`kt init [ORIENTATION]` creates `.knowledge/` in the current working directory. It creates empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches plus `where/am/i.md` and empty spec, plan, state, and next leaves. The optional argument is written verbatim as that file's contents; without it the file is empty. It refuses to overwrite an existing root. `kt boot` performs the former fresh-session startup: global procedure, exact local orientation, dictionary, and local proof result.

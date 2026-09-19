@@ -250,11 +250,26 @@ Optional `state: yellow` marks a leaf for review; elapsed `expires_at` or
 falsified, malformed, or proof-failing; it makes the tree busted and must be repaired.
 Agents should add expiry metadata to facts likely to change, while leaving durable
 or non-verifiable knowledge green unless there is a concrete reason for review.
+Normal proof evaluation also writes `Status: Green`, `Status: Yellow`, or
+`Status: Brown` immediately below each leaf front matter. Legacy leaves without the
+line remain green by default until evaluated; `--no-stamp` writes nothing.
 
-`kt init` performs fresh-session initialization in output-first order: it prints
+A leaf containing only concrete, fully proved facts may declare `verifiable: true`.
+It must contain at least one eligible proof. If every proof runs and passes,
+`kt prove` records `verified_at`, clears sticky falsification, and auto-greens the
+leaf. Missing, malformed, skipped, or failed proofs make it brown. The author is
+responsible for ensuring every claim is covered; the flag cannot detect uncovered
+prose.
+
+`kt init [ORIENTATION]` creates `.knowledge/` in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. The optional argument supplies the exact orientation file contents. It refuses to overwrite an existing tree.
+
+`kt boot` performs fresh-session initialization in output-first order: it prints
 the canonical global procedure and exact local orientation,
 then the accessible dictionary, then the `kt prove --local` result. It fails for
-a missing or incomplete exact local root or a brown final proof check.
+a missing or incomplete exact local root or a brown final proof check. Run it
+directly and consume its complete output. Never pipe it through `head`, `tail`, a
+pager, a filter, or any other truncating or partial-capture command; initialization
+is incomplete unless its final proof summary is displayed.
 
 **Agents run the verifier before relying on proof-backed knowledge.** They check the
 local root during bootstrap and when entering a new project scope, then relevant semantic
@@ -266,15 +281,17 @@ This gives the schema a layer of executable provability: eligible facts reconnec
 to reality instead of remaining unchecked prose. A passing verifier establishes
 that the marked predicates passed—not that every unproved statement is true.
 
-Each passing proof refreshes its own `Proof: (verified at …)` marker with an ISO
-8601 timestamp. Failed proofs receive `Proof: (falsified at …)` and set the leaf's
-`falsified_at` metadata. That flag requires independent review to clear: even if
-every proof later passes, the leaf remains falsified and the verifier reports it.
-Passing every proof is necessary but not sufficient for leaf validation.
-Leaf-level `verified_at`
-is separate and changes only after an independent review of the whole leaf; the
-verifier does not infer whether every statement is covered by proofs. Use
-`--no-stamp` when a read-only check is needed.
+Passing proof timestamps refresh only for leaves with expiry metadata; non-expiring
+leaves keep their existing markers unchanged. Failed proofs receive
+`Proof: (falsified at …)` and set the leaf's sticky `falsified_at` once rather than
+churning it on every sweep. `Status:` is written only when absent or changed.
+Unflagged leaves require independent review to clear falsification:
+even if every proof later passes, the leaf remains falsified. Passing every proof is
+necessary but not sufficient for an unflagged leaf. A reviewed `verifiable: true`
+declaration asserts complete coverage; only then may all passing proofs clear
+falsification and set whole-leaf `verified_at`. Later successful checks refresh it
+only for expiring leaves. The verifier cannot independently
+infer whether every statement is covered. Use `--no-stamp` for a read-only check.
 
 To check the public example, first approve its root in your own terminal:
 
@@ -415,7 +432,7 @@ characters, purely numeric segments, and a broad dictionary-only stop list of
 grammatical, relational, generic action/state, and knowledge-tree container words
 are omitted, so an agent can see terms such as `obtain` and `sudo-authorization`
 without loading a tree listing. Pass root labels or configured canonical root paths
-to restrict the dictionary, for example `kt dict local global`. `kt init` prints it
+to restrict the dictionary, for example `kt dict local global`. `kt boot` prints it
 once after the procedure and orientation and before the final local proof result.
 
 Question prefixes make the directories active search boundaries:
@@ -480,19 +497,17 @@ tool calls are not replayed. If you attach to a separate OpenCode server, restar
 that backend too. See the [OpenCode plugin](https://opencode.ai/docs/plugins/) and
 [CLI](https://opencode.ai/docs/cli/) documentation. Start a new Copilot CLI session.
 
-OpenCode's plugin supplies a compact instruction to run `kt init` once before work.
-It adds no leaf bodies to system context. Startup initialization remains once per
-fresh session; compaction preserves initialization state rather than rebooting it.
+OpenCode's plugin runs `kt boot` when loading and supplies its complete output in system context. Compaction preserves the checked state.
 Focused lookup, capture, maintenance, and ingestion skills remain available as needed.
-The agent-run command loads the procedure from its canonical global owner and startup
+The hook-run command loads the procedure from its canonical global owner and startup
 leaves from the exact local root; parent directories are not searched. Restart OpenCode after changing its
-plugin. No startup leaf contents are injected by the hook.
+plugin. The startup procedure and exact local orientation are injected by the hook.
 
-Codex's native `SessionStart` hook delivers the same compact `kt init` instruction
+Codex's native `SessionStart` hook delivers the same complete `kt boot` output
 on startup, resume, clear, and after compaction—not on every user prompt.
-Resume and compaction restore context without repeating completed startup work.
+These lifecycle events refresh the injected boot output.
 Review/trust the new `SessionStart` definition in `/hooks`, then start a fresh
-session to test startup behavior. The hook includes no project or global leaf contents. A disabled
+session to test startup behavior. The hook includes the canonical procedure and exact local orientation. A disabled
 or untrusted hook cannot supply it.
 
 Codex can send Bash output text without an exit code. The post-tool adapter prefers
@@ -720,8 +735,7 @@ retain required consent prompts and disclosures, without post-save receipts.
 Reads, searches, help, policy inspection, dry-run previews and explicitly verbose
 proof checks return the requested information. Failures retain diagnostics and
 nonzero exit statuses; silence alone is not sufficient without checking status.
-Deprecated amend retains its legacy stdout for living workers plus its deprecation
-notice. Accuracy/preservation reminders belong in the one-shot review hook.
+Accuracy/preservation reminders belong in the one-shot review hook.
 
 ### Rewriting an existing answer
 
@@ -749,24 +763,7 @@ report diagnostics.
 The one-shot task-end capture-review hook carries the accuracy and preservation
 reminder once per work cycle. Mandatory proof checks remain intact.
 
-`kt amend` is deprecated in favor of `kt rewrite`, but remains supported for
-existing workers until they finish. Its interface and behavior remain compatible. Calls also print a brief
-deprecation notice on stderr pointing to the updated workflow guidance.
-For that legacy file/stdin workflow, read the leaf and revision:
-
-```bash
-kt open local:how/to/build.md --revision
-```
-
-The text stays verbatim on stdout; stderr prints its SHA-256 revision. Submit a
-complete revised Markdown file (including its existing metadata):
-
-```bash
-kt amend local:how/to/build.md --expect <revision> --body-file /tmp/revised.md
-```
-
-You can pipe the replacement through stdin instead, or add `--dry-run` to inspect
-the diff. Stale revisions exit 4 without writing; reread and merge. Amendment
-preserves hardlinks, invalidates whole-leaf review, and resets new/changed proof
-stamps. It does not execute proofs or clear sticky falsification. Git is optional
-history, not a requirement. See `how/to/rewrite/a/knowledge/leaf.md` for the canonical procedure.
+Rewrite preserves hardlinks, invalidates whole-leaf review, and resets new or
+changed proof stamps. It does not execute proofs or clear sticky falsification.
+Git is optional history, not a requirement. See
+`how/to/rewrite/a/knowledge/leaf.md` for the canonical procedure.

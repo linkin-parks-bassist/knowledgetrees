@@ -5,6 +5,7 @@ source: "tools/kt built-in proof engine; installer; owner removal of separate ve
 review_when: Recheck when installer behavior or harness skill discovery changes.
 updated_at: "2026-09-13T13:54:30+10:00"
 ---
+Status: Green
 
 From a complete repository checkout, run `./install`. Preview the targets without
 writing with `./install --dry-run`. The installer merges reusable example leaves

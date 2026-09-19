@@ -4,6 +4,9 @@ scope: public knowledge-tree example
 source: sanitized adaptation of the canonical global knowledge-tree methodology
 review_when: Recheck when root creation or verifier conventions change.
 ---
+Status: Green
+
+Run `kt init [ORIENTATION]` from the project directory to create the empty local spine. The optional argument supplies literal `where/am/i.md` contents. It refuses to overwrite an existing tree.
 
 Create `<project>/.knowledge` when entering an active project whose reusable knowledge
 belongs locally. Immediately create `how/`, `what/`, `where/`, `why/`, `does/`, `is/`, and

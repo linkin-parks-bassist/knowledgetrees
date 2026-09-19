@@ -6,6 +6,7 @@ source: sanitized adaptation of the canonical global knowledge-tree methodology
 verification: Compared volatility-relative freshness guidance with the installed knowledgetrees procedure.
 review_when: Recheck when freshness or metadata conventions change.
 ---
+Status: Green
 
 Read the leaf's verification time, evidence, and review trigger. Recheck live state
 immediately; recheck tool paths and versions after upgrades or when execution

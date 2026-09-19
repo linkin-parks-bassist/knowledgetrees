@@ -6,6 +6,7 @@ source: example corpus maintenance requirements
 verification: Recorded the maintained workflow for keeping the example useful and public-safe.
 review_when: Recheck when example maintenance practice changes.
 ---
+Status: Green
 
 Maintain the example as a directly browsable semantic corpus. Add or revise answers
 in their semantic owners, keep the orientation and spine current, run the verifier

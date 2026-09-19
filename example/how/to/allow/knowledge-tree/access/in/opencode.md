@@ -6,6 +6,7 @@ source: https://opencode.ai/docs/permissions/; installer implementation and inte
 verification: Reviewed scoped permission merging and consent-before-write behavior.
 review_when: Recheck after OpenCode permission semantics or installer policy changes.
 ---
+Status: Green
 
 Grant knowledge-tree access only after informed consent. Read contents may reach
 the configured model provider. The installer asks `[n/Y]` before any writes;

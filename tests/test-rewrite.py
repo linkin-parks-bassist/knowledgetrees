@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Standalone revision-checked amendment, hardlinks, review/proof invalidation."""
+"""Standalone revision-checked rewrite, hardlinks, review/proof invalidation."""
 import hashlib
 import json
 import os
@@ -12,7 +12,7 @@ SCRIPT = Path(__file__).resolve().parents[1] / "tools/kt"
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix="kt amend ") as temporary:
+    with tempfile.TemporaryDirectory(prefix="kt rewrite ") as temporary:
         base = Path(temporary)
         root = base / ".knowledge"
         (root / "where/am").mkdir(parents=True)
@@ -29,6 +29,8 @@ metadata:
   source: original evidence
   falsified_at: older-failure
 ---
+
+Status: Brown
 
 The first assertion is true.
 
@@ -57,9 +59,6 @@ true
             result = subprocess.run([sys.executable, str(SCRIPT), *args], cwd=base, env=env,
                                     input=content, text=True, capture_output=True)
             assert result.returncode == expected, (args, result.stdout, result.stderr)
-            if args[0] == "amend":
-                assert "amend is deprecated; review updated workflow guidance" in result.stderr
-                assert "kt open global:how/to/rewrite/a/knowledge/leaf.md" in result.stderr
             return result
 
         opened = run("open", "project:how/to/test.md", "--revision")
@@ -68,44 +67,43 @@ true
         assert opened.stdout == original
         revised = original.replace("The second assertion is true.", "The second assertion is different.")
         revised = revised.replace("  falsified_at: older-failure\n", "")
-        replacement = base / "revised.md"
-        replacement.write_text(revised)
-        preview = run("amend", "project:how/to/test.md", "--expect", token, "--body-file", str(replacement), "--dry-run")
+        preview = run("rewrite", "project:how/to/test.md", token, revised, "--dry-run")
         assert "second assertion is different" in preview.stdout
         assert path.read_text() == original and path.stat().st_ino == inode
-        run("amend", "project:how/to/test.md", "--expect", token, "--body-file", str(replacement), "--source", "new experimental evidence")
+        run("rewrite", "project:how/to/test.md", token, revised, "--source", "new experimental evidence")
         updated = path.read_text()
         assert "verified_at:" not in updated and "verified_by:" not in updated and "verification:" not in updated
         assert "  status: \"unverified\"" in updated and "new experimental evidence" in updated
         assert "older-failure" in updated, "sticky falsification cannot be silently cleared"
+        assert "Status:" not in updated, "editing invalidates the last evaluated lifecycle status"
         assert updated.count("Proof: (verified at 2026-09-12T12:00:00+00:00)") == 1
         assert updated.count("Proof: (verified at _)") == 1
         assert alias.read_text() == updated and path.stat().st_ino == inode
-        run("amend", "project:how/to/test.md", "--expect", token, content="stale replacement", expected=4)
+        run("rewrite", "project:how/to/test.md", token, "stale replacement", expected=4)
         assert path.read_text() == updated
         token = run("open", "project:how/to/test.md", "--revision").stderr.strip().removeprefix("Revision: ")
-        no_op = run("amend", "project:how/to/test.md", "--expect", token, content=updated)
-        assert "Unchanged" in no_op.stdout and path.read_text() == updated
+        no_op = run("rewrite", "project:how/to/test.md", token, updated)
+        assert no_op.stdout == "" and no_op.stderr == "" and path.read_text() == updated
         # Changed predicate cannot retain an old proof stamp, even if submitted as verified.
         revised = updated.replace("```bash\ntrue\n```", "```bash\nfalse\n```", 1)
-        run("amend", "project:how/to/test.md", "--expect", token, content=revised)
+        run("rewrite", "project:how/to/test.md", token, revised)
         assert "Proof: (verified at 2026-09-12" not in path.read_text()
         # Newly inserted orphan proof markers must not carry caller-invented verification.
         token = hashlib.sha256(path.read_bytes()).hexdigest()
-        run("amend", "project:how/to/test.md", "--expect", token,
-            content=path.read_text() + "\nProof: (verified at 2030-01-01T00:00:00+00:00)\n")
+        run("rewrite", "project:how/to/test.md", token,
+            path.read_text() + "\nProof: (verified at 2030-01-01T00:00:00+00:00)\n")
         assert "2030-01-01" not in path.read_text()
         # Body-only standalone leaves get unverified metadata.
         bare = root / "bare.md"
         bare.write_text("Old body")
         token = run("open", "project:bare.md", "--revision").stderr.strip().removeprefix("Revision: ")
-        run("amend", "project:bare.md", "--expect", token, content="New body\n")
+        run("rewrite", "project:bare.md", token, "New body\n")
         assert 'status: "unverified"' in bare.read_text()
         assert "New body" in bare.read_text()
         fresh = hashlib.sha256(bare.read_bytes()).hexdigest()
-        for invalid in ("", "---\nunclosed", "invalid\x00body"):
-            run("amend", "project:bare.md", "--expect", fresh, content=invalid, expected=2)
-        run("amend", "project:bare.md", "--expect", "bad", content="body", expected=2)
+        for invalid in ("", "---\nunclosed"):
+            run("rewrite", "project:bare.md", fresh, invalid, expected=2)
+        run("rewrite", "project:bare.md", "bad", "body", expected=2)
         # Ordinary reads automatically carry the revision; rewrite requires it positionally.
         opened = run("open", "project:how/to/test.md")
         token = opened.stderr.strip().removeprefix("Revision: ")
@@ -131,15 +129,13 @@ true
         run("rewrite", "project:missing.md", token, "answer", expected=2)
         # Symlink aliases cannot be used for mutation; denied roots stay denied.
         (root / "alias.md").symlink_to(bare)
-        run("amend", "project:alias.md", "--expect", fresh, content="body", expected=2)
         run("rewrite", "project:alias.md", fresh, "body", expected=2)
         config = {"roots": {"blocked": {"path": str(root), "access": "deny"}}}
         Path(env["KT_CONFIG"]).write_text(json.dumps(config))
         run("open", "project:bare.md", "--revision", expected=3)
-        run("amend", "project:bare.md", "--expect", fresh, content="body", expected=3)
         run("rewrite", "project:bare.md", fresh, "body", expected=3)
         assert "New body" in bare.read_text()
-    print("amendment integration checks passed")
+    print("rewrite integration checks passed")
 
 
 if __name__ == "__main__":

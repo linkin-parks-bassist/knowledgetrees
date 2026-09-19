@@ -3,9 +3,8 @@ status: "unverified"
 scope: knowledgetrees repository
 source: "Authorized Projects parent-folder relocation and focused verification 2026-09-14"
 review_when: Update after validation, deployment, or publication.
-updated_at: "2026-09-14T23:12:16+10:00"
+updated_at: "2026-09-19T23:49:29+10:00"
 ---
-
 After changing or pulling core kt guidance, run python3 sync-kt-instructions.py
 from this repository. Use --check to audit drift. Start a fresh agent session to
 assess the refreshed interface instructions. See
@@ -18,15 +17,9 @@ local-startup changes. Installer deployment and instruction refresh are complete
 no implementation or installation work remains. Fresh sessions pick up refreshed
 instructions.
 
-Keep deprecated kt amend available until the living legacy workers have finished;
-removal requires a later decision. New work uses kt rewrite.
-
-The positional-hash/silent rewrite, one-shot preservation reminder and legacy
-amend notice updates are validated and
-installed locally. It remains
-uncommitted pending publication. Full reads supply the required hash automatically;
-new work uses kt rewrite ADDRESS HASH CONTENTS. Keep legacy amend working for
-living workers.
+The positional-hash/silent rewrite and one-shot preservation reminder are validated
+and installed. Full reads supply the required hash automatically; editing uses
+`kt rewrite ADDRESS HASH CONTENTS` exclusively.
 
 Normal-success silence is also validated and installed. Publication of the
 follow-up interface/policy changes remains pending.
@@ -61,3 +54,27 @@ context-minimization refinement only with owner authorization.
 
 Hardened dictionary filtering and the terse two-leaf `kt init` payload are validated
 and installed. Commit and publish only with owner authorization.
+
+Persisted in-leaf lifecycle status is fully validated and installed. Commit and
+publish that feature only with owner authorization.
+
+The complete-output `kt init` rule is validated and installed. Commit and publish
+it with the pending lifecycle-status work only with owner authorization.
+
+Opt-in `verifiable: true` auto-greening is validated and installed. Publish it with
+the pending lifecycle-status work only with owner authorization.
+
+Documentation and installed guidance are synchronized with the implementation. No
+additional documentation repair remains; publication is still owner-gated.
+
+Removal of the deprecated editor is installed and proof-checked. Publish it with
+the other pending lifecycle/interface work only with owner authorization.
+
+The low-I/O proof stamping change is installed and final-checked. Publish it with
+the other pending lifecycle/interface work only with owner authorization.
+
+Validate the `kt init`/`kt boot` split, synchronize installed guidance and CLI when ready, and publish only with owner authorization. The user raised the possibility of injecting `kt boot` output from the startup hook; no such change is authorized yet.
+
+Install the injected-boot hook and updated global guidance, run full verification, then commit and push as the owner authorized.
+
+The owner authorized publication of the validated init/boot split and injected startup output. Commit and push the current repository changes; no further implementation work is pending.

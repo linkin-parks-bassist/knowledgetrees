@@ -8,6 +8,7 @@ metadata:
   source: "Owner explicit all-scales knowledge requirement; canonical procedure review, 2026-09-14"
   review_when: Recheck when retrieval gates, bootstrap, or knowledge-tree procedures change.
 ---
+Status: Green
 
 Maintain current truth in place within current authority. Knowledge records facts
 and procedure; it neither grants execution permission nor resurrects superseded
@@ -76,14 +77,20 @@ specifications, plans, procedures, and opinions. Yellow is explicitly marked or
 expired and is a warning; do not use it until re-verification.
 Brown is falsified, malformed, or proof-failing and makes `kt prove` fail because
 the tree is busted.
+Normal evaluation persists the color as `Status: Green|Yellow|Brown` immediately
+after front matter. `--no-stamp` is read-only. Content rewrites remove the prior
+evaluated line until the leaf is checked again.
 
 Stop relying on falsified knowledge. An agent encountering a brown leaf must inspect
 evidence and repair or remove false,
 malformed, or unsafe claims and predicates only within authorized scope. Review the
 whole leaf independently before explicitly clearing `falsified_at`; rerun until
-checks pass. Passing every proof is necessary but not sufficient for leaf validation,
-and never changes leaf `verified_at` or clears a falsification automatically.
-The verifier neither judges proof eligibility nor performs agentic repair.
+checks pass. Passing every proof is necessary but not sufficient for an unflagged
+leaf. A reviewed `verifiable: true` leaf is the narrow exception: complete passing
+proofs set `verified_at` and clear falsification automatically, refreshing time on
+later checks only when expiry metadata is present. The verifier
+cannot judge whether the flag's complete-coverage assertion is truthful and does
+not perform agentic repair.
 
 ## Maintain knowledge at every scale
 

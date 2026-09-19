@@ -5,26 +5,23 @@ scope: "local"
 source: "tools/kt built-in proof engine; installer; owner removal of separate verifier"
 updated_at: "2026-09-13T13:54:30+10:00"
 ---
+Status: Green
 
-The CLI remains one self-contained standard-library Python executable for standalone installation. Sections separate root discovery and access, lookup and rendering, leaf maintenance, capture, proof execution, and parser construction. RootAccessView loads discovery and policies once per invocation; LookupContext lazily reads permitted leaf text once. LeafSnapshot centralizes revision and inode checks for amendment and destructive maintenance. command_parser separates command schemas and handler dispatch from execution. All verification is exposed through kt prove. Regression suites cover access, lookup, maintenance, installation, hooks, and proof timestamps.
+The CLI remains one self-contained standard-library Python executable for standalone installation. Sections separate root discovery and access, lookup and rendering, leaf maintenance, capture, proof execution, and parser construction. RootAccessView loads discovery and policies once per invocation; LookupContext lazily reads permitted leaf text once. LeafSnapshot centralizes revision and inode checks for rewrite and destructive maintenance. command_parser separates command schemas and handler dispatch from execution. All verification is exposed through kt prove. Regression suites cover access, lookup, maintenance, installation, hooks, and proof timestamps.
 
-`kt rewrite ADDRESS HASH CONTENTS` shares the amend handler with a mandatory
+`kt rewrite ADDRESS HASH CONTENTS` uses a dedicated handler with a mandatory
 positional SHA-256 revision and literal inline Markdown. Full open/exact-question
 reads always print the hash of the same returned bytes on stderr. --revision is a
 compatibility no-op. Rewrite checks the required hash against the locked snapshot
 and retains final inode/content checks, hardlinks, access controls, review and
-proof handling. Success and no-ops are silent (exit 0); dry-run remains a diff. Legacy amend retains its
-required --expect interface and output. Evidence: source/tests, 2026-09-15.
-
-The deprecated_amend CLI wrapper emits the deprecation/guidance notice on stderr
-and delegates to the shared amend handler. Rewrite and internal combine calls
-do not invoke the wrapper. Evidence: source and amendment tests, 2026-09-15.
+proof handling. Success and no-ops are silent (exit 0); dry-run remains a diff.
+The removed compatibility editor is absent from parser/help output. Evidence:
+source and rewrite tests, 2026-09-18.
 
 The one-shot capture-review hook carries the accuracy/valid-knowledge preservation
 reminder once per work cycle, rather than every rewrite success/no-op.
 
-Mutation handlers now omit normal success/no-op receipts. The deprecated CLI
-amend wrapper explicitly enables legacy output; internal combine reuse stays
+Mutation handlers omit normal success/no-op receipts. Internal combine reuse stays
 silent. Access/permission changes retain consent disclosures but omit post-save
 receipts. Reads/searches/inspection/previews retain requested output.
 

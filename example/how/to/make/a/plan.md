@@ -6,6 +6,7 @@ source: distilled from Superpowers 6.3.0 writing-plans methodology
 verification: Compared the leaf with the quarantined writing-plans skill and retained its reusable planning guidance without its harness-specific workflow.
 review_when: Recheck when implementation-planning practice changes.
 ---
+Status: Green
 
 Start from an approved specification or a clearly bounded requirement. If the work
 contains independent subsystems, split it into separately useful plans before adding
