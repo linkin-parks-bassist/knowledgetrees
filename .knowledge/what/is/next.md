@@ -3,8 +3,9 @@ status: "unverified"
 scope: knowledgetrees repository
 source: "Authorized Projects parent-folder relocation and focused verification 2026-09-14"
 review_when: Update after validation, deployment, or publication.
-updated_at: "2026-09-19T23:49:29+10:00"
+updated_at: "2026-09-19T23:50:16+10:00"
 ---
+
 After changing or pulling core kt guidance, run python3 sync-kt-instructions.py
 from this repository. Use --check to audit drift. Start a fresh agent session to
 assess the refreshed interface instructions. See
@@ -77,4 +78,6 @@ Validate the `kt init`/`kt boot` split, synchronize installed guidance and CLI w
 
 Install the injected-boot hook and updated global guidance, run full verification, then commit and push as the owner authorized.
 
-The owner authorized publication of the validated init/boot split and injected startup output. Commit and push the current repository changes; no further implementation work is pending.
+The owner authorized publication of the validated init/boot split and injected startup output. The repository changes were committed and pushed as `91fc9af`; no further implementation work is pending.
+
+The init/boot split and hook-injected startup output are installed and published. No implementation or publication work remains for this request.

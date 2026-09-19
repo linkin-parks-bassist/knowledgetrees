@@ -3,8 +3,9 @@ status: "unverified"
 scope: knowledgetrees repository
 source: "Authorized Projects parent-folder relocation and focused verification 2026-09-14"
 review_when: Update after material repository changes.
-updated_at: "2026-09-19T23:49:29+10:00"
+updated_at: "2026-09-19T23:50:16+10:00"
 ---
+
 The public repository's operational root is .knowledge/. The visible example/
 corpus is distributable methodology and deliberately keeps where/am/i.md empty.
 Project spec/plan/state must not be copied into example/. The owner published
@@ -335,4 +336,6 @@ The owner changed the CLI contract on 2026-09-19: `kt init` now creates the empt
 
 The startup hook now runs `kt boot` and injects its complete output for Codex and OpenCode. Failure output is surfaced in context. Documentation and integration tests are being updated before installation/publication.
 
-The `kt init`/`kt boot` split and hook-injected boot output are implemented, validated, and installed. Codex/OpenCode hook, CLI, installer, rewrite, proof-stamp, and privacy regression suites pass. Installed hook smoke output includes both startup leaves and the final green proof summary. Local, example, and installed-global proof sweeps are green; instruction sync reports no drift. Publication is the next step.
+The `kt init`/`kt boot` split and hook-injected boot output are implemented, validated, and installed. Codex/OpenCode hook, CLI, installer, rewrite, proof-stamp, and privacy regression suites pass. Installed hook smoke output includes both startup leaves and the final green proof summary. Local, example, and installed-global proof sweeps are green; instruction sync reports no drift. Published on `main` as `91fc9af`.
+
+The validated implementation and guidance were committed and pushed to `main` as `91fc9af`. Local installation remains current.
