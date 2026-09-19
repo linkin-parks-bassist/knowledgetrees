@@ -1,6 +1,6 @@
 ---
-status: "yellow"
-revised_at: "2026-09-20T09:08:08+10:00"
+status: green
+revised_at: "2026-09-20T09:08:49+10:00"
 ---
 
 The public repository's operational root is .knowledge/. The visible example/
@@ -375,4 +375,5 @@ proofs make such a leaf green from yellow or brown and failing proofs make it
 brown. The owner authorized installation, commit, and push. `./install --force`
 completed with 51 reusable leaves; local, public-example, user-global, and
 installed CointOS proof sweeps are green. Installed kt matches source and
-instruction sync reports no drift. The repository commit and push are pending.
+instruction sync reports no drift. The implementation was committed and pushed
+to `origin/main` as `f79659c`.
