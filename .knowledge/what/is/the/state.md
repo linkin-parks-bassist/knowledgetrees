@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:33:21+10:00"
+revised_at: "2026-09-20T09:34:31+10:00"
 ---
 
 The repository's operational knowledge root is `.knowledge/`; `example/` is the
@@ -60,5 +60,5 @@ is absent on disk. The access registry was unchanged.
 All Python integration suites and the OpenCode adapter suite pass. Installer
 preview and force install completed. Project, public example, and installed
 global proof sweeps are green; curated instruction sync has zero drift; source
-and installed CLI bytes match. Git whitespace check passes. Publication of
-this change is pending.
+and installed CLI bytes match. Git whitespace check passes. The validated change was committed and pushed to
+`origin/main` as `367d481`.
