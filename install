@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+from datetime import datetime
 import json
 import os
 from pathlib import Path
@@ -23,7 +24,6 @@ EXCLUDED_EXAMPLE_LEAVES = {
     Path("what/is/the/spec.md"),
     Path("what/is/the/state.md"),
 }
-RETIRED_LEAVES = {Path("how/to/amend/a/knowledge/leaf.md")}
 AGENTS_BEGIN = "<!-- BEGIN KNOWLEDGETREES BOOTSTRAP -->"
 AGENTS_END = "<!-- END KNOWLEDGETREES BOOTSTRAP -->"
 SKILL_LEAVES = {
@@ -274,16 +274,10 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
 
 
 def initial_orientation() -> bytes:
-    return b"""---
-verified_at: '2026-09-12T16:50:03+10:00'
-verified_by: codex /root
-scope: personal global
-source: installer orientation template
-verification: Reviewed reusable-corpus navigation; no host-specific facts are asserted.
-review_when: Add local environment facts and routes after installation.
----
-
-This user-wide root stores reusable tooling and knowledge-tree procedures. Project
+    header = ("---\nstatus: yellow\nrevised_at: " +
+              json.dumps(datetime.now().astimezone().isoformat(timespec="seconds")) +
+              "\n---\n\n")
+    body = """This user-wide root stores reusable tooling and knowledge-tree procedures. Project
 and subsystem facts belong in their nearest local roots; private or restricted
 material must not be promoted into public exports.
 
@@ -302,6 +296,7 @@ material must not be promoted into public exports.
 Describe your local environment here, including scope, topology, tools, boundaries,
 priorities, and concrete routes. Verify exemplar paths before adding them.
 """
+    return (header + body).encode()
 
 
 def parser_for_cli() -> argparse.ArgumentParser:
@@ -368,13 +363,9 @@ def main(arguments: list[str] | None = None) -> int:
         if relative in EXCLUDED_EXAMPLE_LEAVES:
             continue
         leaf_installs.append((source, knowledge_root / relative, rendered_leaf(source)))
-    retired_targets = ([] if args.hooks_only else
-                       [knowledge_root / relative for relative in RETIRED_LEAVES])
-
     kt_bytes = kt_source.read_bytes()
     conflicts: list[Path] = []
     file_targets = [destination for _source, destination, _content in leaf_installs]
-    file_targets.extend(retired_targets)
     file_targets.extend((kt_target, kt_command, *skill_targets))
     hook_files = []
     if not args.no_hooks:
@@ -459,9 +450,6 @@ def main(arguments: list[str] | None = None) -> int:
 
     if args.dry_run:
         print(f"Would install {len(leaf_installs)} reusable leaves into {knowledge_root}")
-        for destination in retired_targets:
-            if path_exists(destination):
-                print(f"Would remove retired leaf {destination}")
         print(f"Would install kt at {kt_target} and link {kt_command}")
         for destination, _content, _mode in hook_files:
             print(f"Would install lookup/capture reminders at {destination}")
@@ -487,9 +475,6 @@ def main(arguments: list[str] | None = None) -> int:
     for _source, destination, content in leaf_installs:
         if destination.is_symlink() or not same_leaf_bytes(destination, content):
             atomic_write(destination, content, 0o644)
-    for destination in retired_targets:
-        if path_exists(destination):
-            destination.unlink()
     if kt_target.is_symlink() or not same_bytes(kt_target, kt_bytes):
         atomic_write(kt_target, kt_bytes, 0o755)
     else:

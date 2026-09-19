@@ -1,17 +1,17 @@
 ---
 status: green
-revised_at: "2026-09-13T13:54:30+10:00"
+revised_at: "2026-09-20T09:26:15+10:00"
 ---
 
 The CLI remains one self-contained standard-library Python executable for standalone installation. Sections separate root discovery and access, lookup and rendering, leaf maintenance, capture, proof execution, and parser construction. RootAccessView loads discovery and policies once per invocation; LookupContext lazily reads permitted leaf text once. LeafSnapshot centralizes revision and inode checks for rewrite and destructive maintenance. command_parser separates command schemas and handler dispatch from execution. All verification is exposed through kt prove. Regression suites cover access, lookup, maintenance, installation, hooks, and proof timestamps.
 
 `kt rewrite ADDRESS HASH CONTENTS` uses a dedicated handler with a mandatory
 positional SHA-256 revision and literal inline Markdown. Full open/exact-question
-reads always print the hash of the same returned bytes on stderr. --revision is a
-compatibility no-op. Rewrite checks the required hash against the locked snapshot
+reads always print the hash of the same returned bytes on stderr. Rewrite
+checks the required hash against the locked snapshot
 and retains final inode/content checks, hardlinks, access controls, review and
 proof handling. Success and no-ops are silent (exit 0); dry-run remains a diff.
-The removed compatibility editor is absent from parser/help output. Evidence:
+The CLI exposes rewrite as the editing command. Evidence:
 source and rewrite tests, 2026-09-18.
 
 The one-shot capture-review hook carries the accuracy/valid-knowledge preservation

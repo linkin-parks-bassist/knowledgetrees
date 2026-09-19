@@ -41,7 +41,6 @@ try {
   assert.match(startup.system[1], /Project orientation fixture/);
   assert.match(startup.system[1], /final proof summary/);
   assert.match(startup.system[1], /global:how\/to\/use\/knowledgetrees.md/);
-  assert.doesNotMatch(startup.system[1], /verified_by:/);
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);
   assert.equal(startup.system.length, 2, "no duplicate bootstrap blocks in assembled context");
   const rebuilt = { system: [] };

@@ -1,213 +1,102 @@
 ---
 status: green
-revised_at: "2026-09-20T08:51:45+10:00"
+revised_at: "2026-09-20T09:26:54+10:00"
 ---
 
-The repository must be a local Git repository connected to its intended public
-GitHub repository. It must contain:
+The public repository contains the readable README, a self-contained `tools/kt`
+CLI, the `install` script, tests, this operational `.knowledge/` tree, and the
+public `example/` corpus. The example is distributable guidance with an empty
+`where/am/i.md`; repository-specific state stays here. Public leaves must not
+contain private host, customer, or owner-identifying material. The repository
+remains connected to its intended GitHub remote; publication requires the owner's
+authorization.
 
-- `README.md`, adapting `~/Downloads/knowledge_trees_pitch.html` into readable
-  Markdown;
-- the canonical `knowledgetrees` procedure in the visible example corpus;
-- distributable proof verification built into kt outside `.knowledge`, exposed only through `kt prove`;
-- its own canonical `.knowledge` root;
-- a visible `example/` corpus containing all global knowledge that pertains directly
-  and only to knowledge trees, with an empty `example/where/am/i.md` that adopters
-  are prompted to personalize; and
-- useful leaves distilled from the Superpowers methodology, including how to make
-  a plan, write a spec, update a spec, and when to ask for clarification.
+## Leaf format and lifecycle
 
-The repository must provide a knowledge-first installer. It merges reusable leaves
-without installing the example spine, preserves an existing orientation, installs
-one kt CLI with built-in verification under the global knowledge root, asserts the bootstrap in the user's
-`AGENTS.md`, and creates shared-harness and Codex `SKILL.md` entry points as hard
-links to the installed `how/to/use/knowledgetrees.md`. The compatibility skill is a
-bootstrap created by the installer for current harnesses, not a parallel knowledge
-authority.
-The compact bootstrap must carry the kt-first and miss-resolution mandate inline and link detailed
-retrieval, capture, maintenance, and ingestion procedures. The installer must create hardlinked skills for those four
-procedures, enabled in both Codex and OpenCode. A kt miss requires determining
-whether a leaf exists; existing owners are read or amended, absent leaves are
-investigated and added (or recorded unresolved). Established answers are captured
-before the next unrelated tool call or completion. The bootstrap remains once per
-fresh session; procedure skills are used when their task triggers apply. Real root orientations
-must name branch purposes and actual entry routes. Installer OpenCode grants require
-an informed `[n/Y]` gate before any writes, disclose reads and knowledge-tree writes,
-and preserve unrelated configuration and the empty example orientation.
-It is invoked once when a fresh agent session bootstraps, not once per user message,
-turn, or task; a loaded session continues applying the procedure without rebooting.
+Nonempty leaves use flat Markdown front matter. Automated fields are
+`status: green|yellow|brown` and timezone-aware `revised_at`. `kt check ADDRESS
+HASH` alone records the manual whole-leaf `checked_at`. Optional `expires_at`
+and `expires_every` describe time-based freshness; `verifiable: true` is a reviewed
+assertion that eligible proofs cover every factual claim. Skill entry leaves may
+also need `name` and `description` for harness discovery. Blockers, next checks,
+evidence, provenance, and review conditions belong in the answer body; root and
+path supply scope. All stored timestamps are ISO 8601 with a timezone. Unsupported
+or malformed front matter is rejected by write commands and brown in proof checks.
+Empty orientation and spine leaves created by `kt init` remain empty until filled.
 
-The two trees have separate ownership. `.knowledge/` is the real operational root
-for this repository. `example/` is the visible, distributable public specimen and
-must not become a mirror of repository-specific plan or state.
+`kt add`, `kt rewrite`, and `kt combine` set `revised_at` for content changes. New
+and revised answers start yellow; a brown leaf stays brown through a rewrite until
+an independent whole-leaf check. `kt prove` writes the evaluated color. Elapsed
+expiry makes an otherwise passing leaf yellow; it reports yellow counts without
+listing their paths. Brown is sticky after proof failure or malformed structure,
+prints the affected path, and causes a nonzero exit. Proof verification timestamps
+belong to individual `Proof:` markers and never advance manual `checked_at`.
+An unflagged brown leaf needs an independent `kt check` after repair. A reviewed
+`verifiable: true` leaf requires at least one proof and becomes green when every
+proof runs and passes with valid structure, even after a prior failure or expiry.
+Missing or failed proofs make it brown. `--no-stamp` is read-only. Proof and status
+writes preserve hardlink identity and avoid steady-state timestamp churn.
 
-The verifier runs every selected proof but refreshes passing proof timestamps only
-when the leaf has expiry metadata. A failed proof records
-`Proof: (falsified at …)` and falsifies the whole leaf via sticky `falsified_at`
-metadata whose original timestamp does not churn. Unflagged leaves require independent agent review to clear
-it, and passing proofs alone never establishes whole-leaf validation. A reviewed
-`verifiable: true` declaration opts a fully proof-covered factual leaf into automatic
-falsification clearing when every proof runs and passes. Evaluation writes `status`
-in front matter; an explicit `kt check ADDRESS HASH` records manual `checked_at`.
-Keep legacy markers compatible, support read-only checking, preserve hardlinks,
-and leave agentic knowledge repair outside the verifier's scope.
+## Retrieval and maintenance
 
-Every leaf has one lifecycle state. Missing lifecycle state defaults to green,
-including specs, plans, procedures, opinions, and other contents that are not
-actually verifiable. Green requires no elapsed expiry, sticky falsification,
-malformed proof, or failing proof. Yellow means re-verification is required because
-the leaf explicitly declares `state: yellow` or an optional `expires_at` timestamp
-or `expires_every` period has elapsed; agents must not use yellow contents before
-re-verifying them. Agents should optionally add expiry metadata to factual knowledge
-liable to change. Brown means
-the leaf is falsified, malformed, or has a failing proof; the tree is busted and an
-agent encountering it must diagnose and repair it. Every `kt prove` run prints
-aggregate green/yellow/brown counts and every brown root-qualified path. Yellow
-is a warning; brown makes the command fail.
-Normal evaluation writes `status: green|yellow|brown` in front matter.
-`kt check ADDRESS HASH` sets timezone-aware `checked_at` after manual review.
-An elapsed expiry makes the leaf yellow without listing its path in routine proof
-output. A manual check renews a recurring expiry or satisfies a passed one-time
-deadline.
-`kt add`, `kt rewrite`, and `kt combine` set
-`revised_at` and start new or changed answers as yellow. Legacy absence remains
-compatible and defaults green; `--no-stamp` is read-only. Writes preserve
-hardlinks. Optional `falsified_at`, `verifiable`, and expiry fields
-retain their verification and freshness roles. Scope comes from the path; evidence
-and source belong in the answer. Do not require manual author, provenance,
-review conditions, or revision hashes in metadata. A full read supplies its hash.
-Legacy date-only check times remain readable. An invalid freshness value makes
-the leaf yellow for review; it must not create sticky falsification, especially
-on a leaf with no proofs.
+The CLI supports sentence-prefix questions, root-qualified `kt open`, ranked
+`kt find`, `kt dict`, `kt add`, `kt rewrite`, `kt check`, `kt rm`, `kt mv`,
+`kt combine`, root registration/access, and `kt prove`. Exact reads print verbatim
+content on stdout and its SHA-256 revision on stderr. `kt rewrite ADDRESS HASH
+CONTENTS` requires the full-read revision, rejects stale writes, preserves
+hardlinks and still-valid answer text, resets changed proof markers, and produces
+no normal success output. Evidence belongs in the answer. `kt rm` and `kt mv`
+require `--expect`; move refuses overwrites and preserves bytes. `kt combine`
+concatenates source bodies in order, resets inherited proof stamps and manual
+check time, keeps brown if any source was brown, and removes sources only after a
+successful save. Destructive maintenance must detect conflicts and preserve
+changed sources. All mutations honor root access and forced privacy.
 
-Every repository leaf must be suitable for public release: it must not name the
-repository owner as an individual, expose home-directory identifiers, or include
-personal or private knowledge. Imported global knowledge must therefore be curated
-and sanitized rather than copied mechanically.
+Default lookup output is compact plain text with root-qualified addresses,
+coverage scores, excerpts, and status. `--pretty` supplies a human-oriented view.
+Empty or weak search results exit nonzero without treating a miss as proof of
+absence. `does/` and `is/` answer yes/no questions directly. `kt dict` emits
+sorted, unique, useful final path segments from accessible trees without reading
+bodies or exposing restricted paths. Knowledge belongs at every scale, including
+function contracts, code details, architecture, decisions, specs, and plans.
 
-No first push may occur until the repository owner has reviewed the prepared contents and asks for
-the push.
+## Roots, startup, and installation
 
-Provide failure-triggered kt lookup/capture reminders and one-shot substantial-work
-capture reviews for local Codex, OpenCode, and GitHub Copilot CLI. Preserve unrelated
-hooks and permissions, respect Codex hook trust, isolate sessions, avoid raw tool
-logs in machine state, and prevent self-triggering review loops. Default review
-threshold is 10 completed tool calls or an encountered failure. Installer-only hook
-updates must preserve existing leaves and hardlinked skills. Keyword retrieval must
-exit nonzero on empty or insufficiently relevant results while retaining useful
-weak suggestions; heuristic success never certifies knowledge correctness.
+The exact current-directory `.knowledge/` tree and explicit registered roots are
+used; kt never discovers parent trees automatically. Wider roots default to ask.
+A user-confirmed persistent permission bypass may skip ordinary ask/deny rules,
+but force-private always wins outside the exact local tree. Protected subtrees
+must not leak through lookup, reads, capture, symlinks, proofs, or startup.
+Agents do not approve access on the user's behalf. The root registry and
+unrelated host permissions survive installation.
 
-## Root access policies
+`kt init [ORIENTATION]` creates an empty local tree and spine without overwriting
+one. `kt boot` prints the canonical global procedure, exact local orientation,
+accessible dictionary, and local proof result in that order. Startup hooks inject
+its complete output through the final proof summary. The bootstrap is once per
+fresh session, then kt-first retrieval and miss resolution apply throughout the
+session. The example and global instructions include lookup, capture, maintenance,
+ingestion, and proof guidance. An encountered miss is resolved to an existing
+owner or an investigated new or unresolved answer before unrelated work resumes.
 
-Use a user-global registry and no automatic parent discovery. Wider roots default
-to ask, with existing pairwise and session grants preserved. Add a persistent,
-user-confirmed dangerously-skip-permissions setting that ignores ordinary ask/deny
-restrictions. Force-private overrides bypass and all grants: such roots are absent
-from kt output and inaccessible unless they are the exact local tree. Registered
-private subtrees must not leak through broader roots or proof execution.
+The installer merges the public example guidance into `~/.knowledge` without
+installing the example spine, preserves existing orientation, installs the CLI and
+hooks, asserts the home AGENTS bootstrap, and hardlinks skill entry points to the
+canonical installed procedure leaves. It preserves unrelated configuration.
+OpenCode permission changes require informed `[n/Y]` consent before writes.
+Codex, OpenCode, and Copilot hooks provide startup, failure, and one-shot
+capture-review reminders without storing raw logs. Hook support must respect
+session boundaries and avoid self-triggering loops. The OpenCode backend must
+restart to load a changed plugin; Codex hook definitions require native trust.
 
-Root identities in output and default capture metadata are global, local, or the
-full canonical root directory path. Full paths avoid collisions for external trees.
-Keep project and registered names as compatibility input aliases. Startup policy
-loading must use the same persistent bypass and force-private rules as the CLI.
+## Proof and release checks
 
-Rewrite must accept complete replacement Markdown inline, require the positional
-content revision supplied by a full read, preserve hardlinks and root access
-policies, invalidate stale whole-leaf/proof verification, and work without Git or
-an interactive editor.
-
-## Agent-oriented output
-
-Default CLI output must be compact plain text intended for agents, especially
-non-exact lookups. Provide `--pretty` for the human-oriented layout. Preserve
-retrieval ordering, explicit weak/falsified status, root-qualified leaf addresses,
-verbatim exact reads, and exit-status semantics while reducing decorative output.
-
-## Yes/no branches
-
-Every knowledge root has canonical `does/` and `is/` branches alongside how,
-what, where, and why. The CLI accepts does/is question prefixes. Their leaves
-answer yes/no directly with needed conditions and evidence. Installer/bootstrap,
-root creation, and orientation guidance include both branches and actual routes.
-
-## Leaf removal and movement
-
-Add kt rm and kt mv to simplify maintenance. Both require the source revision
-from kt open --revision, support dry-run, and enforce access/force-private on
-source and destination. Move refuses overwrites, preserves bytes and same-filesystem
-hardlink identity, and handles cross-filesystem moves by exclusive copy before
-removing the source. Neither command prunes canonical directories or silently
-updates references; maintenance includes reviewing links, orientation, scope, and
-proofs after relocation. Stale-source conflicts leave the source intact.
-
-
-kt combine SOURCE... -o DESTINATION concatenates Markdown bodies in input order
-under one unverified destination metadata header with source/revision provenance.
-It removes sources only after the destination is saved successfully, retaining
-the destination when it is an input. It resets inherited proof stamps and retains
-falsification and unresolved blockers. Source revisions are checked before saving
-and deletion; concurrent edits are retained. Multi-file deletion is not transactional
-and interrupted cleanup may leave source leaves alongside the saved answer.
-Existing destination replacement requires --expect and uses rewrite conflict
-checks/hardlink preservation. Creation refuses overwrites; dry-run writes nothing.
-All inputs and output enforce access and forced privacy.
-
-## Knowledge at every scale
-
-The canonical definition, bootstrap, lookup, capture, maintenance and ingestion
-procedures must explicitly cover knowledge at all scales. Fine-grained function
-behavior and rationale, code-comment-level details, file contents, typedef
-locations, include order, dependencies, invariants and repository folders belong
-in the owning tree just as architecture and specs do. No minimum abstraction,
-complexity or answer-length threshold may exclude them. Leaves contain direct
-answers with checked source evidence and appropriate review conditions.
-
-## Inline rewrite
-
-Every full leaf read must automatically supply its SHA-256 revision alongside
-verbatim contents (stderr hash, stdout body). Keep open --revision as compatibility.
-Canonical editing is kt rewrite ADDRESS HASH CONTENTS, with the hash a required
-positional argument and no --expect option. Reject stale revisions without writing.
-Echo neither body; success and identical no-ops must produce no stdout or stderr (exit 0). Put accuracy and preservation
-reminders in the existing one-shot task-end capture-review hook.
-Retain --source, --dry-run, hardlinks, access controls, concurrent-write checks,
-review invalidation, proof handling and mandatory proof checks. Original contents
-must be in context before editing. The deprecated `kt amend` command and its
-compatibility procedure must be absent; `kt rewrite` is the sole editing command.
-
-## Normal success output
-
-Mutation success and no-ops must be silent; requested data, proof lifecycle reports,
-previews/verbose checks, errors and consent
-prompts remain. Exit status remains authoritative; reminders live in one-shot hooks.
-
-
-## Path-segment dictionary
-
-Provide `kt dict [ROOT...]`. With no roots it considers only the final two segments of each leaf path across
-accessible trees; arguments restrict it to configured root labels or
-canonical paths. Sort segments on one comma-separated line, preserve hyphenated segments, strip
-.md and deduplicate globally. Omit segments of two characters or fewer, purely
-numeric segments, and a broad dictionary-only list of grammatical, relational,
-generic action/state, and knowledge-tree container words. Read no leaf bodies and reveal no full paths or
-restricted subtree segments. Run kt dict once in fresh-session bootstrap so agents
-receive query vocabulary without unrelated knowledge contents.
-
-## Tree creation and session boot
-
-Provide `kt init [ORIENTATION]` to create `.knowledge/` in the working directory with empty canonical branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. Optional ORIENTATION is literal file contents. Refuse an existing tree. Provide `kt boot` for the former session startup behavior: canonical global procedure, exact local orientation, dictionary, then local proof result. Startup hooks run boot and inject its complete output, including the final proof summary. A failure is reported in context.
-
-## Proof root selection
-
-Bare kt prove checks all accessible roots. Provide `kt prove --local` for only the
-exact current-directory tree and `kt prove --global` for only global knowledge;
-retain --root ROOT for another exact accessible tree. Fresh-session bootstrap uses
---local to keep mandatory startup verification bounded. All modes report lifecycle
-counts and brown paths while retaining access/force-private enforcement and proof semantics.
-
-Support optional Boolean front-matter `verifiable: true` for leaves containing only
-concrete facts whose every claim is proof-covered. Require at least one eligible
-proof. If all proofs execute and pass with valid structure, clear sticky
-falsification and evaluate green without stamping a leaf-level proof time. Missing, malformed,
-skipped, or failing proofs evaluate brown. Unflagged leaves retain conservative
-behavior: passing proofs alone never verify the whole leaf.
+Proof commands are explicit, bounded, and read-only predicates attached to
+concrete assertions. `kt prove` checks every selected proof, reports aggregate
+colors and brown paths, and supports exact local, global, and other accessible
+root selection. The verifier does not repair prose or infer complete proof
+coverage. Agents inspect claim-to-proof coverage before setting `verifiable`.
+Publication checks include Python and OpenCode regressions, scoped project,
+example, and installed-global proof sweeps, instruction-sync checks, installed
+CLI byte comparison, a public-content audit, and Git whitespace/working-tree
+checks. Only the owner authorizes publishing changes.

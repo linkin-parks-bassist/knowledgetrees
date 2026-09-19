@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T08:51:45+10:00"
+revised_at: "2026-09-20T09:31:11+10:00"
 ---
 
 ## Success output policy
@@ -49,9 +49,9 @@ Accuracy/preservation reminders belong in the one-shot review hook.
   every run reports green/yellow/brown totals and prints brown addresses only.
   Normal evaluation writes `status` in front matter; `kt check` writes `checked_at`;
   `--no-stamp` preserves bytes.
-  Missing lifecycle state defaults to green, including non-verifiable contents.
-  Explicit or expired yellow warns and forbids use pending re-verification; brown fails the command and
-  requires diagnosis and repair.
+  Non-expiring leaves evaluate green unless a proof fails or brown falsification
+  remains. Expired leaves evaluate yellow and need manual review; brown fails the
+  command and requires diagnosis and repair.
   slash-containing leaf paths are not filters. Multiple tokens are disjunctive.
 - Create: `kt add "what is the result" "Checked answer" --local`.
   Creation supports `--local`, `--global`, or `--root ROOT`; it refuses existing leaves.
@@ -117,8 +117,7 @@ outcomes; lookup and open do not verify or stamp proofs.
 Default output is compact plain text for agents. Non-exact searches print one
 summary (`matches=shown/total`, adequate count, selected branch where applicable,
 and `coverage=lexical`), then one tab-separated line per result: root-qualified
-leaf address, keyword coverage with `weak` when below threshold, leaf-review or
-falsification status, and an excerpt bounded to 160 characters. Rank order is
+leaf address, keyword coverage with `weak` when below threshold, current leaf status, and an excerpt bounded to 160 characters. Rank order is
 unchanged; coverage is not confidence. Excerpts help select a leaf and are not
 complete answers. Open the chosen leaf before relying on it.
 
@@ -129,8 +128,8 @@ disables colors. Default output never emits ANSI colors, including in a terminal
 Both modes preserve exact question hits and `kt open` byte-for-byte, including
 frontmatter. Search modes share ordering, limits, access checks, and exit statuses.
 Empty or weak-only keyword matches exit 1; blocked root access exits 3.
-Results distinguish leaf-review timestamps from proof verification and retain
-explicit falsification flags. Check relevant proofs before reliance.
+Results show the current leaf status. Manual check time is distinct from proof
+verification time. Check relevant proofs before reliance.
 The installer puts the script in the global `.tools/kt` and links `~/.local/bin/kt`.
 
 ## Persistent access settings
@@ -148,7 +147,7 @@ new invocation sees current configuration and filesystem changes.
 
 ## Remove, move, and coalesce leaves
 
-Read a source revision with `kt open local:what/is/old.md --revision`.
+Read a source revision with `kt open local:what/is/old.md`.
 Use the hash printed on stderr for destructive single-leaf changes:
 
 ```sh
@@ -164,13 +163,13 @@ the destination is retained; other inputs are removed. `--dry-run` writes/remove
 nothing. Sources are revision/inode checked before saving and removal; detected
 concurrent changes are retained. Cleanup across multiple files is not transactional:
 interruption or a conflict can leave sources beside the saved destination. Inspect
-that state before retrying so content is not duplicated. Source/revision provenance,
-unresolved blockers, and sticky falsification survive; inherited proof stamps and
-whole-leaf verification are reset for review.
+that state before retrying so content is not duplicated. Source answer bodies, including unresolved blockers and next checks, survive.
+A brown source keeps the combined leaf brown. Manual check time and inherited
+proof stamps are reset for review.
 
 Move refuses an existing destination and preserves bytes. Same-filesystem moves
 preserve hardlink identity; cross-filesystem moves copy exclusively before removing
 the source. Removing a name leaves other hardlinks intact. No command prunes empty
-canonical branches or updates links automatically. Review scope metadata, links,
+canonical branches or updates links automatically. Review scope, links,
 orientation, current-state projections, and affected proofs after maintenance.
 All operations enforce source/destination access and force-private boundaries.

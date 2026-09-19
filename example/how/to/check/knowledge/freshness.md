@@ -1,9 +1,9 @@
 ---
 status: green
-revised_at: "2026-09-18T12:22:12+10:00"
+revised_at: "2026-09-20T09:23:47+10:00"
 ---
 
-Read the leaf's verification time, evidence, and review trigger. Recheck live state
+Read the leaf's manual `checked_at`, evidence, and review trigger. Recheck live state
 immediately; recheck tool paths and versions after upgrades or when execution
 matters; re-read policy sources when decisions may have changed. Stable doctrine
 does not expire on an arbitrary timer. A source checksum detects change, not

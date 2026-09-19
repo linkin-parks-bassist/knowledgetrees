@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:06:22+10:00"
+revised_at: "2026-09-20T09:23:47+10:00"
 name: knowledgetrees-capture
 description: 'Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs.'
 ---
@@ -48,17 +48,17 @@ Use `kt open ROOT:PATH` for that read and `kt prove --root ROOT TOKEN` after
 changing eligible proofs. Create a new leaf in one call:
 
 ```sh
-kt add "how to prepare the demo" "Run the project's documented demo command." --source "checked project instructions"
+kt add "how to prepare the demo" "Run the project's documented demo command."
 ```
 
 `capture` is an alias for `add`. The exact current-directory local root is the default, falling
 back to global; choose `--global`, `--local` (`--project` is an alias), or `--root example` explicitly when
-scope matters. `--scope` supplies a scope description. `--dry-run` previews without
+scope matters. `--dry-run` previews without
 writing. Pass `-` as the answer to read multiline Markdown from stdin.
 The command preserves repeated words and hyphenated components, creates metadata,
 and refuses existing owners rather than overwriting them. It records new answers
-as `unverified`, never invents whole-leaf verification or a proof, and never executes
-the supplied body. Review everything independently before adding verified metadata;
+with `status: yellow`, never invents a manual check or proof, and never executes
+the supplied body. Review the answer before recording `checked_at`;
 inspect and run eligible proofs separately. For an unresolved question, supply
 `--unresolved --blocker "missing evidence" --next-check "specific next investigation"`.
 
@@ -101,10 +101,10 @@ and next check and stays yellow until reviewed.
 
 Freshness may additionally use either `expires_at` (ISO 8601 with timezone) or
 `expires_every` (for example `14d`, `2 weeks`, or `two weeks`, measured from
-`checked_at`; a legacy `verified_at` remains a compatible fallback). An elapsed expiry makes the leaf yellow and unusable until
+`checked_at`). An elapsed expiry makes the leaf yellow and unusable until
 re-verification. Use expiry only when a real time-based freshness boundary exists.
-Legacy leaves without metadata default to green, including specs, plans,
-procedures, opinions, and other content that is not actually verifiable. Prefer
+Proof-free specifications, plans, procedures, opinions, and other content
+that is not mechanically verifiable can be green. Prefer
 expiries for factual answers liable to change.
 
 ## Narrowly eligible executable proofs
@@ -136,7 +136,7 @@ assertion without a marked proof, or a marker whose predicate is unsafe or tests
 a different assertion, is a defect to repair within current authority before
 reliance. A passing run
 refreshes only its `Proof: (verified at …)` marker. A failing run changes it to
-`Proof: (falsified at …)` and sets sticky leaf `falsified_at`. The verifier cannot
+`Proof: (falsified at …)` and sets `status: brown`. The verifier cannot
 decide semantic eligibility, faithful coverage, or whether all prose is proved;
 the agent remains responsible. Read maintenance before repairing a falsified leaf.
 
@@ -144,5 +144,5 @@ For an existing owner, use kt rewrite ADDRESS HASH CONTENTS as
 described in
 `how/to/rewrite/a/knowledge/leaf.md`; creation still refuses overwriting existing leaves.
 
-Use canonical `does/` and `is/` branches for yes/no answers. Capture scope defaults
-to local, global, or the full canonical root path; --scope overrides that metadata.
+Use canonical `does/` and `is/` branches for yes/no answers. The leaf path and
+selected root supply scope; no scope field is written to front matter.

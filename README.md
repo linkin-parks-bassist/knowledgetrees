@@ -250,10 +250,25 @@ An unreviewed new or revised leaf starts `status: yellow`; elapsed `expires_at` 
 falsified, malformed, or proof-failing; it makes the tree busted and must be repaired.
 Agents should add expiry metadata to facts likely to change, while leaving durable
 or non-verifiable knowledge green unless there is a concrete reason for review.
-Normal proof evaluation writes `status: green|yellow|brown` in front matter.
+Normal proof evaluation writes `status: green|yellow|brown` in flat front matter.
 `revised_at` records the last content change; `kt check ADDRESS HASH` records
-`checked_at` after manual review. Legacy leaves without
-metadata remain green by default until evaluated; `--no-stamp` writes nothing.
+`checked_at` after manual review. Optional `expires_at` and `expires_every` set
+freshness limits, and `verifiable: true` asserts complete proof coverage.
+Timestamps use ISO 8601 with a timezone. Unsupported front matter makes a leaf
+brown; `--no-stamp` writes nothing.
+
+```yaml
+---
+status: green
+revised_at: "2026-09-20T09:00:00+10:00"
+checked_at: "2026-09-20T09:10:00+10:00"
+expires_every: 2 weeks
+verifiable: false
+---
+```
+
+`checked_at`, expiry, and `verifiable` are optional. Keep origins, caveats,
+blockers, and next checks in the answer, not in front matter.
 
 A leaf containing only concrete facts whose every claim is covered by eligible proofs
 should declare `verifiable: true` after that coverage has been reviewed.
@@ -285,8 +300,8 @@ that the marked predicates passed—not that every unproved statement is true.
 
 Passing proof timestamps refresh only for leaves with expiry metadata; non-expiring
 leaves keep their existing markers unchanged. Failed proofs receive
-`Proof: (falsified at …)` and set the leaf's sticky `falsified_at` once rather than
-churning it on every sweep. `status` records the current evaluated color.
+`Proof: (falsified at …)` and set `status: brown`. The first failure time remains
+on the proof marker rather than churning on every sweep.
 Unflagged leaves require independent review to clear falsification:
 even if every proof later passes, the leaf remains falsified. Passing every proof is
 necessary but not sufficient for an unflagged leaf. A reviewed `verifiable: true`
@@ -420,8 +435,8 @@ ranked keyword results, `kt open global:how/to/add/knowledge/leaves.md` to read 
 leaf verbatim, and `kt prove --no-stamp leaves` to check relevant proofs.
 `kt roots` shows the active scopes. Default output is compact plain text for
 agents. Non-exact searches use one summary and one tab-separated line per result:
-leaf address, lexical coverage (with `weak` below threshold), review/falsification
-status, and an excerpt of at most 160 characters. Use `kt --pretty find leaves`
+leaf address, lexical coverage (with `weak` below threshold), leaf status, and
+an excerpt of at most 160 characters. Use `kt --pretty find leaves`
 or `kt where is vivado --pretty` for the expanded human layout and terminal colors.
 Exact answers and `kt open` remain verbatim in both modes; search ranking and
 exit statuses are unchanged. Search is lexical, not a semantic model;
@@ -707,7 +722,8 @@ Malformed configuration fails closed even when bypass is enabled.
 
 ### Active leaf maintenance
 
-Read a revision with kt open ROOT:PATH --revision. Use its hash for removal or movement:
+Read a revision with `kt open ROOT:PATH`. It prints the leaf and its revision hash.
+Use that hash for removal or movement:
 
 ```sh
 kt rm local:what/is/old.md --expect HASH --dry-run
@@ -717,8 +733,9 @@ kt combine local:what/is/first.md local:what/is/second.md -o local:what/is/cohes
 
 Combine coalesces in input order and removes sources after saving successfully.
 An existing destination requires --expect HASH; if it is an input, it is retained.
-Dry-run changes nothing. Source provenance, unresolved blockers, and falsification
-survive; verification claims/proof stamps are reset for review. Sources changed
+Dry-run changes nothing. Source answer bodies, including unresolved blockers and
+next checks, survive. A brown source keeps the combined leaf brown; manual check
+time and proof stamps are reset for review. Sources changed
 during coalescing are retained. Multi-file cleanup is not transactional, so inspect
 partially completed cleanup before retrying. Moves refuse overwrites and preserve
 same-filesystem hardlinks; cross-filesystem moves copy before removing the source.
@@ -744,7 +761,6 @@ Accuracy/preservation reminders belong in the one-shot review hook.
 Every full leaf read (`kt open` or an exact question) automatically prints its
 SHA-256 hash as `Revision: HASH` on stderr. stdout remains the verbatim leaf, so
 the read brings both contents and revision into context without an extra call.
-`open --revision` remains accepted for compatibility.
 
 Rewrite using that required positional hash:
 
@@ -769,8 +785,7 @@ After manually reviewing the complete answer from a full read, record that revie
 with `kt check ADDRESS HASH`. This sets `checked_at` and leaves status yellow until
 `kt prove` evaluates current proofs. Proof runs never advance manual check time.
 
-Old metadata continues to work without conversion. Empty orientation leaves
-remain empty.
+Empty orientation leaves remain empty.
 
 Rewrite preserves hardlinks, invalidates whole-leaf review, and resets new or
 changed proof stamps. It does not execute proofs or clear sticky falsification.

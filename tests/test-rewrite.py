@@ -19,18 +19,10 @@ def main():
         (root / "where/am/i.md").write_text("Standalone tree, no Git repository.")
         path = root / "how/to/test.md"
         original = '''---
+status: brown
+revised_at: '2026-09-12T12:00:00+00:00'
 name: test-skill
-metadata:
-  verified_at: yesterday
-  verified_by: fixture
-  verification: |
-    Checked all claims.
-  scope: fixture
-  source: original evidence
-  falsified_at: older-failure
 ---
-
-Status: Brown
 
 The first assertion is true.
 
@@ -61,27 +53,23 @@ true
             assert result.returncode == expected, (args, result.stdout, result.stderr)
             return result
 
-        opened = run("open", "project:how/to/test.md", "--revision")
+        opened = run("open", "project:how/to/test.md")
         token = opened.stderr.strip().removeprefix("Revision: ")
         assert token == hashlib.sha256(path.read_bytes()).hexdigest()
         assert opened.stdout == original
         revised = original.replace("The second assertion is true.", "The second assertion is different.")
-        revised = revised.replace("  falsified_at: older-failure\n", "")
         preview = run("rewrite", "project:how/to/test.md", token, revised, "--dry-run")
         assert "second assertion is different" in preview.stdout
         assert path.read_text() == original and path.stat().st_ino == inode
-        run("rewrite", "project:how/to/test.md", token, revised, "--source", "new experimental evidence")
+        run("rewrite", "project:how/to/test.md", token, revised)
         updated = path.read_text()
-        assert "verified_at:" not in updated and "verified_by:" not in updated and "verification:" not in updated
-        assert "status: \"yellow\"" in updated and "revised_at:" in updated
-        assert "older-failure" in updated, "sticky falsification cannot be silently cleared"
-        assert "Status:" not in updated, "editing invalidates the last evaluated lifecycle status"
+        assert "status: \"brown\"" in updated and "revised_at:" in updated
         assert updated.count("Proof: (verified at 2026-09-12T12:00:00+00:00)") == 1
         assert updated.count("Proof: (verified at _)") == 1
         assert alias.read_text() == updated and path.stat().st_ino == inode
         run("rewrite", "project:how/to/test.md", token, "stale replacement", expected=4)
         assert path.read_text() == updated
-        token = run("open", "project:how/to/test.md", "--revision").stderr.strip().removeprefix("Revision: ")
+        token = run("open", "project:how/to/test.md").stderr.strip().removeprefix("Revision: ")
         no_op = run("rewrite", "project:how/to/test.md", token, updated)
         assert no_op.stdout == "" and no_op.stderr == "" and path.read_text() == updated
         # Changed predicate cannot retain an old proof stamp, even if submitted as verified.
@@ -93,10 +81,10 @@ true
         run("rewrite", "project:how/to/test.md", token,
             path.read_text() + "\nProof: (verified at 2030-01-01T00:00:00+00:00)\n")
         assert "2030-01-01" not in path.read_text()
-        # Body-only standalone leaves get unverified metadata.
+        # Body-only input gets current metadata on rewrite.
         bare = root / "bare.md"
         bare.write_text("Old body")
-        token = run("open", "project:bare.md", "--revision").stderr.strip().removeprefix("Revision: ")
+        token = run("open", "project:bare.md").stderr.strip().removeprefix("Revision: ")
         run("rewrite", "project:bare.md", token, "New body\n")
         assert 'status: "yellow"' in bare.read_text()
         assert "New body" in bare.read_text()
@@ -113,12 +101,12 @@ true
         run("rewrite", "project:how/to/test.md", "bad", "answer", expected=2)
         run("rewrite", "project:how/to/test.md", token, "Inline answer\nwith multiple lines", "--dry-run")
         assert path.read_text() == before
-        rewritten = run("rewrite", "project:how/to/test.md", token, "Inline answer\nwith multiple lines", "--source", "inline evidence")
+        rewritten = run("rewrite", "project:how/to/test.md", token, "Inline answer\nwith multiple lines")
         assert rewritten.stdout == ""
         assert rewritten.stderr == ""
         assert path.stat().st_ino == inode and alias.read_text() == path.read_text()
         assert "Inline answer\nwith multiple lines" in path.read_text()
-        assert "older-failure" in path.read_text() and "revised_at:" in path.read_text()
+        assert 'status: "brown"' in path.read_text() and "revised_at:" in path.read_text()
         run("rewrite", "project:how/to/test.md", token, "stale", expected=4)
         current = path.read_text()
         token = hashlib.sha256(current.encode()).hexdigest()
@@ -132,7 +120,7 @@ true
         run("rewrite", "project:alias.md", fresh, "body", expected=2)
         config = {"roots": {"blocked": {"path": str(root), "access": "deny"}}}
         Path(env["KT_CONFIG"]).write_text(json.dumps(config))
-        run("open", "project:bare.md", "--revision", expected=3)
+        run("open", "project:bare.md", expected=3)
         run("rewrite", "project:bare.md", fresh, "body", expected=3)
         assert "New body" in bare.read_text()
     print("rewrite integration checks passed")

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-13T13:54:52+10:00"
+revised_at: "2026-09-20T09:26:15+10:00"
 ---
 
 Root discovery uses only the exact current-directory tree, the known global
@@ -18,8 +18,8 @@ global tree is also local. Canonical paths avoid folder-name collisions.
 Use `kt open local:PATH`, `kt open global:PATH`, or
 `kt open /full/root/directory:PATH`. Quote arguments containing spaces.
 `project:` and registered names remain input aliases. New captures use --local
-(--project is an alias), --global, or --root PATH. A supplied --scope overrides
-capture metadata. Existing leaves are not automatically relabeled.
+(--project is an alias), --global, or --root PATH. The selected root and leaf path supply scope; no scope field is written to
+leaf metadata.
 
 ## Ordinary policies and grants
 

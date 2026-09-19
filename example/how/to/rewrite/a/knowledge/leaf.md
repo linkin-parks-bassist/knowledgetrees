@@ -1,12 +1,11 @@
 ---
 status: green
-revised_at: "2026-09-20T08:51:45+10:00"
+revised_at: "2026-09-20T09:23:47+10:00"
 ---
 
 Read a leaf normally with `kt open ROOT:PATH` or an exact sentence-prefix query.
 Every full leaf read supplies `Revision: HASH` on stderr for the same bytes returned
-verbatim on stdout. `open --revision` remains accepted as a compatibility flag;
-it is no longer needed. Ranked excerpts are not full reads and do not supply a
+verbatim on stdout. Ranked excerpts are not full reads and do not supply a
 revision for editing.
 
 Use the canonical editing command:
@@ -20,8 +19,8 @@ rewrite --expect option. A matching hash establishes that the leaf still has the
 read contents; it does not prove how recently it was read or that the agent reviewed
 it. Keep those contents in context and preserve still-valid knowledge when editing.
 Contents are a literal argument, including multiline Markdown. No temporary file,
-stdin, editor, or extra read just to obtain a hash is required. --source records
-actual evidence; --dry-run previews the diff without writing. Quote shell arguments
+stdin, editor, or extra read just to obtain a hash is required. Put evidence
+in the answer; --dry-run previews the diff without writing. Quote shell arguments
 correctly; operating-system argument size limits apply.
 
 Successful rewrites and identical no-ops produce no stdout or stderr. Exit 0
@@ -45,8 +44,9 @@ Unchanged assertion-paragraph plus fenced predicate retains its original proof
 marker, regardless of any replacement timestamp supplied. New or changed proofs
 are reset to `Proof: (verified at _)` and must be checked separately. Rewriting
 never executes proof bodies or claims independent whole-leaf verification.
-Sticky falsified_at is preserved even if omitted from the replacement; independent
-review/repair remains necessary before deliberately clearing it.
+A brown leaf stays brown through a rewrite until an independent whole-leaf
+review is recorded with `kt check`, or complete eligible proofs pass on a
+`verifiable: true` leaf.
 
 Evidence: the rewrite integration test uses a standalone non-Git tree and verifies conflict
 refusal, dry-run/no-op behavior, in-place hardlinks, review invalidation, unchanged

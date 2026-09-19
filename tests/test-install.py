@@ -190,15 +190,11 @@ def main() -> None:
         assert permissions["edit"][str(target_home / ".agents") + "/**"] == "ask"
 
         orientation.write_text("Local environment orientation.\n")
-        retired = knowledge / "how/to/amend/a/knowledge/leaf.md"
-        retired.parent.mkdir(parents=True, exist_ok=True)
-        retired.write_text("Retired compatibility guidance.\n")
         rerun = run(*home_arguments, answer="")
         assert len(json.loads(codex_hooks.read_text())["hooks"]["Stop"]) == 2
         assert "[n/Y]" not in rerun.stdout
         assert orientation.read_text().startswith("---\nstatus: green\n")
         assert orientation.read_text().endswith("Local environment orientation.\n")
-        assert not retired.exists()
         assert agents_path.read_text().count(
             "BEGIN KNOWLEDGETREES BOOTSTRAP"
         ) == 1
@@ -213,9 +209,9 @@ def main() -> None:
         proof_owner.write_text(proof_content.replace("Proof: (verified at ", "Proof: (falsified at "))
         run(*home_arguments, expected=2)
         assert "Proof: (falsified at " in proof_owner.read_text()
-        proof_owner.write_text(proof_content.replace("---\n", "---\nfalsified_at: test-failure\n", 1))
+        proof_owner.write_text(proof_content.replace("status: green", "status: brown", 1))
         run(*home_arguments, expected=2)
-        assert "falsified_at: test-failure" in proof_owner.read_text()
+        assert "status: brown" in proof_owner.read_text()
         proof_owner.write_text(proof_content)
         capture_owner.write_text(capture_owner.read_text() + "\nLocal customization.\n")
         customized = capture_owner.read_bytes()

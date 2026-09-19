@@ -18,15 +18,15 @@ def main():
         global_root = base / "global space"
         for root in (local, global_root):
             (root / "where/am").mkdir(parents=True)
-            (root / "where/am/i.md").write_text("---\nscope: test\n---\n\nTest orientation.\n")
+            (root / "where/am/i.md").write_text("---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nTest orientation.\n")
             (root / "how/to/add/knowledge").mkdir(parents=True)
         leaf = "how/to/add/knowledge/leaves.md"
-        content = "---\nmetadata:\n  verified_at: '2026-09-12T12:00:00+00:00'\n---\n\nCapture leaves immediately.\n"
+        content = "---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nCapture leaves immediately.\n"
         (global_root / leaf).write_text(content)
         (local / leaf).write_text(content.replace("Capture", "Project: capture"))
-        (global_root / "bad.md").write_text("---\nfalsified_at: yesterday\n---\n\nLeaves are bad.\n")
+        (global_root / "bad.md").write_text("---\nstatus: brown\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nLeaves are bad.\n")
         (global_root / "where/is").mkdir(parents=True)
-        (global_root / "where/is/compiler.md").write_text("---\nscope: test\n---\n\nThe compiler is installed here.\n")
+        (global_root / "where/is/compiler.md").write_text("---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nThe compiler is installed here.\n")
         (global_root / "where/is/gpu.md").write_text("GPU location: violet accelerator.\n")
         (global_root / "how/to/explain").mkdir(parents=True)
         (global_root / "how/to/explain/compiler.md").write_text("A compiler translates code.\n")
@@ -54,29 +54,27 @@ def main():
             assert "\033[" not in result.stdout
             return result.stdout
 
-        result = run("add", "How to do the thing?", "Do it carefully.", "--source", "test evidence")
+        result = run("add", "How to do the thing?", "Do it carefully.")
         captured = local / "how/to/do/the/thing.md"
         assert result == "" and captured.is_file()
         saved = captured.read_text()
-        assert 'status: \"yellow\"' in saved and 'revised_at:' in saved and 'source:' not in saved
-        assert "verified_at:" not in saved and "Proof:" not in saved
+        assert 'status: \"yellow\"' in saved and 'revised_at:' in saved
+        assert "Proof:" not in saved
         assert run("how to do the thing") == saved
         run("add", "how to do the thing", "overwrite", expected=2)
         assert captured.read_text() == saved
         run("capture", "why is repetition repetition useful", "Repetition.", "--global")
         assert (global_root / "why/is/repetition/repetition/useful.md").is_file()
-        run("add", "where is multi-word tooling", "Here.", "--root", str(global_root),
-            "--scope", "public example", "--source", "quoted \"source\"\nwith newline")
+        run("add", "where is multi-word tooling", "Here.", "--root", str(global_root))
         explicit = (global_root / "where/is/multi-word/tooling.md").read_text()
         assert 'revised_at:' in explicit and str(base) not in explicit
-        assert 'source:' not in explicit
         preview = run("add", "when to preview", "Preview first.", "--dry-run")
         assert 'status: \"yellow\"' in preview and not (local / "when").exists()
         run("add", "where is mystery", "Not established.", "--unresolved", expected=2)
         run("add", "where is mystery", "Not established.", "--unresolved",
             "--blocker", "missing evidence", "--next-check", "inspect configuration")
         unresolved = (local / "where/is/mystery.md").read_text()
-        assert 'status: \"yellow\"' in unresolved and 'blocker:' in unresolved
+        assert 'status: \"yellow\"' in unresolved and 'Blocker: missing evidence' in unresolved and 'Next check: inspect configuration' in unresolved
         for unsafe in ("../escape", "where/is/escape", "where_is_escape", "---", "bad\nquestion"):
             run("add", unsafe, "No.", expected=2)
         run("add", "what is empty", "   ", expected=2)
@@ -90,8 +88,8 @@ def main():
         assert (local / "how/to/pipe.md").read_text().endswith("Multiline\nanswer.\n")
         result = run("find", "how to add knowledge leaves")
         assert result.index("local:" + leaf) < result.index("global:" + leaf)
-        assert "2026-09-12T12:00:00+00:00" in result
-        assert "FALSIFIED" in run("find", "leaves")
+        assert "\tgreen\t" in result
+        assert "\tbrown\t" in run("find", "leaves")
         dictionary = run("dict").strip().split(", ")
         assert dictionary == sorted(set(dictionary), key=lambda value: (value.casefold(), value))
         assert {"obtain", "sudo-authorization"}.issubset(dictionary)
@@ -219,7 +217,7 @@ def main():
         assert proof.read_text().startswith("---\nstatus: green\n")
         proof.write_text("Failing.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
         run("prove", "--no-stamp", "proven", expected=1)
-        assert "falsified_at:" not in proof.read_text()
+        assert "status: brown" not in proof.read_text()
     print("kt integration checks passed")
 
 

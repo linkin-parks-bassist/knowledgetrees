@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T08:51:45+10:00"
+revised_at: "2026-09-20T09:23:47+10:00"
 name: knowledgetrees-maintenance
 description: 'Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed.'
 ---
@@ -62,8 +62,8 @@ subdirectory names; use `--verbose` for diagnostics.
 
 Inspect each proof's assertion and read-only predicate before execution. A passing
 proof stamps `Proof: (verified at …)`; a failed or timed-out execution stamps
-`Proof: (falsified at …)` and marks the leaf's `falsified_at`. Malformed proof
-structure also falsifies the leaf. Legacy `Proof:` markers are accepted. Writes
+`Proof: (falsified at …)` and marks the leaf brown. Malformed proof
+structure also makes the leaf brown. Writes
 preserve hardlink identity; `--no-stamp` makes checks read-only.
 
 `kt prove` always reports green, yellow, and brown totals and prints brown
@@ -80,7 +80,7 @@ Normal evaluation persists `status: green|yellow|brown` in front matter.
 Stop relying on falsified knowledge. An agent encountering a brown leaf must inspect
 evidence and repair or remove false,
 malformed, or unsafe claims and predicates only within authorized scope. Review the
-whole leaf independently before explicitly clearing `falsified_at`; rerun until
+whole leaf independently and use `kt check ADDRESS HASH` to clear brown status; rerun until
 checks pass. Passing every proof is necessary but not sufficient for an unflagged
 leaf. A reviewed `verifiable: true` leaf is the narrow exception: complete passing
 proofs clear falsification automatically. The verifier
@@ -109,7 +109,7 @@ replace agent review. A review with no new knowledge needs no invented leaf.
 Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
 Leaves may declare an ISO-8601 `expires_at` or an `expires_every` duration measured
-from manual `checked_at`; a legacy `verified_at` remains a compatible fallback. Elapsed expiry makes them yellow until independently re-verified.
+from manual `checked_at`. Elapsed expiry makes them yellow until independently re-verified.
 Agents should add expiry metadata when a factual answer is liable to change. Do not
 add expiry merely because content cannot be mechanically or independently verified.
 
@@ -136,7 +136,7 @@ atomicity, cohesion, or leaf length into automatic rewrite rules.
 
 ## Remove, move, and coalesce leaves
 
-Read a source revision with `kt open local:what/is/old.md --revision`.
+Read a source revision with `kt open local:what/is/old.md`.
 Use the hash printed on stderr for destructive single-leaf changes:
 
 ```sh
@@ -152,13 +152,13 @@ the destination is retained; other inputs are removed. `--dry-run` writes/remove
 nothing. Sources are revision/inode checked before saving and removal; detected
 concurrent changes are retained. Cleanup across multiple files is not transactional:
 interruption or a conflict can leave sources beside the saved destination. Inspect
-that state before retrying so content is not duplicated. Source/revision provenance,
-unresolved blockers, and sticky falsification survive; inherited proof stamps and
-whole-leaf verification are reset for review.
+that state before retrying so content is not duplicated. Source bodies, including their blockers and next checks, are preserved. A brown
+source keeps the destination brown; inherited proof stamps and manual check time
+are reset for review.
 
 Move refuses an existing destination and preserves bytes. Same-filesystem moves
 preserve hardlink identity; cross-filesystem moves copy exclusively before removing
 the source. Removing a name leaves other hardlinks intact. No command prunes empty
-canonical branches or updates links automatically. Review scope metadata, links,
+canonical branches or updates links automatically. Review leaf paths, links,
 orientation, current-state projections, and affected proofs after maintenance.
 All operations enforce source/destination access and force-private boundaries.

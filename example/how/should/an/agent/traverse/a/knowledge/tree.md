@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T08:51:45+10:00"
+revised_at: "2026-09-20T09:32:03+10:00"
 name: knowledgetrees-lookup
 description: 'Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and capture missing knowledge before continuing.'
 ---
@@ -35,7 +35,7 @@ architecture answer; smallness and source visibility are not exemptions.
 2. Read likely matches with `kt open local:PATH` or `kt open global:PATH`.
    Prefer project answers for project questions and global answers for host tooling.
    Results and orientation previews are not substitutes for the full answer.
-3. Check `status`, `revised_at`, `checked_at`, optional verification and expiry metadata, and evidence in the answer.
+3. Check `status`, `revised_at`, `checked_at`, optional expiry metadata, proof markers, and evidence in the answer.
    Freshness depends on volatility and evidence, not timestamp recency alone. Read
    the assertion and predicate behind every proof before relying on the claim.
    Run `kt prove --root ROOT TOKEN`. Missing lifecycle state defaults to green;
@@ -67,8 +67,8 @@ If no leaf exists, investigate safely, verify from primary evidence, and capture
 the answer before the next unrelated tool call or completion. Necessary verification
 and capture calls are allowed while resolving the question. Capture even small answers;
 do not postpone them to a documentation phase or suppress them to keep leaf count low.
-If unresolved, record a blocker and next check; keep `status: yellow`
-without inventing a verified conclusion. If writes are forbidden, give a scoped handoff.
+If unresolved, record a blocker and next check in the answer without
+inventing a verified conclusion. If writes are forbidden, give a scoped handoff.
 
 Do not treat a zero-result query, an unreadable root, or a broken/missing `kt`
 executable as evidence of absent knowledge. If `kt` is off PATH, use the installed

@@ -341,18 +341,50 @@ def paint(value, color):
     return str(value)
 
 
+LEAF_FIELDS = frozenset(("status", "revised_at", "checked_at", "expires_at",
+                         "expires_every", "verifiable", "name", "description"))
+
+
 def leaf_parts(text):
     metadata = {}
     body = text
     match = re.match(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", text, re.S)
     if match:
         body = text[match.end():]
-        for key in ("verified_at", "falsified_at", "expires_at", "expires_every", "state", "verifiable",
-                    "status", "blocker", "next_check", "revised_at", "checked_at"):
-            value = re.search(rf"^\s*{key}:\s*([^\n]+)", match[1], re.M)
+        for key in LEAF_FIELDS:
+            value = re.search(rf"^{key}:\s*([^\n]+)", match[1], re.M)
             if value:
                 metadata[key] = value[1].strip().strip("\"'")
     return metadata, body
+
+
+def metadata_errors(text):
+    if not text.startswith("---\n"):
+        return []
+    match = re.match(r"\A---\n(.*?)\n---(?:\n|$)", text, re.S)
+    if match is None:
+        return [(1, "unclosed metadata front matter")]
+    errors = []
+    seen = set()
+    for number, line in enumerate(match[1].splitlines(), 2):
+        field = re.fullmatch(r"([a-z_]+):[ \t]*(.+)", line)
+        if field is None or field[1] not in LEAF_FIELDS:
+            errors.append((number, "unsupported metadata field or syntax"))
+            continue
+        key, value = field.groups()
+        if key in seen:
+            errors.append((number, f"duplicate metadata field: {key}"))
+        seen.add(key)
+        value = value.strip().strip("\"'")
+        if key == "status" and value not in LEAF_STATES:
+            errors.append((number, "status must be green, yellow, or brown"))
+        if key in ("revised_at", "checked_at", "expires_at"):
+            try:
+                if datetime.fromisoformat(value).utcoffset() is None:
+                    raise ValueError("timezone required")
+            except ValueError:
+                errors.append((number, f"{key} must be an ISO 8601 timestamp with timezone"))
+    return errors
 
 
 def words(value):
@@ -531,9 +563,7 @@ def find(args, branches=None, browse=False, context=None):
         branch = f" branch={args.branch}" if getattr(args, "branch", None) else ""
         print(f"{'leaves' if browse else 'matches'}={len(shown)}/{len(results)} adequate={count}{branch} coverage=lexical")
         for _, _, relative, label, _, metadata, excerpt, matched in shown:
-            status = ("FALSIFIED:" + metadata["falsified_at"] if metadata.get("falsified_at")
-                      else metadata.get("status") or ("reviewed:" + metadata["verified_at"]
-                           if metadata.get("verified_at") else "unverified"))
+            status = metadata.get("status", "green")
             fields = [f"{label}:{relative}"]
             if terms:
                 fields.append(f"coverage={matched:.0%}" + (" weak" if matched < args.min_coverage else ""))
@@ -553,9 +583,8 @@ def find(args, branches=None, browse=False, context=None):
         print(f"{paint(str(index) + '.', '1')} {paint(label + ':' + relative, '36')}  {paint('score ' + str(-negative_score), '2')}")
         if terms:
             print(f"   keyword coverage {matched:.0%}" + (" · weak suggestion" if matched < args.min_coverage else ""))
-        status = ("FALSIFIED " + metadata["falsified_at"] if metadata.get("falsified_at")
-                  else metadata.get("status", "leaf reviewed " + metadata.get("verified_at", "unknown")))
-        print("   " + paint(status, "31" if metadata.get("falsified_at") else "2"))
+        status = metadata.get("status", "green")
+        print("   " + paint(status, "31" if status == "brown" else "2"))
         if excerpt:
             print(textwrap.fill(excerpt, width=width, initial_indent="   ", subsequent_indent="   "))
         print()
@@ -702,7 +731,7 @@ def resolve_leaf(value, writable=False):
     return path
 
 
-def open_leaf(value, with_revision=False):
+def open_leaf(value):
     data = resolve_leaf(value).read_bytes()
     print(f"Revision: {revision(data)}", file=sys.stderr)
     sys.stdout.write(data.decode("utf-8"))
@@ -777,67 +806,27 @@ def proof_records(text):
     return lines, records
 
 
-def invalidate_review(text, original, source=None):
+def invalidate_review(text, original):
     match = re.match(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|$)", text, re.S)
     if text.startswith("---") and match is None:
         raise ValueError("unclosed front matter")
-    header = match[1] if match else ""
     body = text[match.end():] if match else text
-    nested = False
-    indent = ""
-    # Remove old whole-leaf review fields, including indented block continuations.
-    lines = header.splitlines()
-    cleaned = []
-    index = 0
-    while index < len(lines):
-        line = lines[index]
-        field = re.match(r"^( *)(status|verified_at|verified_by|verification|checked_at|updated_at|created_at|scope|source|review_when):", line)
-        if field:
-            width = len(field[1])
-            index += 1
-            while index < len(lines) and (not lines[index].strip() or len(lines[index]) - len(lines[index].lstrip()) > width):
-                index += 1
-            continue
-        cleaned.append(line)
-        index += 1
-    flattened = []
-    inside_metadata = False
-    for line in cleaned:
-        if line.strip() == "metadata:":
-            inside_metadata = True
-            continue
-        if inside_metadata and line and not line.startswith(" "):
-            inside_metadata = False
-        flattened.append(line[2:] if inside_metadata and line.startswith("  ") else line)
-    header = "\n".join(flattened)
-
-    def set_field(key, value):
-        nonlocal header
-        entry = f"{indent}{key}: {json.dumps(value)}"
-        pattern = rf"(?m)^{indent}{key}:.*$"
-        if re.search(pattern, header):
-            fields = header.splitlines()
-            first = next(i for i, line in enumerate(fields) if re.match(pattern.removeprefix("(?m)"), line))
-            end = first + 1
-            while end < len(fields) and (not fields[end].strip() or len(fields[end])-len(fields[end].lstrip()) > len(indent)):
-                end += 1
-            fields[first:end] = [entry]
-            header = "\n".join(fields)
-        elif nested:
-            header = re.sub(r"(?m)^metadata:\s*$", lambda _: "metadata:\n" + entry, header, count=1)
-        elif key == "status":
-            header = entry + ("\n" + header if header.strip() else "")
-        else:
-            header = header.rstrip() + ("\n" if header.strip() else "") + entry
-
-    status, _ = leaf_parts(text)
-    set_field("status", "yellow")
-    set_field("revised_at", datetime.now().astimezone().isoformat(timespec="seconds"))
-    # Do not let a submitted replacement silently clear sticky falsification.
     previous, _ = leaf_parts(original)
-    if previous.get("falsified_at"):
-        set_field("falsified_at", previous["falsified_at"])
-    return remove_lifecycle_status("---\n" + header + "\n---\n\n" + body.lstrip("\r\n"))
+    kept = []
+    if match:
+        for line in match[1].splitlines():
+            key = line.partition(":")[0]
+            if key in ("status", "revised_at", "checked_at"):
+                continue
+            kept.append(line)
+    header = (f"status: {json.dumps('brown' if previous.get('status') == 'brown' else 'yellow')}\n"
+              f"revised_at: {json.dumps(datetime.now().astimezone().isoformat(timespec='seconds'))}")
+    if kept:
+        header += "\n" + "\n".join(kept)
+    updated = "---\n" + header + "\n---\n\n" + body.lstrip("\r\n")
+    if metadata_errors(updated):
+        raise ValueError("replacement contains unsupported or malformed metadata")
+    return updated
 
 
 def rewrite_leaf(args):
@@ -870,7 +859,9 @@ def rewrite_leaf(args):
             new_lines[index] = (saved or "Proof: (verified at _)") + ending
             if saved is None:
                 invalidated += 1
-        updated = invalidate_review("".join(new_lines), original, args.source)
+        updated = invalidate_review("".join(new_lines), original)
+        if getattr(args, "inherited_brown", False):
+            updated = set_lifecycle_status(updated, "brown")
         if args.dry_run:
             sys.stdout.writelines(difflib.unified_diff(original.splitlines(keepends=True), updated.splitlines(keepends=True), fromfile=str(path), tofile=str(path) + " (rewritten)"))
             print(f"Whole-leaf review invalidated; {invalidated} new/changed proofs need checking.", file=sys.stderr)
@@ -922,7 +913,7 @@ def leaf_address(path):
 def relocate_leaf(args):
     path = resolve_leaf(args.path, writable=True)
     if not re.fullmatch(r"[0-9a-fA-F]{64}", args.expect):
-        raise ValueError("--expect must be a SHA-256 revision from kt open --revision")
+        raise ValueError("--expect must be a SHA-256 revision from a full leaf read")
     destination = destination_leaf(args.destination) if args.command == "mv" else None
     with path.open("rb") as stream:
         fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
@@ -961,45 +952,38 @@ def relocate_leaf(args):
 def combine_leaves(args):
     destination = destination_leaf(args.output)
     sources = [resolve_leaf(value, writable=True) for value in args.paths]
-    bodies, provenance, falsified, unresolved = [], [], None, False
-    snapshots, blockers, next_checks = {}, [], []
+    bodies = []
+    brown = False
+    snapshots = {}
     for source in sources:
         snapshot = read_leaf_snapshot(source)
         data = snapshot.data
         snapshots[source] = snapshot
-        metadata, body = leaf_parts(data.decode("utf-8"))
+        source_text = data.decode("utf-8")
+        if metadata_errors(source_text):
+            raise ValueError(f"source leaf has unsupported metadata: {source}")
+        metadata, body = leaf_parts(source_text)
         # Verification happened in a source scope, not in the combined answer.
         lines, records = proof_records(body)
         for index, _, _ in records:
             lines[index] = "Proof: (verified at _)" + ("\n" if lines[index].endswith("\n") else "")
         body = "".join(lines)
         bodies.append(body.strip("\r\n"))
-        provenance.append(f"{leaf_address(source)} revision={revision(data)}")
-        falsified = falsified or metadata.get("falsified_at")
-        unresolved = unresolved or metadata.get("status") == "unresolved"
-        if metadata.get("blocker"):
-            blockers.append(metadata["blocker"])
-        if metadata.get("next_check"):
-            next_checks.append(metadata["next_check"])
+        brown = brown or metadata.get("status") == "brown"
     # Abort before saving if any input changed while preparing the answer.
     for source, snapshot in snapshots.items():
         check_leaf_snapshot(source, snapshot,
                             message="kt: combine input changed; no output saved; reread inputs")
     now = datetime.now().astimezone().isoformat(timespec="seconds")
-    metadata = {"status": "yellow", "revised_at": now}
-    if falsified:
-        metadata["falsified_at"] = falsified
-    if unresolved:
-        metadata.update(blocker="; ".join(blockers) or "One or more input leaves are unresolved.",
-                        next_check="; ".join(next_checks) or "Establish the unresolved combined answer before validation.")
+    metadata = {"status": "brown" if brown else "yellow", "revised_at": now}
     content = "---\n" + "".join(f"{key}: {json.dumps(value, ensure_ascii=False)}\n" for key, value in metadata.items())
     content += "---\n\n" + "\n\n".join(bodies) + "\n"
     if destination.exists():
         if not args.expect:
-            raise ValueError("existing destination requires --expect from kt open --revision")
+            raise ValueError("existing destination requires --expect from a full leaf read")
         rewrite_leaf(argparse.Namespace(path=str(destination), hash=args.expect,
-            contents=content, source=None, dry_run=args.dry_run,
-            reset_proofs=True))
+            contents=content, dry_run=args.dry_run,
+            reset_proofs=True, inherited_brown=brown))
         if args.dry_run:
             print("Would remove source leaves except the destination.", file=sys.stderr)
             return 0
@@ -1087,7 +1071,7 @@ def capture(args):
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     metadata = {"status": "yellow", "revised_at": now}
     if args.unresolved:
-        metadata.update(blocker=args.blocker, next_check=args.next_check)
+        answer = answer.rstrip() + f"\n\nBlocker: {args.blocker}\n\nNext check: {args.next_check}"
     content = "---\n" + "".join(f"{k}: {json.dumps(v, ensure_ascii=False)}\n"
                                  for k, v in metadata.items()) + "---\n\n" + answer.rstrip() + "\n"
     if args.dry_run:
@@ -1110,7 +1094,7 @@ PROOF_FENCES = {
     "```python3": "python3",
 }
 OUTPUT_LIMIT = 4096
-PROOF_MARKER = re.compile(r"^Proof:(?: \((verified|falsified) at ([^)]+)\))?$")
+PROOF_MARKER = re.compile(r"^Proof: \((verified|falsified) at ([^)]+)\)$")
 LEAF_STATES = ("green", "yellow", "brown")
 NUMBER_WORDS = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
@@ -1193,7 +1177,7 @@ def parse_proofs(path):
     original = path.read_text()
     lines = original.splitlines()
     proofs = []
-    errors = []
+    errors = metadata_errors(original)
     index = 0
     while index < len(lines):
         line = lines[index]
@@ -1211,7 +1195,7 @@ def parse_proofs(path):
             index += 1
             continue
         stamp = marker.group(2)
-        if stamp not in (None, "_"):
+        if stamp != "_":
             try:
                 parsed = datetime.fromisoformat(stamp)
                 if parsed.utcoffset() is None:
@@ -1242,20 +1226,7 @@ def parse_proofs(path):
     return original, proofs, errors
 
 
-def remove_lifecycle_status(text):
-    front = re.match(r"\A---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)", text)
-    offset = front.end() if front else 0
-    prefix, body = text[:offset], text[offset:]
-    existing = re.match(r"(?:\r?\n)*Status: (?:Green|Yellow|Brown)[ \t]*(?:\r?\n|$)", body)
-    if not existing:
-        return text
-    body = body[existing.end():]
-    body = body.lstrip("\r\n")
-    return prefix + body
-
-
 def set_lifecycle_status(text, state):
-    text = remove_lifecycle_status(text)
     if not text.startswith("---\n"):
         text = "---\n---\n\n" + text
     finish = text.find("\n---", 3)
@@ -1296,10 +1267,9 @@ def check_leaf(args):
         original = stream.read()
         if revision(original.encode()) != args.hash:
             raise RevisionConflict("kt: leaf changed; reread it before recording a check")
-        updated = remove_lifecycle_status(original)
-        updated = re.sub(r"(?m)^\s{0,2}falsified_at:.*(?:\n|$)", "", updated)
-        updated = re.sub(r"(?m)^\s{0,2}verified_at:.*(?:\n|$)", "", updated)
-        updated = set_lifecycle_status(updated, "yellow")
+        if metadata_errors(original):
+            raise ValueError("leaf has unsupported metadata; repair it before recording a check")
+        updated = set_lifecycle_status(original, "yellow")
         updated = stamp_checked_at(updated, datetime.now().astimezone().isoformat(timespec="seconds"))
         if args.dry_run:
             sys.stdout.write("".join(difflib.unified_diff(original.splitlines(True),
@@ -1311,22 +1281,7 @@ def check_leaf(args):
     return 0
 
 
-def mark_leaf_verified(text, timestamp, refresh=False):
-    if not text.startswith("---\n"):
-        raise OSError("verifiable leaf requires metadata front matter")
-    finish = text.find("\n---", 4)
-    if finish == -1:
-        raise OSError("cannot mark verification: unclosed metadata front matter")
-    header = text[4:finish]
-    nested = re.search(r"(?m)^metadata:\s*$", header) is not None
-    indent = "  " if nested else ""
-    falsified = re.compile(rf"(?m)^{indent}falsified_at:.*(?:\n|$)")
-    header = falsified.sub("", header)
-    header = re.sub(rf"(?m)^{indent}verified_at:.*(?:\n|$)", "", header)
-    return "---\n" + header.rstrip() + text[finish:]
-
-
-def stamp_proofs(path, original, markers, falsified, state, verified=False,
+def stamp_proofs(path, original, markers, state,
                  refresh_proofs=False):
     lines = original.splitlines(keepends=True)
     timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
@@ -1342,10 +1297,6 @@ def stamp_proofs(path, original, markers, falsified, state, verified=False,
         status = "verified" if passed else "falsified"
         lines[index] = f"Proof: ({status} at {timestamp}){ending}"
     updated = "".join(lines)
-    if falsified:
-        updated = falsify_leaf(updated, timestamp)
-    elif verified:
-        updated = mark_leaf_verified(updated, timestamp, refresh_proofs)
     updated = set_lifecycle_status(updated, state)
     if updated == original:
         return
@@ -1356,28 +1307,6 @@ def stamp_proofs(path, original, markers, falsified, state, verified=False,
         stream.seek(0)
         stream.write(updated)
         stream.truncate()
-
-
-def falsify_leaf(text, timestamp):
-    if leaf_parts(text)[0].get("falsified_at"):
-        return text
-    if not text.startswith("---\n"):
-        return f"---\nfalsified_at: '{timestamp}'\n---\n\n{text}"
-    finish = text.find("\n---", 4)
-    if finish == -1:
-        raise OSError("cannot mark falsification: unclosed metadata front matter")
-    header = text[4:finish]
-    nested = re.search(r"(?m)^metadata:\s*$", header) is not None
-    indent = "  " if nested else ""
-    field = re.compile(rf"(?m)^{indent}falsified_at:.*$")
-    value = f"{indent}falsified_at: '{timestamp}'"
-    if field.search(header):
-        header = field.sub(value, header)
-    elif nested:
-        header = re.sub(r"(?m)^metadata:\s*$", f"metadata:\n{value}", header, count=1)
-    else:
-        header += "\n" + value
-    return "---\n" + header + text[finish:]
 
 
 def clipped(value):
@@ -1425,11 +1354,7 @@ def metadata_datetime(value, field):
     except (TypeError, ValueError) as error:
         raise ValueError(f"{field} must be ISO 8601") from error
     if parsed.utcoffset() is None:
-        # Legacy metadata often records only a local calendar date. New kt writes
-        # timezone-aware timestamps, but old dates must remain readable.
-        if field == "expires_at" and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
-            parsed += timedelta(days=1)
-        parsed = parsed.astimezone()
+        raise ValueError(f"{field} must include a timezone")
     return parsed
 
 
@@ -1448,15 +1373,12 @@ def expiry_duration(value):
 
 def lifecycle_state(original, now):
     metadata, _ = leaf_parts(original)
-    declared = metadata.get("state", "green").casefold()
-    if declared not in LEAF_STATES:
-        return "yellow", None
-    if metadata.get("falsified_at") or declared == "brown":
+    if metadata.get("status") == "brown":
         return "brown", None
     try:
         expires = (metadata_datetime(metadata["expires_at"], "expires_at")
                    if metadata.get("expires_at") else None)
-        checked = metadata.get("checked_at") or metadata.get("verified_at")
+        checked = metadata.get("checked_at")
         if expires is not None and now >= expires and metadata.get("checked_at"):
             manual_checked = metadata_datetime(metadata["checked_at"], "checked_at")
             if manual_checked >= expires:
@@ -1469,7 +1391,7 @@ def lifecycle_state(original, now):
             expires = min(expires, periodic) if expires else periodic
     except ValueError as error:
         return "yellow", None
-    if declared == "yellow" or (expires is not None and now >= expires):
+    if expires is not None and now >= expires:
         return "yellow", None
     return "green", None
 
@@ -1574,7 +1496,7 @@ def verify_proofs(arguments=None, emit=True):
             errors.append((1, lifecycle_error))
             leaf_falsified = True
         header = original.split("\n---", 1)[0] if original.startswith("---\n") else ""
-        sticky_falsification = bool(re.search(r"(?m)^\s{0,2}falsified_at:", header))
+        sticky_falsification = metadata.get("status") == "brown"
         if args.verbose:
             print(f"LEAF {relative} proofs={len(proofs)}")
         for line, message in errors:
@@ -1615,7 +1537,7 @@ def verify_proofs(arguments=None, emit=True):
         if not args.no_stamp:
             try:
                 stamp_proofs(path, original, [] if errors else results,
-                             leaf_falsified, state, auto_verified, expiring)
+                             state, expiring)
             except OSError as error:
                 failed += 1
                 failed_paths.add(relative)
@@ -1708,7 +1630,7 @@ def prove(arguments):
 # CLI argument schema and command dispatch.
 
 def open_command(args):
-    return open_leaf(args.path, args.revision)
+    return open_leaf(args.path)
 
 
 STARTUP_LEAVES = (
@@ -1816,7 +1738,6 @@ def command_parser():
     opening = commands.add_parser("open", help="print a leaf verbatim, including metadata")
     opening.set_defaults(handler=open_command)
     opening.add_argument("path", help="local:path, global:path, ROOT:path (registered root), or absolute .md path; project: aliases local:")
-    opening.add_argument("--revision", action="store_true", help="compatibility flag: reads always print SHA-256 revision on stderr")
     vocabulary = commands.add_parser("dict", help="print useful final-two leaf-path segments from accessible roots")
     vocabulary.set_defaults(handler=dictionary)
     vocabulary.add_argument("roots", nargs="*", help="optional root labels or configured root paths; default: all accessible roots")
@@ -1825,7 +1746,6 @@ def command_parser():
     replacing.add_argument("path", help="existing leaf address")
     replacing.add_argument("hash", help="required SHA-256 revision supplied by the leaf read")
     replacing.add_argument("contents", help="complete replacement Markdown; use -- before positional arguments beginning with -")
-    replacing.add_argument("--source", help=argparse.SUPPRESS)
     replacing.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
     checking = commands.add_parser("check", help="record a manual review of the complete leaf")
     checking.set_defaults(handler=check_leaf)
@@ -1838,7 +1758,7 @@ def command_parser():
         maintenance.add_argument("path", help="source leaf address")
         if name == "mv":
             maintenance.add_argument("destination", help="destination Markdown leaf address")
-        maintenance.add_argument("--expect", required=True, help="source SHA-256 from kt open --revision")
+        maintenance.add_argument("--expect", required=True, help="source SHA-256 from a full leaf read")
         maintenance.add_argument("--dry-run", action="store_true")
     combining = commands.add_parser("combine", help="combine ordered Markdown bodies into one leaf")
     combining.set_defaults(handler=combine_leaves)
@@ -1854,8 +1774,6 @@ def command_parser():
     scope.add_argument("--global", dest="global_root", action="store_true")
     scope.add_argument("--local", "--project", dest="project", action="store_true")
     scope.add_argument("--root", help="existing knowledge root (for example, example/)")
-    adding.add_argument("--scope", help=argparse.SUPPRESS)
-    adding.add_argument("--source", help=argparse.SUPPRESS)
     adding.add_argument("--dry-run", action="store_true", help="preview path and complete leaf without writing")
     adding.add_argument("--unresolved", action="store_true")
     adding.add_argument("--blocker")

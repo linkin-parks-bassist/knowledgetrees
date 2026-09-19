@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix="kt-maintenance-") as temporary:
 
     source = root / "what/is/first.md"
     source.parent.mkdir(parents=True)
-    first = "---\nverified_at: yesterday\n---\n\nFirst answer.\n\nA true assertion.\n\nProof: (verified at yesterday)\n\n```bash\ntest 1 -eq 1\n```\n"
+    first = "---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nFirst answer.\n\nA true assertion.\n\nProof: (verified at 2026-09-12T12:00:00+00:00)\n\n```bash\ntest 1 -eq 1\n```\n"
     source.write_text(first)
     alias = base / "alias.md"
     os.link(source, alias)
@@ -81,7 +81,7 @@ with tempfile.TemporaryDirectory(prefix="kt-maintenance-") as temporary:
 
     source.write_text(first)
     second = root / "what/is/second.md"
-    second_body = "---\nfalsified_at: yesterday\nstatus: unresolved\nblocker: pending evidence\nnext_check: inspect source\n---\n\nSecond answer.\n"
+    second_body = "---\nstatus: brown\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nSecond answer.\n\nBlocker: pending evidence\n\nNext check: inspect source\n"
     second.write_text(second_body)
     output = root / "what/is/combined.md"
     args = ("combine", "local:what/is/first.md", "local:what/is/second.md", "-o", "local:what/is/combined.md")
@@ -90,9 +90,8 @@ with tempfile.TemporaryDirectory(prefix="kt-maintenance-") as temporary:
     run(*args)
     text = output.read_text()
     assert text.count("---\n") == 2 and text.index("First answer") < text.index("Second answer")
-    assert "verified_at:" not in text and "verified at yesterday" not in text
-    assert "Proof: (verified at _)" in text and 'falsified_at: "yesterday"' in text
-    assert 'status: "yellow"' in text
+    assert "Proof: (verified at _)" in text
+    assert 'status: "brown"' in text
     assert "revised_at:" in text
     assert not source.exists() and not second.exists()
     assert "pending evidence" in text and "inspect source" in text
