@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T15:51:45+10:00"
+revised_at: "2026-09-20T16:11:03+10:00"
 ---
 
 ## Success output policy
@@ -37,6 +37,7 @@ Accuracy/preservation reminders belong in the one-shot review hook.
   Both search permitted active roots; neither accepts `--root`. Use `--limit 5`
   to bound search output without piping away the command exit status.
 - Exact text: `kt grep PATTERN` is a literal, case-sensitive text search over every permitted root, front matter included, printing `ADDRESS:LINE: text` (exit 1 on no match). `-E`/`--regex` uses a Python regular expression, `-i` ignores case, `-l` lists only addresses, `-C N` adds context, and `--limit N` caps output. Use `--` before a pattern that starts with `-`. It respects root access like `kt find` and is not semantic; use it to find every place that states a fact.
+- Access: `kt grants [ROOT]` lists each root's effective access and why (local tree, project grant, allowed everywhere, session grant, bypass, denied, or none), marking roots whose tree is gone. `kt access ROOT revoke [--scope project|all]` gives access back (user's terminal). Approvals whose tree no longer exists are dropped automatically.
 - Non-green leaves: `kt status [--local|--global|--root ROOT]` lists yellow and brown leaves (brown first) with the reason (malformed, falsified, expired, or created/rewritten since last proved) and green/yellow/brown counts, without running proofs or writing anything. Empty placeholder leaves are skipped.
 - Read: copy a returned address exactly into `kt open ADDRESS`. `local:PATH`
   selects only the current project; `global:PATH` selects only global knowledge.
@@ -140,7 +141,7 @@ The installer puts the script in the global `.tools/kt` and links `~/.local/bin/
 
 ## MCP tools
 
-When a harness has the knowledgetrees MCP server (installed by `./install`), the workflow is also available as tools with the same semantics: `kt_info`, `kt_lookup` (`kt how to ...`), `kt_find` (optional `json`), `kt_grep`, `kt_read` (`kt open`, returning the revision; `body_only`, `offset`, `limit`), `kt_edit`, `kt_rewrite`, `kt_undo`, `kt_add`, `kt_dict`, `kt_roots`, `kt_prove` (does not stamp unless `stamp` is set), `kt_status`, `kt_access_status`, and `kt_access_request`. Prefer `kt_edit` for changes: it replaces exact text that must occur once in the answer body, against the revision from your read (several edits apply atomically), and returns a diff; `kt_undo` reverses your latest edit of a leaf while it is unchanged. `kt_access_request` asks the user through the harness to approve a restricted root; the model cannot answer it, and a decline is final for the session. A miss or brown result comes back as data marked `(exit 1)`; only exit 2 or higher is a tool error. `check`, `init`, `rm`, `mv`, `combine`, `register`, `access`, and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
+When a harness has the knowledgetrees MCP server (installed by `./install`), the workflow is also available as tools with the same semantics: `kt_info`, `kt_lookup` (`kt how to ...`), `kt_find` (optional `json`), `kt_grep`, `kt_read` (`kt open`, returning the revision; `body_only`, `offset`, `limit`), `kt_edit`, `kt_rewrite`, `kt_undo`, `kt_add`, `kt_dict`, `kt_roots`, `kt_prove` (does not stamp unless `stamp` is set), `kt_status`, `kt_access_status`, `kt_access_request`, and `kt_access_revoke`. Prefer `kt_edit` for changes: it replaces exact text that must occur once in the answer body, against the revision from your read (several edits apply atomically), and returns a diff; `kt_undo` reverses your latest edit of a leaf while it is unchanged. `kt_access_request` asks the user through the harness to approve a restricted root; the model cannot answer it, and a decline is final for the session. `kt_access_revoke` gives access back when you no longer need it, and `kt_access_status` (or `kt grants`) says why each root is readable. A miss or brown result comes back as data marked `(exit 1)`; only exit 2 or higher is a tool error. `check`, `init`, `rm`, `mv`, `combine`, `register`, `access`, and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
 
 ## Persistent access settings
 

@@ -61,7 +61,8 @@ def main():
         assert rpc("ping")["result"] == {}
         names = {t["name"] for t in rpc("tools/list")["result"]["tools"]}
         assert names == {"kt_info", "kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_edit", "kt_rewrite", "kt_undo",
-                         "kt_add", "kt_dict", "kt_roots", "kt_prove", "kt_status", "kt_access_status", "kt_access_request"}
+                         "kt_add", "kt_dict", "kt_roots", "kt_prove", "kt_status", "kt_access_status", "kt_access_request",
+                         "kt_access_revoke"}
         listed = {t["name"]: t for t in rpc("tools/list")["result"]["tools"]}
         for name, definition in listed.items():
             hints = definition["annotations"]
@@ -243,6 +244,23 @@ def main():
         assert not error and "unavailable" in text
         error, text = tool("kt_access_status", root="-x")
         assert error
+        error, text = tool("kt_access_status")
+        assert "local tree" in text and "allowed everywhere" in text and "Give back access" in text, text
+        error, text = tool("kt_access_revoke", root="local")
+        assert error and "local tree" in text
+        error, text = tool("kt_access_revoke", root=str(vaults["hidden"]))
+        assert error and "unavailable" in text and "hidden" not in text
+        error, text = tool("kt_access_revoke", root="-x")
+        assert error
+        error, text = tool("kt_access_revoke", root=str(vaults["vault"]), scope="galaxy")
+        assert error
+        error, text = tool("kt_access_revoke", root=str(vaults["vault"]))
+        assert not error and "nothing to revoke" in text, "an already-restricted root has nothing to revoke"
+        error, text = tool("kt_access_revoke", root=str(vaults["vault"]), scope="all")
+        assert not error and "cannot show confirmation prompts" in text and f"kt access {vaults['vault']} revoke --scope all" in text
+        error, text = tool("kt_access_revoke", root="global")
+        assert not error and "cannot show confirmation prompts" in text, "revoking the global root always needs the user"
+        assert json.loads((root / "config.json").read_text())["roots"]["vault"]["access"] == "ask", "no change without the user"
         error, text = tool("kt_access_status", root="relative/path")
         assert error
 
@@ -261,7 +279,7 @@ def main():
             json.loads((root / "config.json").read_text())["projects"] == {}, "no grant without the user"
 
         listed_prompts = {p["name"]: p for p in rpc("prompts/list")["result"]["prompts"]}
-        assert set(listed_prompts) == {"capture_review", "garden", "verify_leaf"}
+        assert set(listed_prompts) == {"capture_review", "garden", "verify_leaf", "revoke_access"}
         got = rpc("prompts/get", {"name": "capture_review"})["result"]["messages"][0]["content"]["text"]
         assert "Knowledge-tree capture review" in got
         got = rpc("prompts/get", {"name": "verify_leaf", "arguments": {"address": address}})["result"]["messages"][0]["content"]["text"]
@@ -286,8 +304,8 @@ def main():
         assert remote.wait(timeout=10) == 0
 
         # ---- elicitation: the user, not the model, answers approval prompts through the harness
-        def start_client(capabilities):
-            process = subprocess.Popen([sys.executable, str(SERVER)], cwd=project, env=env, text=True,
+        def start_client(capabilities, extra_env=None):
+            process = subprocess.Popen([sys.executable, str(SERVER)], cwd=project, env={**env, **(extra_env or {})}, text=True,
                                        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             def send(message):
@@ -331,7 +349,7 @@ def main():
         outcome = receive()
         assert outcome["id"] == identifier and not outcome["result"]["isError"] and "approved" in outcome["result"]["content"][0]["text"]
         deferred = receive()
-        assert deferred["id"] == 99 and len(deferred["result"]["tools"]) == 15, "a request that arrived mid-prompt is still served"
+        assert deferred["id"] == 99 and len(deferred["result"]["tools"]) == 16, "a request that arrived mid-prompt is still served"
         assert grants()["projects"][str(project.resolve())][str(vaults["vault"].resolve())] == "allow"
         identifier = next(request_id)
         send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",
@@ -351,6 +369,57 @@ def main():
         send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "accept", "content": {"decision": "all"}}})
         assert receive()["id"] == identifier
         assert grants()["roots"]["vault3"]["access"] == "allow"
+
+        # ---- revocation: narrowing this directory is direct; anything wider needs the user
+        def call(name, **arguments):
+            identifier = next(request_id)
+            send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call", "params": {"name": name, "arguments": arguments}})
+            return identifier
+
+        def outcome(identifier):
+            reply = receive()
+            assert reply["id"] == identifier, reply
+            return reply["result"]["isError"], reply["result"]["content"][0]["text"]
+        here = str(project.resolve())
+        identifier = call("kt_access_status", root=str(vaults["vault"]))
+        error, text = outcome(identifier)
+        assert not error and "project grant" in text and "kt_access_revoke" in text
+        identifier = call("kt_access_revoke", root=str(vaults["vault"]))
+        error, text = outcome(identifier)  # no prompt was sent: the reply arrives directly
+        assert not error and "requires approval again in this project" in text and "prompt the user" in text
+        assert str(vaults["vault"].resolve()) not in grants()["projects"].get(here, {})
+        identifier = call("kt_grep", pattern="SECRET-vault lives")
+        error, text = outcome(identifier)
+        assert "no_matches" in text, "revoked access takes effect immediately"
+        identifier = call("kt_access_revoke", root=str(vaults["vault2"]))  # made "and subdirectories" for this directory
+        error, text = outcome(identifier)
+        assert not error and "requires approval again" in text
+        assert str(vaults["vault2"].resolve()) not in grants()["projects"].get(here, {})
+        identifier = call("kt_access_revoke", root=str(vaults["vault3"]))  # allowed everywhere: overridden here only
+        error, text = outcome(identifier)
+        assert not error and grants()["projects"][here][str(vaults["vault3"].resolve())] == "ask"
+        assert grants()["roots"]["vault3"]["access"] == "allow", "other projects are unaffected"
+        for answer in ({"action": "decline"}, {"action": "accept", "content": {"confirm": False}}, {"action": "cancel"}):
+            before = grants()
+            identifier = call("kt_access_revoke", root=str(vaults["vault3"]), scope="all")
+            prompt = receive()
+            assert prompt["method"] == "elicitation/create" and "Effect:" in prompt["params"]["message"]
+            assert prompt["params"]["requestedSchema"]["properties"]["confirm"]["type"] == "boolean"
+            send({"jsonrpc": "2.0", "id": prompt["id"], "result": answer})
+            error, text = outcome(identifier)
+            assert not error and "declined" in text and grants() == before, "anything but a confirmed accept changes nothing"
+        identifier = call("kt_access_revoke", root=str(vaults["vault3"]), scope="all")
+        prompt = receive()
+        send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "accept", "content": {"confirm": True}}})
+        error, text = outcome(identifier)
+        assert not error and "in every project" in text
+        assert grants()["roots"]["vault3"]["access"] == "ask" and here not in grants()["projects"]
+        identifier = call("kt_access_revoke", root="global")  # the global root needs the user even for one project
+        prompt = receive()
+        assert prompt["method"] == "elicitation/create"
+        send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "decline"}})
+        error, text = outcome(identifier)
+        assert "declined" in text and grants()["roots"]["global"]["access"] == "allow"
 
         # Denied and force-private roots never reach the user.
         for refused in ("locked", "hidden"):
@@ -382,6 +451,19 @@ def main():
         send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "accept", "content": {"decision": "everything"}}})
         reply = receive()
         assert reply["result"]["isError"] and "nothing was granted" in reply["result"]["content"][0]["text"] and grants() == before
+        client.stdin.close()
+        assert client.wait(timeout=10) == 0
+
+        # The per-session prompt cap stops an agent from spamming the user.
+        client, send, receive = start_client({"elicitation": {}}, {"KT_MCP_PROMPT_LIMIT": "1"})
+        identifier = ask(vaults["vault"])
+        prompt = receive()
+        assert prompt["method"] == "elicitation/create"
+        send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "decline"}})
+        assert receive()["id"] == identifier
+        identifier = ask(vaults["vault2"])
+        reply = receive()
+        assert reply["id"] == identifier and "Too many approval requests" in reply["result"]["content"][0]["text"]
         client.stdin.close()
         assert client.wait(timeout=10) == 0
 

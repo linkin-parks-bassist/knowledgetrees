@@ -9,6 +9,7 @@ own `apply_access_decision`. The model never sees or answers that prompt.
 """
 
 import collections
+import copy
 import difflib
 import json
 import os
@@ -22,14 +23,14 @@ PROTOCOL = "2025-06-18"
 CLI = Path(os.environ.get("KT_MCP_CLI", str(Path(__file__).resolve().with_name("kt"))))
 MAX_TEXT = 1048576
 UNDO_DEPTH = 20
-MAX_ELICITATIONS = 5
+MAX_ELICITATIONS = int(os.environ.get("KT_MCP_PROMPT_LIMIT", "10"))
 
 INSTRUCTIONS = (
     "Knowledge trees: look up before you search elsewhere (kt_lookup with how to/where is/what is/..., "
     "kt_find, kt_grep for exact text). Read with kt_read, then change leaves with kt_edit against the revision "
     "you read. A miss is not proof of absence. If a root needs approval, call kt_access_request: it asks "
-    "the user through the harness. Never ask the user to type kt access unless it tells you the client "
-    "cannot prompt, and never work around a refusal."
+    "the user through the harness. Release access you no longer need with kt_access_revoke. Never ask the "
+    "user to type kt access unless a tool says the client cannot prompt, and never work around a refusal."
 )
 
 
@@ -118,9 +119,15 @@ TOOLS = [
          "its last change). Read-only; runs no proofs. Use it to garden a tree.",
          {"scope": {**SCOPE, "description": "Default: every accessible root"}}, read_only=True),
     tool("kt_access_status", "Root access status",
-         "Say whether a root is readable. Without root, lists every root and its policy; restricted roots need the user's "
-         "approval via kt_access_request.", {"root": {"type": "string", "description": "Root label or absolute path"}},
-         read_only=True),
+         "Say whether each root (or one root) is readable, and why: local tree, project grant, allowed everywhere, denied, "
+         "or needing approval. Marks roots whose tree no longer exists. Restricted roots need kt_access_request.",
+         {"root": {"type": "string", "description": "Root label or absolute path"}}, read_only=True),
+    tool("kt_access_revoke", "Revoke root access",
+         "Give back access you no longer need. Scope project (default) makes the root require approval again in this project; "
+         "scope all does so everywhere, or removes the registration of a root whose tree is gone. Changes that reach beyond "
+         "this project directory ask the user first. You cannot revoke the local tree, a permissions bypass, or a session grant.",
+         {"root": {"type": "string", "description": "Root label or absolute path"},
+          "scope": {"type": "string", "enum": ["project", "all"]}}, ["root"], idempotent=True),
     tool("kt_access_request", "Ask the user for root access",
          "Ask the USER, through the harness, to allow reading a restricted root. Only the user can answer; you cannot "
          "grant access yourself. Give a short honest reason. If the user declines, do not ask again or work around it.",
@@ -430,18 +437,21 @@ def tool_status(arguments):
 
 def tool_access_status(arguments):
     root = arguments.get("root")
-    if root is None:
-        return report(run_kt("roots"), "kt roots") + (
-            "\nRoots marked (restricted) need the user's approval: call kt_access_request with the root path.")
-    root = text_arg(arguments, "root", limit=4096)
-    if root.startswith("-"):
-        raise ToolError("root must not start with '-'")
-    output = report(run_kt("access", root), "kt access")
-    if "ask" in output:
-        output += "\nThis root needs the user's approval: call kt_access_request."
-    elif "force-private" in output:
-        output += "\nThis root is unavailable and cannot be approved through the harness."
-    return output
+    if root is not None:
+        root = text_arg(arguments, "root", limit=4096)
+        if root.startswith("-"):
+            raise ToolError("root must not start with '-'")
+    output = report(run_kt("grants", *([root] if root else [])), "kt grants")
+    notes = []
+    if "\task\t" in output or "\tno grant\t" in output:
+        notes.append("Roots in state ask need the user's approval: call kt_access_request.")
+    if "\tallow\t" in output:
+        notes.append("Give back access you no longer need with kt_access_revoke.")
+    if "TREE MISSING" in output:
+        notes.append("A root whose tree is gone can be removed with kt_access_revoke scope all.")
+    if output.strip() == "force-private":
+        notes.append("That root is unavailable and cannot be approved through the harness.")
+    return output + ("\n" + " ".join(notes) if notes else "")
 
 
 def clean_reason(value):
@@ -464,18 +474,41 @@ def read_response(identifier):
             PENDING.append(message)
 
 
+def can_prompt():
+    return CLIENT["elicitation"] and ELICITATIONS[0] < MAX_ELICITATIONS
+
+
+def elicit(message, schema):
+    """Ask the user (never the model) through the client. Returns the accepted content, or None if the
+    user declined or cancelled."""
+    ELICITATIONS[0] += 1
+    identifier = f"kt-elicit-{ELICITATIONS[0]}"
+    send({"jsonrpc": "2.0", "id": identifier, "method": "elicitation/create",
+          "params": {"message": message, "requestedSchema": schema}})
+    response = read_response(identifier)
+    result = response.get("result") or {}
+    if "error" in response or result.get("action") != "accept":
+        return None
+    return result.get("content") if isinstance(result.get("content"), dict) else {}
+
+
+def resolve_root(namespace, value):
+    try:
+        config = namespace["access_config"]()
+        root, label, available = namespace["resolve_access_root"](config, value)
+        return config, root, label, available
+    except ValueError as error:
+        raise ToolError(str(error))
+
+
 def tool_access_request(arguments):
     value = text_arg(arguments, "root", limit=4096)
     reason = clean_reason(text_arg(arguments, "reason", limit=4096))
     if value.startswith("-"):
         raise ToolError("root must not start with '-'")
     namespace = kt_namespace()
-    try:
-        config = namespace["access_config"]()
-        root, label, available = namespace["resolve_access_root"](config, value)
-        current = namespace["root_access"](root, label, config=config)
-    except ValueError as error:
-        raise ToolError(str(error))
+    config, root, label, available = resolve_root(namespace, value)
+    current = namespace["root_access"](root, label, config=config)
     if current == "allow":
         return "That root is already readable; no approval is needed."
     if current == "force-private":
@@ -483,34 +516,28 @@ def tool_access_request(arguments):
     if current == "deny":
         raise ToolError("that root is denied by the user's policy; only the user can change that, deliberately, in their "
                         "own terminal. Do not work around it.")
-    terminal = f"kt access {root} allow --scope project"
     if not CLIENT["elicitation"]:
         return ("This client cannot show approval prompts. Ask the user to run this in their terminal, then retry:\n"
-                + terminal)
+                f"kt access {root} allow --scope project")
     if str(root) in DECLINED:
         return ("The user declined this request earlier in this session. Do not ask again or work around it; continue "
                 "without that root or ask the user in conversation.")
-    if ELICITATIONS[0] >= MAX_ELICITATIONS:
+    if not can_prompt():
         return "Too many approval requests this session; ask the user in conversation instead."
-    ELICITATIONS[0] += 1
     project = str(Path.cwd().resolve())
-    message = (f"An agent is asking to read a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
-               f"Project directory: {project}\nReason (from the agent): {reason}\n\n"
-               "Approving lets kt read this root's leaves for this project; retrieved text may be sent to your model provider. "
-               "It does not grant direct filesystem access. Decline to refuse.")
-    identifier = f"kt-elicit-{ELICITATIONS[0]}"
-    send({"jsonrpc": "2.0", "id": identifier, "method": "elicitation/create", "params": {
-        "message": message,
-        "requestedSchema": {"type": "object", "required": ["decision"], "properties": {"decision": {
+    content = elicit(
+        f"An agent is asking to read a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
+        f"Project directory: {project}\nReason (from the agent): {reason}\n\n"
+        "Approving lets kt read this root's leaves for this project; retrieved text may be sent to your model provider. "
+        "It does not grant direct filesystem access. Decline to refuse.",
+        {"type": "object", "required": ["decision"], "properties": {"decision": {
             "type": "string", "title": "Grant", "description": "Where the approval applies",
-            "enum": list(ACCESS_CHOICES), "enumNames": [choice[0] for choice in ACCESS_CHOICES.values()]}}}}})
-    response = read_response(identifier)
-    result = response.get("result") or {}
-    decision = (result.get("content") or {}).get("decision") if isinstance(result.get("content"), dict) else None
-    if result.get("action") != "accept" or "error" in response:
+            "enum": list(ACCESS_CHOICES), "enumNames": [choice[0] for choice in ACCESS_CHOICES.values()]}}})
+    if content is None:
         DECLINED.add(str(root))
         return ("The user declined. Do not ask again or work around it; continue without that root or ask the user in "
                 "conversation.")
+    decision = content.get("decision")
     if decision not in ACCESS_CHOICES:
         raise ToolError("the approval response was not one of the offered choices; nothing was granted")
     _title, scope, subdirectories = ACCESS_CHOICES[decision]
@@ -520,10 +547,43 @@ def tool_access_request(arguments):
     return f"The user approved reading that root for {where}. Retry your lookup."
 
 
+def tool_access_revoke(arguments):
+    value = text_arg(arguments, "root", limit=4096)
+    scope = arguments.get("scope", "project")
+    if value.startswith("-") or scope not in ("project", "all"):
+        raise ToolError("root must not start with '-' and scope must be project or all")
+    namespace = kt_namespace()
+    config, root, label, available = resolve_root(namespace, value)
+    cwd = str(Path.cwd().resolve())
+    _policy, _source, granted_for = namespace["resolve_root_access"](root, label, cwd, config)
+    try:  # preview on a copy: validates the request and describes its effect without saving
+        effect = namespace["apply_revocation"](copy.deepcopy(config), root, label, available, scope, cwd, save=False)
+    except ValueError as error:
+        raise ToolError(str(error))
+    # Narrowing this exact project directory is safe to do directly; anything wider (or the global root,
+    # which holds the agent's own procedures) changes the user's policy for other places, so the user confirms.
+    wider = scope == "all" or (granted_for is not None and granted_for != cwd) or root == namespace["global_knowledge_root"]()
+    if wider:
+        if not CLIENT["elicitation"]:
+            return ("This change reaches beyond this project directory, and this client cannot show confirmation prompts. "
+                    f"Ask the user to run this in their terminal:\nkt access {root} revoke --scope {scope}")
+        if not can_prompt():
+            return "Too many prompts this session; ask the user in conversation instead."
+        content = elicit(f"An agent asks to revoke access to a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
+                         f"Project directory: {cwd}\nEffect: {effect}\n\nAccept to make this change; decline to leave access as it is.",
+                         {"type": "object", "required": ["confirm"], "properties": {"confirm": {
+                             "type": "boolean", "title": "Revoke access", "description": "Confirm the change described above"}}})
+        if content is None or content.get("confirm") is not True:
+            return "The user declined; access is unchanged."
+    namespace["apply_revocation"](config, root, label, available, scope, cwd)
+    return effect + " Asking for it again will prompt the user."
+
+
 HANDLERS = {"kt_info": tool_info, "kt_lookup": tool_lookup, "kt_find": tool_find, "kt_grep": tool_grep,
             "kt_read": tool_read, "kt_edit": tool_edit, "kt_rewrite": tool_rewrite, "kt_undo": tool_undo,
             "kt_add": tool_add, "kt_dict": tool_dict, "kt_roots": tool_roots, "kt_prove": tool_prove,
-            "kt_status": tool_status, "kt_access_status": tool_access_status, "kt_access_request": tool_access_request}
+            "kt_status": tool_status, "kt_access_status": tool_access_status, "kt_access_request": tool_access_request,
+            "kt_access_revoke": tool_access_revoke}
 
 
 # ---- prompts (user-invoked slash commands in harnesses that support them) ------------------------------
@@ -543,6 +603,10 @@ PROMPTS = {
                          "check its claims against current evidence, repair it with kt_edit (never delete still-valid "
                          "knowledge), and run kt_prove with stamp to record the result. Report what you changed and "
                          "anything you could not verify."),
+    "revoke_access": ("Review and give back access this project no longer needs", [],
+                      lambda a: "Call kt_access_status to see which roots this project can read and why. For each restricted "
+                                "root you do not need for the current work, call kt_access_revoke (widening changes ask the "
+                                "user). Report what you revoked and what you kept, and why."),
     "verify_leaf": ("Verify one leaf against current evidence", [{"name": "address", "description": "Leaf address", "required": True}],
                     lambda a: f"Verify the knowledge leaf {a['address']}: kt_read it, check each claim against the "
                               "source evidence, use kt_grep to find other leaves stating the same fact, fix what is "

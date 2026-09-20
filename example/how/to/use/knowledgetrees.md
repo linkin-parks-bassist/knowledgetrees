@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T15:51:44+10:00"
+revised_at: "2026-09-20T16:11:03+10:00"
 name: "knowledgetrees"
 description: "Initialize once; use knowledge trees as the sole maintained knowledge source for their scope."
 ---
@@ -43,8 +43,8 @@ After substantive repository work, update `what/is/the/state.md` and `what/is/ne
 - `kt rm` / `kt mv` / `kt combine` — revision-checked leaf maintenance.
 - `kt prove [--local|--global|--root ROOT] [TOKEN...]` — report green/yellow/brown state and run marked proofs.
 - `kt status` — list non-green leaves with reasons; read-only.
-- `kt roots` / `kt access` / `kt permissions` — inspect roots and access policy.
+- `kt roots` / `kt grants` / `kt access` / `kt permissions` — inspect roots, why each is readable, and access policy.
 
-Use root-qualified addresses returned by kt. Access-required output is not a lookup miss; do not bypass policy or approve access yourself. If you have the `kt_access_request` tool, use it to ask the user through the harness; otherwise give them the exact `kt access` command. MCP `kt_*` tools mirror these commands (`kt_edit` for small edits). `force-private` always wins. Successful mutations are normally silent; exit status is authoritative.
+Use root-qualified addresses returned by kt. Access-required output is not a lookup miss; do not bypass policy or approve access yourself. If you have the `kt_access_request` tool, use it to ask the user through the harness; otherwise give them the exact `kt access` command. MCP `kt_*` tools mirror these commands (`kt_edit` for small edits); release access you no longer need with `kt_access_revoke`. `force-private` always wins. Successful mutations are normally silent; exit status is authoritative.
 
 Focused procedures: `how/should/an/agent/traverse/a/knowledge/tree.md`, `how/to/add/knowledge/leaves.md`, `how/to/maintain/a/knowledge/tree.md`, and `how/should/legacy/documents/be/ingested/into/a/knowledge/tree.md`.

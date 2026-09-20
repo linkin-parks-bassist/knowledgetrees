@@ -31,7 +31,7 @@ This repository contains:
 ## Tools for agents
 
 Knowledge only compounds if using it is effortless, so `./install` gives Claude Code, Codex,
-OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 15 tools
+OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 16 tools
 that mirror the `kt` workflow. Every one delegates to the CLI, so revision checks, access
 policy, and proofs behave identically.
 
@@ -41,7 +41,7 @@ policy, and proofs behave identically.
 | Read | `kt_read` (body-only, paged), `kt_info` (startup knowledge) |
 | Change | `kt_edit` (text must match once; several edits apply atomically), `kt_rewrite`, `kt_undo`, `kt_add` |
 | Check | `kt_prove`, `kt_status` (every non-green leaf, with why) |
-| Access | `kt_access_status`, `kt_access_request` |
+| Access | `kt_access_status` (what is readable and why), `kt_access_request`, `kt_access_revoke` |
 
 Writes are checked against the revision the agent read, so a stale edit fails instead of
 clobbering. Read tools are annotated read-only, so harnesses can skip their prompts and keep
@@ -58,6 +58,11 @@ it calls `kt_access_request` and **your harness asks you**, through MCP elicitat
 2. You choose *this directory*, *this directory and subdirectories*, *everywhere*, or decline.
 3. Only your answer saves the grant. The model never sees or answers the prompt, and it is not
    asked again about a root you declined.
+
+Access is not one-way: `kt_access_status` says why each root is readable and `kt_access_revoke`
+gives it back. Narrowing the current directory is immediate; anything wider asks you first.
+Approvals are tied to a path, so `kt` drops them when their tree disappears, and a different tree
+later created there needs a fresh approval.
 
 Denied and force-private roots are never prompted for, and a client that cannot prompt gets the
 exact `kt access` command instead. This guards against an agent granting itself access to
@@ -716,6 +721,7 @@ python3 -B tests/test-install.py   # installer
 python3 -B tests/test-hooks.py     # shared hook handler
 python3 -B tests/test-mcp.py       # MCP server
 python3 -B tests/test-grep-status.py # kt grep, kt status, access-grant function
+python3 -B tests/test-grants.py      # grant sources, revocation, stale-approval pruning
 node tests/test-opencode-hooks.mjs # OpenCode plugin
 ```
 
@@ -747,6 +753,8 @@ or full canonical root directory paths, avoiding collisions between folder names
 `project:` and registered names remain input aliases; new captures default their
 scope metadata to the canonical identity. Use --local (--project is an alias),
 --global, or --root PATH to select capture destinations.
+
+`kt grants` shows why each root is readable, and `kt access ROOT revoke` gives access back.
 
 Wider roots default to ask. Ordinary ask/deny policies withhold leaf content;
 force-private also hides the root identity entirely outside exact local scope.

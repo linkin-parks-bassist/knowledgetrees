@@ -130,6 +130,12 @@ def access_database():
 
 
 def root_access(root, label=None, cwd=None, config=None):
+    return resolve_root_access(root, label, cwd, config)[0]
+
+
+def resolve_root_access(root, label=None, cwd=None, config=None):
+    """Return (policy, source, project): the effective policy, why it applies, and the key of the
+    project grant that supplied it (None otherwise)."""
     config = access_config() if config is None else config
     cwd = Path(cwd or Path.cwd()).resolve()
     root = Path(root).resolve()
@@ -139,15 +145,22 @@ def root_access(root, label=None, cwd=None, config=None):
     # Forced privacy is checked before bypass or grants and inherited by subtrees.
     if root != local and any(policy == "force-private" and root.is_relative_to(path)
                              for path, policy in policies):
-        return "force-private"
+        return "force-private", "forced private", None
     if config.get("dangerously_skip_permissions", False):
-        return "allow"
+        return "allow", "permissions bypass", None
     if any(policy == "deny" and root.is_relative_to(path) for path, policy in policies):
-        return "deny"
+        return "deny", "denied by root policy", None
     matching = [policy for path, policy in policies if path == root]
-    policy = "allow" if root == local or "allow" in matching else matching[-1] if matching else "ask"
+    if root == local:
+        policy, source = "allow", "local tree"
+    elif "allow" in matching:
+        policy, source = "allow", "allowed everywhere"
+    elif matching:
+        policy, source = matching[-1], f"root policy ({matching[-1]})"
+    else:
+        policy, source = "ask", "no grant"
     if policy == "force-private":
-        policy = "allow"  # Only an exact local tree reaches this branch.
+        policy, source = "allow", "local tree"  # Only an exact local tree reaches this branch.
     # Exact pairwise scope by default; inheritance must be explicitly approved.
     projects = sorted(((Path(path), grants) for path, grants in config["projects"].items()
                        if cwd.is_relative_to(Path(path))), key=lambda item: len(item[0].parts), reverse=True)
@@ -157,7 +170,7 @@ def root_access(root, label=None, cwd=None, config=None):
             access = grant if isinstance(grant, str) else grant["access"]
             inherit = isinstance(grant, dict) and grant.get("subdirectories", False)
             if cwd == project or inherit:
-                return access
+                return access, "project grant" + (" including subdirectories" if inherit else ""), str(project)
     session = access_session()
     if session:
         path = Path(os.environ.get("KT_ACCESS_STATE_DIR", str(Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "knowledgetrees"))) / "access.sqlite3"
@@ -168,8 +181,58 @@ def root_access(root, label=None, cwd=None, config=None):
                     rows = connection.execute("SELECT project, access FROM grants WHERE session=? AND root=? AND touched>?", (hashlib.sha256(session.encode()).hexdigest(), str(root), time.time()-7*86400)).fetchall()
                     rows = sorted(((Path(project), access) for project, access in rows if cwd == Path(project)), key=lambda row: len(row[0].parts), reverse=True)
                     if rows:
-                        return rows[0][1]
-    return policy
+                        return rows[0][1], "session grant", None
+    return policy, source, None
+
+
+def missing_path(path):
+    """True only when the path definitely does not exist (other errors count as present)."""
+    try:
+        os.stat(path)
+    except (FileNotFoundError, NotADirectoryError):
+        return True
+    except OSError:
+        return False
+    return False
+
+
+def prune_stale_grants():
+    """Drop approvals whose tree no longer exists: project grants whose project directory or root is
+    gone, and registered roots that were allowed everywhere or are auto-named. An approval is keyed
+    by path, so leaving one behind would silently approve whatever tree is later recreated there.
+    Deny and force-private entries and user-named ask registrations are kept (they protect or name
+    a tree, which may just be unmounted); kt grants marks them missing and kt access ROOT revoke
+    --scope all removes one."""
+    config = access_config()
+    removed = []
+    for name, spec in list(config["roots"].items()):
+        # Approved roots go; so do auto-named ask registrations (root-<hash>), which name nothing but a
+        # dead path. User-named ask registrations, deny, and force-private entries stay.
+        disposable = spec.get("access") == "allow" or (
+            spec.get("access") == "ask" and re.fullmatch(r"root-[0-9a-f]{12}", name) is not None)
+        if name not in ("local", "project", "global") and disposable and missing_path(configured_root(name, spec)):
+            removed.append((name, None))
+            del config["roots"][name]
+    for project in list(config["projects"]):
+        grants = config["projects"][project]
+        if missing_path(project):
+            removed.append((project, None))
+            del config["projects"][project]
+            continue
+        for root in list(grants):
+            if missing_path(root):
+                removed.append((project, root))
+                del grants[root]
+        if not grants:
+            del config["projects"][project]
+    if removed:
+        try:
+            save_access_config(config)
+        except OSError:
+            return []
+        print(f"kt: removed {len(removed)} stale access approval(s) for trees that no longer exist "
+              "(approvals are tied to a path and must not carry over to a recreated tree)", file=sys.stderr)
+    return removed
 
 
 def require_root(root, label=None):
@@ -257,7 +320,7 @@ def resolve_access_root(config, value):
         if not Path(value).expanduser().is_absolute():
             raise ValueError("select a discovered root label or an absolute knowledge-root path")
         root = Path(value).expanduser().resolve()
-        if not root.is_dir():
+        if not root.is_dir() and root not in [path for _, path in available]:
             raise ValueError("knowledge root does not exist")
         label = next((name for name, path in available if path == root), "root-" + hashlib.sha256(str(root).encode()).hexdigest()[:12])
     return root, label, available
@@ -297,6 +360,74 @@ def apply_access_decision(config, root, label, available, decision, scope, proje
     save_access_config(config)
 
 
+def apply_revocation(config, root, label, available, scope, cwd, save=True):
+    """Narrow or remove access already granted; returns a description. Like apply_access_decision this
+    never prompts: the caller confirms. With save=False it only edits the given config (a preview).
+    Raises ValueError for grants that cannot be revoked this way."""
+    cwd = str(Path(cwd).resolve())
+
+    def persist():
+        if save:
+            save_access_config(config)
+    policy, source, project = resolve_root_access(root, label, cwd, config)
+    if policy == "force-private":
+        raise ValueError("that root is unavailable")
+    if root == local_root(cwd):
+        raise ValueError("the exact local tree is always readable and cannot be revoked")
+    if source == "permissions bypass":
+        raise ValueError("the permissions bypass is on; only `kt permissions --reset` in the user's terminal turns it off")
+    if source == "session grant":
+        raise ValueError("this is a session grant; it expires on its own, or reset it with the same session id: kt access ROOT reset --scope session")
+    matching = [name for name, spec in config["roots"].items() if configured_root(name, spec) == root]
+    if scope == "all":
+        for grants in config["projects"].values():
+            grants.pop(str(root), None)
+        config["projects"] = {key: grants for key, grants in config["projects"].items() if grants}
+        if missing_path(root):
+            for name in matching:
+                del config["roots"][name]
+            persist()
+            return "Removed the registration of a root whose tree no longer exists, and every grant for it."
+        for name in matching or [label]:
+            config["roots"][name] = {"path": str(root), "access": "ask"}
+        persist()
+        return "Access to that root now requires approval again, in every project."
+    if policy != "allow":
+        return "That root is not currently readable from here; nothing to revoke."
+    if project:
+        grants = config["projects"].get(project, {})
+        grants.pop(str(root), None)
+        if not grants:
+            config["projects"].pop(project, None)
+    if resolve_root_access(root, label, cwd, config)[0] == "allow":
+        # Still allowed everywhere: an explicit project-level "ask" overrides it for this project only.
+        config["projects"].setdefault(cwd, {})[str(root)] = "ask"
+    persist()
+    return "Access to that root now requires approval again in this project" + (
+        f" (the grant was made for {project}" + (" and its subdirectories" if project != cwd else "") + ")." if project else ".")
+
+
+def grants_command(args):
+    """List each root's effective access and why, marking roots whose tree is gone."""
+    config = access_config()
+    cwd = Path.cwd().resolve()
+    if args.root:
+        root, _, _ = resolve_access_root(config, args.root)
+        targets = [(root_identity(root), root)]
+    else:
+        targets = discovered_roots(config)
+    for label, root in targets:
+        policy, source, project = resolve_root_access(root, label, cwd, config)
+        if policy == "force-private":
+            if args.root:
+                print("force-private")
+            continue
+        detail = source + (f" (granted for {project})" if project and project != str(cwd) else "")
+        detail += "; TREE MISSING (kt access ROOT revoke --scope all removes its registration)" if missing_path(root) else ""
+        print(f"{label}\t{policy}\t{detail}\t{root if policy == 'allow' else '(restricted)'}")
+    return 0
+
+
 def access_command(args):
     config = access_config()
     root, label, available = resolve_access_root(config, args.root)
@@ -311,6 +442,8 @@ def access_command(args):
     if args.decision == "force-private":
         args.scope = "all"
     session = access_session()
+    if args.decision == "revoke" and args.scope == "session":
+        raise ValueError("revoke applies to --scope project (this directory) or all")
     if args.scope == "session" and not session:
         raise ValueError("session scope requires KT_SESSION_ID (or CODEX_THREAD_ID/OPENCODE_SESSION_ID); use the same identifier in the agent environment")
     if not sys.stdin.isatty():
@@ -324,6 +457,9 @@ def access_command(args):
     if input(f"Save {args.decision!r} decision? [y/N] ").strip().lower() not in ("y", "yes"):
         print("No access decision saved.")
         return 1
+    if args.decision == "revoke":
+        print(apply_revocation(config, root, label, available, args.scope, project))
+        return 0
     apply_access_decision(config, root, label, available, args.decision, args.scope, project, subdirectories, session)
     return 0
 
@@ -1882,7 +2018,7 @@ def roots_command(args):
             else:
                 print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
         if not PRETTY:
-            print("commands: info | init | find | grep | QUESTION | open | dict | add | rewrite | check | status | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
+            print("commands: info | init | find | grep | QUESTION | open | dict | add | rewrite | check | status | rm | mv | combine | prove | roots | grants | register | access | permissions; --help; --pretty")
             return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
@@ -1977,9 +2113,12 @@ def command_parser():
     access = commands.add_parser("access", help="inspect, approve, deny, or revoke root access")
     access.set_defaults(handler=access_command)
     access.add_argument("root", help="root label or absolute root path")
-    access.add_argument("decision", nargs="?", choices=["allow", "deny", "ask", "force-private", "reset"])
+    access.add_argument("decision", nargs="?", choices=["allow", "deny", "ask", "force-private", "reset", "revoke"], help="revoke narrows access already granted (project scope: this directory; all: everywhere)")
     access.add_argument("--scope", choices=["session", "project", "all"], default="project")
     access.add_argument("--subdirectories", action="store_true", help="explicitly extend a project approval to descendant directories")
+    granting = commands.add_parser("grants", help="list each root's effective access and why, including roots whose tree is gone")
+    granting.set_defaults(handler=grants_command)
+    granting.add_argument("root", nargs="?", help="optional root label or absolute path")
     permissions = commands.add_parser("permissions", help="inspect or persist user permission bypass")
     permissions.set_defaults(handler=permissions_command)
     settings = permissions.add_mutually_exclusive_group()
@@ -1996,6 +2135,11 @@ def main():
     boundary = arguments.index("--") if "--" in arguments else len(arguments)
     PRETTY = "--pretty" in arguments[:boundary]
     arguments = [arg for arg in arguments[:boundary] if arg != "--pretty"] + arguments[boundary:]
+    if not (arguments and arguments[0] in ("-h", "--help")):
+        try:
+            prune_stale_grants()
+        except (OSError, ValueError):
+            pass  # a broken access file is reported by the command that needs it
     if arguments and arguments[0] == "prove":
         return prove(arguments[1:])
     if arguments and arguments[0].split() and arguments[0].split()[0].casefold() in QUESTION_STARTS:
