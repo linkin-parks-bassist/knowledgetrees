@@ -136,6 +136,13 @@ def main() -> None:
         assert set(copilot_hooks["hooks"]) == {"sessionStart", "userPromptSubmitted", "postToolUse", "postToolUseFailure", "agentStop"}
         assert copilot_hooks["hooks"]["sessionStart"][0]["args"][-2:] == ["copilot", "start"]
         assert copilot_hooks["hooks"]["agentStop"][0]["args"][-2:] == ["copilot", "stop"]
+        server = knowledge / ".tools/kt-mcp"
+        assert server.read_bytes() == (REPOSITORY / "tools/kt-mcp").read_bytes() and os.access(server, os.X_OK)
+        assert tomllib.loads(codex_config.read_text())["mcp_servers"]["knowledgetrees"] == {"command": "python3", "args": [str(server)]}
+        assert json.loads(opencode_config.read_text())["mcp"]["knowledgetrees"] == {"type": "local", "command": ["python3", str(server)], "enabled": True}
+        assert json.loads((target_home / ".copilot/mcp-config.json").read_text())["mcpServers"]["knowledgetrees"]["args"] == [str(server)]
+        if shutil.which("claude"):
+            assert "knowledgetrees" in json.loads((target_home / ".claude.json").read_text())["mcpServers"]
         canonical = knowledge / "how" / "to" / "use" / "knowledgetrees.md"
         shared_skill = target_home / ".agents" / "skills" / "knowledgetrees" / "SKILL.md"
         orientation = knowledge / "where" / "am" / "i.md"
@@ -164,7 +171,7 @@ def main() -> None:
         for name in ("how/to/add/knowledge/leaves.md", "how/to/maintain/a/knowledge/tree.md",
                      "how/should/an/agent/traverse/a/knowledge/tree.md"):
             assert (knowledge / name).is_file()
-        assert {p.name for p in (knowledge / ".tools").iterdir()} == {"kt", "kt-hooks"}
+        assert {p.name for p in (knowledge / ".tools").iterdir()} == {"kt", "kt-hooks", "kt-mcp"}
 
         assert agents_path.is_symlink()
         agents = agents_path.read_text()
@@ -210,6 +217,9 @@ def main() -> None:
         orientation.write_text("Local environment orientation.\n")
         rerun = run(*home_arguments, answer="")
         assert len(json.loads(codex_hooks.read_text())["hooks"]["Stop"]) == 2
+        assert len(json.loads(claude_settings.read_text())["hooks"]["Stop"]) == 2
+        assert codex_config.read_text().count("[mcp_servers.knowledgetrees]") == 1
+        assert list(json.loads(opencode_config.read_text())["mcp"]) == ["knowledgetrees"]
         assert "[n/Y]" not in rerun.stdout
         assert orientation.read_text().startswith("---\nstatus: green\n")
         assert orientation.read_text().endswith("Local environment orientation.\n")
@@ -271,6 +281,26 @@ def main() -> None:
         assert not agents_path.exists()
         run(*home_arguments)
         assert not agents_path.exists()
+
+    with tempfile.TemporaryDirectory(prefix="knowledgetrees-mcp-test-") as temporary:
+        custom = Path(temporary) / "custom"
+        (custom / ".copilot").mkdir(parents=True)
+        (custom / ".copilot/mcp-config.json").write_text(json.dumps({"mcpServers": {
+            "knowledgetrees": {"type": "local", "command": "custom"}, "other": {"command": "keep"}}}))
+        (custom / ".codex").mkdir()
+        (custom / ".codex/config.toml").write_text('[mcp_servers.knowledgetrees]\ncommand = "custom"\n')
+        run("--home", str(custom), "--no-mcp")
+        assert not (custom / ".knowledge/.tools/kt-mcp").exists()
+        assert "kt-mcp" not in (custom / ".codex/config.toml").read_text()
+        run("--home", str(custom))
+        registered = json.loads((custom / ".copilot/mcp-config.json").read_text())["mcpServers"]
+        assert registered["knowledgetrees"]["command"] == "custom" and registered["other"] == {"command": "keep"}
+        assert tomllib.loads((custom / ".codex/config.toml").read_text())["mcp_servers"]["knowledgetrees"]["command"] == "custom"
+        broken = Path(temporary) / "broken"
+        (broken / ".copilot").mkdir(parents=True)
+        (broken / ".copilot/mcp-config.json").write_text('{"mcpServers": []}')
+        run("--home", str(broken), expected=2)
+        assert not (broken / ".knowledge").exists()
 
     print("installer integration checks passed")
 

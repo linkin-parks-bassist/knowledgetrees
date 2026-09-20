@@ -602,6 +602,17 @@ runtime. See [the hook procedure](example/how/to/use/knowledgetree/hooks.md) for
 event contracts and limitations. This integration targets local Copilot CLI;
 Copilot cloud jobs and VS Code need their own environment/distribution setup.
 
+### Structured edits over MCP
+
+The installer also deploys `~/.knowledge/.tools/kt-mcp`, a small stdio MCP server that
+exposes `kt_read`, `kt_edit`, and `kt_rewrite` to Claude Code, Codex, OpenCode, and
+Copilot CLI. `kt_edit` replaces text that must match exactly once, against the revision
+you read; a stale revision, ambiguous match, or restricted root writes nothing. Every
+write goes through `kt rewrite`, so revision, access, locking, and proof semantics stay
+in the CLI. Registration merges into each harness's own MCP configuration (Claude Code
+via `claude mcp add`), leaves other servers and any existing `knowledgetrees` entry
+alone, and is skipped with `--no-mcp`. Restart each harness afterwards.
+
 ### Why did skills appear after installation?
 
 After installation, Codex and other harnesses may appear to contain a

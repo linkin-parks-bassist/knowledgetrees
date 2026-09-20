@@ -184,6 +184,52 @@ def opencode_config_text(current: str, target_home: Path) -> str:
     return current if unchanged else json.dumps(config, indent=2, ensure_ascii=False) + "\n"
 
 
+def codex_mcp_text(current: str, server: Path) -> str:
+    existing = tomllib.loads(current).get("mcp_servers", {}) if current.strip() else {}
+    if not isinstance(existing, dict) or "knowledgetrees" in existing:
+        return current  # respect an existing (possibly customized) registration
+    separator = "" if not current else ("\n" if current.endswith("\n") else "\n\n")
+    return current + separator + (
+        "# BEGIN KNOWLEDGETREES MCP\n[mcp_servers.knowledgetrees]\n"
+        f"command = \"python3\"\nargs = [{json.dumps(str(server))}]\n# END KNOWLEDGETREES MCP\n")
+
+
+def opencode_mcp_text(current: str, server: Path) -> str:
+    config = json.loads(current) if current.strip() else {}
+    if not isinstance(config, dict) or not isinstance(config.get("mcp", {}), dict):
+        raise ValueError("OpenCode configuration must be an object whose mcp field is an object")
+    if "knowledgetrees" in config.setdefault("mcp", {}):
+        return current
+    config["mcp"]["knowledgetrees"] = {"type": "local", "command": ["python3", str(server)], "enabled": True}
+    return json.dumps(config, indent=2, ensure_ascii=False) + "\n"
+
+
+def copilot_mcp_bytes(config_path: Path, server: Path) -> bytes:
+    storage = writable_target(config_path)
+    current = storage.read_text() if storage.is_file() else ""
+    config = json.loads(current) if current.strip() else {}
+    if not isinstance(config, dict) or not isinstance(config.get("mcpServers", {}), dict):
+        raise ValueError("Copilot MCP configuration must be an object whose mcpServers field is an object")
+    if "knowledgetrees" in config.setdefault("mcpServers", {}):
+        return current.encode()
+    config["mcpServers"]["knowledgetrees"] = {"type": "local", "command": "python3", "args": [str(server)], "tools": ["*"]}
+    return (json.dumps(config, indent=2) + "\n").encode()
+
+
+def register_claude_mcp(target_home: Path, server: Path) -> str:
+    """Use Claude Code's own CLI: it rewrites ~/.claude.json constantly, so never edit that file directly."""
+    environment = {**os.environ, "HOME": str(target_home)}
+    try:
+        if subprocess.run(["claude", "mcp", "get", "knowledgetrees"], env=environment, cwd=target_home,
+                          capture_output=True, timeout=60).returncode == 0:
+            return "already registered"
+        added = subprocess.run(["claude", "mcp", "add", "--scope", "user", "knowledgetrees", "--", "python3", str(server)],
+                               env=environment, cwd=target_home, capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return f"skipped (claude CLI unavailable); run: claude mcp add --scope user knowledgetrees -- python3 {shlex.quote(str(server))}"
+    return "registered" if added.returncode == 0 else f"failed: {added.stderr.strip()}"
+
+
 def permission_consent(target_home: Path) -> bool:
     print("WARNING: Installation will grant OpenCode agents automatic read access to:")
     for name in (".knowledge", ".agents"):
@@ -331,6 +377,7 @@ def parser_for_cli() -> argparse.ArgumentParser:
     )
     parser.add_argument("--hooks-only", action="store_true", help="install/update CLI and hooks without replacing installed leaves or skills")
     parser.add_argument("--no-hooks", action="store_true", help="skip hook installation (does not remove existing hooks)")
+    parser.add_argument("--no-mcp", action="store_true", help="skip the structured-edit MCP server and its harness registrations")
     return parser
 
 
@@ -386,7 +433,16 @@ def main(arguments: list[str] | None = None) -> int:
         except (OSError, ValueError, TypeError) as error:
             print(f"error: cannot safely prepare knowledge-tree hooks: {error}", file=sys.stderr)
             return 2
-        file_targets.extend(path for path, _content, _mode in hook_files)
+    mcp_server = knowledge_root / ".tools" / "kt-mcp"
+    copilot_mcp = target_home / ".copilot" / "mcp-config.json"
+    if not args.no_mcp:
+        try:
+            hook_files.append((mcp_server, (repository / "tools/kt-mcp").read_bytes(), 0o755))
+            hook_files.append((copilot_mcp, copilot_mcp_bytes(copilot_mcp, mcp_server), 0o600))
+        except (OSError, ValueError, TypeError) as error:
+            print(f"error: cannot safely prepare the knowledge-tree MCP server: {error}", file=sys.stderr)
+            return 2
+    file_targets.extend(path for path, _content, _mode in hook_files)
     invalid_targets = [
         destination
         for destination in file_targets
@@ -413,7 +469,7 @@ def main(arguments: list[str] | None = None) -> int:
             conflicts.append(destination)
     for destination, content, _mode in hook_files:
         # Codex and Claude Code settings are safe merge targets, not managed source bundles.
-        if destination not in (target_home / ".codex/hooks.json", target_home / ".claude/settings.json") and path_exists(destination) and not same_bytes(destination, content):
+        if destination not in (target_home / ".codex/hooks.json", target_home / ".claude/settings.json", copilot_mcp) and path_exists(destination) and not same_bytes(destination, content):
             conflicts.append(destination)
     for canonical, destination in skill_links:
         skill_bytes = rendered_leaf(example / canonical.relative_to(knowledge_root))
@@ -437,6 +493,8 @@ def main(arguments: list[str] | None = None) -> int:
         if destination.is_relative_to(target_home / ".codex"):
             config_updated = codex_config_text(config_updated, destination)
     try:
+        if not args.no_mcp:
+            config_updated = codex_mcp_text(config_updated, mcp_server)
         tomllib.loads(config_updated)
     except tomllib.TOMLDecodeError as error:
         print(f"error: cannot safely merge Codex configuration: {error}", file=sys.stderr)
@@ -449,6 +507,7 @@ def main(arguments: list[str] | None = None) -> int:
     opencode_current = opencode_storage.read_text() if opencode_storage.is_file() else ""
     try:
         opencode_updated = opencode_current if args.hooks_only else opencode_config_text(opencode_current, target_home)
+        opencode_final = opencode_updated if args.no_mcp else opencode_mcp_text(opencode_updated, mcp_server)
     except (ValueError, TypeError) as error:
         print(f"error: cannot safely merge OpenCode configuration: {error}", file=sys.stderr)
         return 2
@@ -469,6 +528,8 @@ def main(arguments: list[str] | None = None) -> int:
             print(f"Would hard-link {destination} to {canonical}")
         if agents_updated != agents_current:
             print(f"Would remove the managed bootstrap from {agents_path}")
+        if not args.no_mcp:
+            print("Would register the structured-edit MCP server with Claude Code (via `claude mcp add`), Codex, OpenCode, and Copilot CLI")
         if not args.hooks_only:
             print(f"Would enable the Codex skill in {codex_config}")
         if opencode_updated != opencode_current:
@@ -476,6 +537,8 @@ def main(arguments: list[str] | None = None) -> int:
             print(f"Would allow reads of {knowledge_root}/** and {target_home / '.agents'}/**, plus writes to {knowledge_root}/**.")
         return 0
 
+    if opencode_final != opencode_current:
+        print("Adding the knowledge-tree structured-edit MCP server to OpenCode configuration.")
     if opencode_updated != opencode_current and not permission_consent(target_home):
         return 2
 
@@ -528,13 +591,15 @@ def main(arguments: list[str] | None = None) -> int:
     if config_updated != config_current:
         mode = config_storage.stat().st_mode & 0o777 if config_storage.exists() else 0o600
         atomic_write(config_storage, config_updated.encode(), mode)
-    if opencode_updated != opencode_current:
+    if opencode_final != opencode_current:
         mode = opencode_storage.stat().st_mode & 0o777 if opencode_storage.exists() else 0o600
-        atomic_write(opencode_storage, opencode_updated.encode(), mode)
+        atomic_write(opencode_storage, opencode_final.encode(), mode)
     for destination, content, mode in hook_files:
         storage = writable_target(destination)
         if not same_bytes(storage, content):
             atomic_write(storage, content, mode)
+
+    claude_mcp = None if args.no_mcp else register_claude_mcp(target_home, mcp_server)
 
     proof_environment = os.environ.copy()
     proof_environment["HOME"] = str(target_home)
@@ -551,8 +616,11 @@ def main(arguments: list[str] | None = None) -> int:
     print(f"Installed {len(leaf_installs)} reusable leaves into {knowledge_root}")
     print(f"Installed kt at {kt_target}; command: {kt_command}")
     if hook_files:
-        print("Installed failure and task-end reminders for Codex, OpenCode, and Copilot CLI.")
-        print("Codex: review/trust the new definitions with /hooks. Restart OpenCode to load its plugin.")
+        print("Installed failure and task-end reminders for Claude Code, Codex, OpenCode, and Copilot CLI.")
+        print("Claude Code and Codex: review/trust the new definitions with /hooks. Restart OpenCode to load its plugin.")
+    if claude_mcp is not None:
+        print(f"Structured-edit MCP server (kt_read, kt_edit, kt_rewrite) for Codex, OpenCode, and Copilot CLI is configured; Claude Code: {claude_mcp}.")
+        print("Restart each harness to load it.")
     if not args.hooks_only:
         print("Installed hard-linked compatibility skills for shared harnesses, Codex, and Claude Code")
     if agents_updated != agents_current:

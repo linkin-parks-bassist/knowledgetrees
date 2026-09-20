@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""Local stdio MCP server exposing structured knowledge-tree reads and edits.
+
+Every mutation is delegated to `kt rewrite`, so revision conflicts, access policy,
+locking, proof invalidation, and inode preservation stay owned by the CLI.
+"""
+
+import difflib
+import json
+import os
+from pathlib import Path
+import re
+import runpy
+import subprocess
+import sys
+
+PROTOCOL = "2025-06-18"
+CLI = Path(os.environ.get("KT_MCP_CLI", str(Path(__file__).resolve().with_name("kt"))))
+MAX_TEXT = 1048576
+
+TOOLS = [
+    {"name": "kt_read",
+     "description": "Read a knowledge-tree leaf. Returns its revision and full text; pass that revision to kt_edit or kt_rewrite.",
+     "inputSchema": {"type": "object", "required": ["address"], "additionalProperties": False,
+                     "properties": {"address": {"type": "string", "description": "Root-qualified leaf address returned by kt, e.g. local:what/is/next.md"}}}},
+    {"name": "kt_edit",
+     "description": "Replace exact text in a leaf's answer body. old_text must occur exactly once. Fails on a stale revision, "
+                    "restricted access, or ambiguous/missing match; nothing is written on failure. Returns a diff and the new revision.",
+     "inputSchema": {"type": "object", "required": ["address", "revision", "old_text", "new_text"], "additionalProperties": False,
+                     "properties": {"address": {"type": "string"},
+                                    "revision": {"type": "string", "description": "Revision from the read this edit is based on"},
+                                    "old_text": {"type": "string", "description": "Exact body text to replace; must match once"},
+                                    "new_text": {"type": "string"},
+                                    "dry_run": {"type": "boolean", "description": "Show the diff without writing"}}}},
+    {"name": "kt_rewrite",
+     "description": "Replace a leaf's whole answer body (no front matter). Prefer kt_edit for small changes so still-valid knowledge is not lost.",
+     "inputSchema": {"type": "object", "required": ["address", "revision", "body"], "additionalProperties": False,
+                     "properties": {"address": {"type": "string"}, "revision": {"type": "string"},
+                                    "body": {"type": "string"}, "dry_run": {"type": "boolean"}}}},
+]
+
+
+class ToolError(Exception):
+    pass
+
+
+def run_kt(*arguments):
+    completed = subprocess.run([sys.executable, str(CLI), *arguments], text=True, capture_output=True)
+    return completed
+
+
+def read_leaf(address):
+    completed = run_kt("open", address)
+    if completed.returncode:
+        raise ToolError((completed.stderr or completed.stdout).strip() or f"kt open failed ({completed.returncode})")
+    found = re.search(r"^Revision: ([a-f0-9]{64})$", completed.stderr, re.M)
+    if not found:
+        raise ToolError("kt open did not report a revision")
+    return completed.stdout, found.group(1)
+
+
+def body_of(text):
+    leaf_parts = runpy.run_path(str(CLI))["leaf_parts"]
+    return leaf_parts(text)[1]
+
+
+def require_text(arguments, *names):
+    for name in names:
+        if not isinstance(arguments.get(name), str):
+            raise ToolError(f"{name} must be a string")
+    if any(len(arguments[name].encode()) > MAX_TEXT for name in names):
+        raise ToolError("text exceeds 1 MiB")
+
+
+def rewrite(address, revision, body, dry_run):
+    flags = ["--dry-run"] if dry_run else []
+    completed = run_kt("rewrite", *flags, address, revision, body)
+    if completed.returncode:
+        raise ToolError((completed.stderr or completed.stdout).strip() or f"kt rewrite failed ({completed.returncode})")
+    return completed
+
+
+def finish(address, before, dry_run, completed):
+    if dry_run:
+        return (completed.stdout or "No change.\n") + completed.stderr
+    after, revision = read_leaf(address)
+    diff = "".join(difflib.unified_diff(before.splitlines(keepends=True), after.splitlines(keepends=True),
+                                       fromfile="before", tofile="after"))
+    return f"Revision: {revision}\n{diff or 'No change.'}"
+
+
+def call(name, arguments):
+    require_text(arguments, "address")
+    address = arguments["address"]
+    if name == "kt_read":
+        text, revision = read_leaf(address)
+        return f"Revision: {revision}\n---\n{text}"
+    require_text(arguments, "revision")
+    dry_run = arguments.get("dry_run") is True
+    text, current = read_leaf(address)
+    if current != arguments["revision"]:
+        raise ToolError("leaf changed since your read; call kt_read again and merge before editing")
+    if name == "kt_rewrite":
+        require_text(arguments, "body")
+        return finish(address, text, dry_run, rewrite(address, current, arguments["body"], dry_run))
+    if name == "kt_edit":
+        require_text(arguments, "old_text", "new_text")
+        old, new = arguments["old_text"], arguments["new_text"]
+        body = body_of(text)
+        if not old:
+            raise ToolError("old_text must not be empty")
+        matches = body.count(old)
+        if matches != 1:
+            raise ToolError(f"old_text must match exactly once in the answer body; found {matches} matches"
+                            + (" (front matter is not editable here)" if not matches and old in text else ""))
+        return finish(address, text, dry_run, rewrite(address, current, body.replace(old, new, 1), dry_run))
+    raise ToolError(f"unknown tool {name}")
+
+
+def respond(message):
+    method, ident = message.get("method"), message.get("id")
+    if ident is None:
+        return None  # notifications such as notifications/initialized need no reply
+    if method == "initialize":
+        requested = (message.get("params") or {}).get("protocolVersion")
+        return {"jsonrpc": "2.0", "id": ident, "result": {
+            "protocolVersion": requested if isinstance(requested, str) else PROTOCOL,
+            "capabilities": {"tools": {}},
+            "serverInfo": {"name": "knowledgetrees", "version": "1"}}}
+    if method == "ping":
+        return {"jsonrpc": "2.0", "id": ident, "result": {}}
+    if method == "tools/list":
+        return {"jsonrpc": "2.0", "id": ident, "result": {"tools": TOOLS}}
+    if method == "tools/call":
+        params = message.get("params") or {}
+        arguments = params.get("arguments")
+        try:
+            if params.get("name") not in {tool["name"] for tool in TOOLS} or not isinstance(arguments, dict):
+                raise ToolError("unknown tool or malformed arguments")
+            text, error = call(params["name"], arguments), False
+        except ToolError as failure:
+            text, error = str(failure), True
+        return {"jsonrpc": "2.0", "id": ident, "result": {"content": [{"type": "text", "text": text}], "isError": error}}
+    return {"jsonrpc": "2.0", "id": ident, "error": {"code": -32601, "message": f"method not found: {method}"}}
+
+
+def main():
+    # Claude Code supplies the session project here even when a user-scoped MCP
+    # server starts with another working directory. An explicit override also
+    # lets other hosts provide the same identity.
+    project = os.environ.get("KT_MCP_PROJECT_DIR") or os.environ.get("CLAUDE_PROJECT_DIR")
+    if project:
+        directory = Path(project).resolve(strict=True)
+        if not directory.is_dir():
+            raise NotADirectoryError(directory)
+        os.chdir(directory)
+    for line in sys.stdin:
+        if not line.strip():
+            continue
+        try:
+            message = json.loads(line)
+            if not isinstance(message, dict):
+                raise ValueError("expected a JSON object")
+        except ValueError:
+            print(json.dumps({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "parse error"}}), flush=True)
+            continue
+        reply = respond(message)
+        if reply is not None:
+            print(json.dumps(reply), flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
