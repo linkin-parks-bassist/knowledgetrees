@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:31:11+10:00"
+revised_at: "2026-09-20T09:58:35+10:00"
 ---
 
 ## Success output policy
@@ -55,7 +55,10 @@ Accuracy/preservation reminders belong in the one-shot review hook.
   slash-containing leaf paths are not filters. Multiple tokens are disjunctive.
 - Create: `kt add "what is the result" "Checked answer" --local`.
   Creation supports `--local`, `--global`, or `--root ROOT`; it refuses existing leaves.
-- Rewrite inline: `kt rewrite ADDRESS HASH "Complete replacement Markdown"`.
+  Add `--expires-at`, `--expires-every`, or `--verifiable` when justified.
+- Rewrite inline: `kt rewrite ADDRESS HASH "Complete answer body"`.
+  Use `--expires-at`, `--expires-every`, `--no-expiry`, `--verifiable`, or
+  `--no-verifiable` to change optional metadata. Omitted options preserve it.
   HASH is a required positional revision supplied automatically on stderr by full
   leaf reads. No --expect option. --dry-run previews the diff. Successful writes
   produce no stdout or stderr (exit 0), without echoing either body. No-ops are

@@ -1,8 +1,8 @@
 ---
 status: green
-revised_at: "2026-09-20T09:23:47+10:00"
-name: knowledgetrees-maintenance
-description: 'Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed.'
+revised_at: "2026-09-20T09:58:36+10:00"
+name: "knowledgetrees-maintenance"
+description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
 ---
 
 Maintain current truth in place within current authority. Knowledge records facts
@@ -114,7 +114,9 @@ Agents should add expiry metadata when a factual answer is liable to change. Do 
 add expiry merely because content cannot be mechanically or independently verified.
 
 Have the original contents in context before editing a leaf. Full reads supply
-the revision hash automatically; use kt rewrite ADDRESS HASH CONTENTS. The required
+the revision hash automatically; use kt rewrite ADDRESS HASH BODY. Supply the
+answer body only. Use `--expires-at`, `--expires-every`, or `--verifiable` to set
+optional metadata; `--no-expiry` or `--no-verifiable` to clear it. The required
 hash rejects changed contents; reread and merge on conflict. Preserve still-valid
 knowledge and concurrent edits, correct contradictions
 against governing evidence, and update affected orientation/spine projections.

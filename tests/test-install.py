@@ -161,7 +161,8 @@ def main() -> None:
         installed_skills = runpy.run_path(str(INSTALLER))["SKILL_LEAVES"]
         for name, relative in installed_skills.items():
             owner = knowledge / relative
-            assert f"name: {name}" in owner.read_text()
+            assert (f"name: {name}" in owner.read_text() or
+                    f'name: "{name}"' in owner.read_text())
             assert "status:" in owner.read_text()
             assert "  ---" not in owner.read_text(), "frontmatter delimiter must not be nested"
             assert owner.read_text().count("\n---\n") == 1

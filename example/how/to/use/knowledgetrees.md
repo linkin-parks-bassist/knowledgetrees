@@ -1,7 +1,7 @@
 ---
 status: green
-revised_at: "2026-09-20T09:06:22+10:00"
-name: knowledgetrees
+revised_at: "2026-09-20T09:58:36+10:00"
+name: "knowledgetrees"
 description: "Initialize once; use knowledge trees as the sole maintained knowledge source for their scope."
 ---
 
@@ -35,8 +35,8 @@ After substantive repository work, update `what/is/the/state.md` and `what/is/ne
 - `kt find WORDS` — broad lexical search across accessible roots.
 - `kt open ADDRESS` — print a leaf verbatim and emit its revision hash.
 - `kt dict [ROOT...]` — print useful final-two path segments.
-- `kt add QUESTION ANSWER` — create an absent unverified leaf.
-- `kt rewrite ADDRESS HASH CONTENTS` — revision-checked complete replacement.
+- `kt add QUESTION ANSWER [--expires-at TIME|--expires-every WINDOW] [--verifiable]` — create a leaf from its answer body.
+- `kt rewrite ADDRESS HASH BODY` — revision-checked answer-body replacement; options set or clear expiry and verifiability.
 - `kt rm` / `kt mv` / `kt combine` — revision-checked leaf maintenance.
 - `kt prove [--local|--global|--root ROOT] [TOKEN...]` — report green/yellow/brown state and run marked proofs.
 - `kt roots` / `kt access` / `kt permissions` — inspect roots and access policy.

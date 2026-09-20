@@ -4,11 +4,17 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
 
 SCRIPT = Path(__file__).resolve().parents[1] / "tools/kt"
+
+
+def body(text):
+    match = re.match(r"\A---\n.*?\n---\n", text, re.S)
+    return text[match.end():].lstrip("\n") if match else text
 
 
 def main():
@@ -57,7 +63,7 @@ true
         token = opened.stderr.strip().removeprefix("Revision: ")
         assert token == hashlib.sha256(path.read_bytes()).hexdigest()
         assert opened.stdout == original
-        revised = original.replace("The second assertion is true.", "The second assertion is different.")
+        revised = body(original).replace("The second assertion is true.", "The second assertion is different.")
         preview = run("rewrite", "project:how/to/test.md", token, revised, "--dry-run")
         assert "second assertion is different" in preview.stdout
         assert path.read_text() == original and path.stat().st_ino == inode
@@ -70,16 +76,16 @@ true
         run("rewrite", "project:how/to/test.md", token, "stale replacement", expected=4)
         assert path.read_text() == updated
         token = run("open", "project:how/to/test.md").stderr.strip().removeprefix("Revision: ")
-        no_op = run("rewrite", "project:how/to/test.md", token, updated)
+        no_op = run("rewrite", "project:how/to/test.md", token, body(updated))
         assert no_op.stdout == "" and no_op.stderr == "" and path.read_text() == updated
         # Changed predicate cannot retain an old proof stamp, even if submitted as verified.
-        revised = updated.replace("```bash\ntrue\n```", "```bash\nfalse\n```", 1)
+        revised = body(updated).replace("```bash\ntrue\n```", "```bash\nfalse\n```", 1)
         run("rewrite", "project:how/to/test.md", token, revised)
         assert "Proof: (verified at 2026-09-12" not in path.read_text()
         # Newly inserted orphan proof markers must not carry caller-invented verification.
         token = hashlib.sha256(path.read_bytes()).hexdigest()
         run("rewrite", "project:how/to/test.md", token,
-            path.read_text() + "\nProof: (verified at 2030-01-01T00:00:00+00:00)\n")
+            body(path.read_text()) + "\nProof: (verified at 2030-01-01T00:00:00+00:00)\n")
         assert "2030-01-01" not in path.read_text()
         # Body-only input gets current metadata on rewrite.
         bare = root / "bare.md"
@@ -110,7 +116,7 @@ true
         run("rewrite", "project:how/to/test.md", token, "stale", expected=4)
         current = path.read_text()
         token = hashlib.sha256(current.encode()).hexdigest()
-        no_op = run("rewrite", "project:how/to/test.md", token, current)
+        no_op = run("rewrite", "project:how/to/test.md", token, body(current))
         assert no_op.stdout == "" and no_op.stderr == ""
         for invalid in ("", "---\nunclosed"):
             run("rewrite", "project:how/to/test.md", token, invalid, expected=2)

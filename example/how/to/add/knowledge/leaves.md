@@ -1,8 +1,8 @@
 ---
 status: green
-revised_at: "2026-09-20T09:23:47+10:00"
-name: knowledgetrees-capture
-description: 'Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs.'
+revised_at: "2026-09-20T09:59:34+10:00"
+name: "knowledgetrees-capture"
+description: "Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs."
 ---
 
 Capture an established reusable answer before the next unrelated tool call or
@@ -42,13 +42,13 @@ Put host/personal tooling in `~/.knowledge` and project/subsystem facts in the
 nearest applicable local root. Never promote professional, customer, partner, or
 restricted material into the global tree; sanitize anything intended for publication.
 Keep an existing owner in context before editing. Full reads supply the revision
-hash automatically; pass it positionally to kt rewrite ADDRESS HASH CONTENTS.
+hash automatically; pass it positionally to kt rewrite ADDRESS HASH BODY.
 Preserve still-valid knowledge and reread/merge if the hash conflicts.
 Use `kt open ROOT:PATH` for that read and `kt prove --root ROOT TOKEN` after
 changing eligible proofs. Create a new leaf in one call:
 
 ```sh
-kt add "how to prepare the demo" "Run the project's documented demo command."
+kt add "how to prepare the demo" "Run the project's documented demo command." --expires-every "2 weeks"
 ```
 
 `capture` is an alias for `add`. The exact current-directory local root is the default, falling
@@ -58,7 +58,10 @@ writing. Pass `-` as the answer to read multiline Markdown from stdin.
 The command preserves repeated words and hyphenated components, creates metadata,
 and refuses existing owners rather than overwriting them. It records new answers
 with `status: yellow`, never invents a manual check or proof, and never executes
-the supplied body. Review the answer before recording `checked_at`;
+the supplied body. Pass only answer Markdown; `kt` generates the front matter.
+Use `--expires-at TIMESTAMP` or `--expires-every DURATION` when a fact has a real
+time-based freshness boundary. Use `--verifiable` only after checking that every
+claim is covered by eligible proofs. Review the answer before recording `checked_at`;
 inspect and run eligible proofs separately. For an unresolved question, supply
 `--unresolved --blocker "missing evidence" --next-check "specific next investigation"`.
 
@@ -99,9 +102,9 @@ failing proof makes it brown. The flag asserts complete coverage; proof executio
 cannot detect uncovered prose. An unresolved reusable question retains a blocker
 and next check and stays yellow until reviewed.
 
-Freshness may additionally use either `expires_at` (ISO 8601 with timezone) or
-`expires_every` (for example `14d`, `2 weeks`, or `two weeks`, measured from
-`checked_at`). An elapsed expiry makes the leaf yellow and unusable until
+Freshness may additionally use either `--expires-at` (ISO 8601 with timezone) or
+`--expires-every` (for example `14d`, `2 weeks`, or `two weeks`, measured from
+manual `checked_at`). An elapsed expiry makes the leaf yellow and unusable until
 re-verification. Use expiry only when a real time-based freshness boundary exists.
 Proof-free specifications, plans, procedures, opinions, and other content
 that is not mechanically verifiable can be green. Prefer
@@ -140,7 +143,7 @@ refreshes only its `Proof: (verified at …)` marker. A failing run changes it t
 decide semantic eligibility, faithful coverage, or whether all prose is proved;
 the agent remains responsible. Read maintenance before repairing a falsified leaf.
 
-For an existing owner, use kt rewrite ADDRESS HASH CONTENTS as
+For an existing owner, use kt rewrite ADDRESS HASH BODY as
 described in
 `how/to/rewrite/a/knowledge/leaf.md`; creation still refuses overwriting existing leaves.
 

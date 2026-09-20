@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:23:47+10:00"
+revised_at: "2026-09-20T09:58:35+10:00"
 ---
 
 Read a leaf normally with `kt open ROOT:PATH` or an exact sentence-prefix query.
@@ -11,17 +11,20 @@ revision for editing.
 Use the canonical editing command:
 
 ```sh
-kt rewrite ROOT:PATH HASH "Complete revised Markdown"
+kt rewrite ROOT:PATH HASH "Complete revised answer body"
 ```
 
 HASH is a mandatory positional SHA-256 revision from the read. There is no
 rewrite --expect option. A matching hash establishes that the leaf still has the
 read contents; it does not prove how recently it was read or that the agent reviewed
 it. Keep those contents in context and preserve still-valid knowledge when editing.
-Contents are a literal argument, including multiline Markdown. No temporary file,
-stdin, editor, or extra read just to obtain a hash is required. Put evidence
-in the answer; --dry-run previews the diff without writing. Quote shell arguments
-correctly; operating-system argument size limits apply.
+Contents are the complete answer body, including multiline Markdown. Do not
+supply front matter. `kt` retains optional metadata and generates status and
+revision time. Use `--expires-at TIMESTAMP` or `--expires-every DURATION` to set
+freshness; `--no-expiry` clears it. Use `--verifiable` only after reviewing
+complete proof coverage, and `--no-verifiable` to clear the flag. `kt check`
+alone records manual `checked_at`. `--dry-run` previews the result. Quote shell
+arguments correctly; operating-system argument size limits apply.
 
 Successful rewrites and identical no-ops produce no stdout or stderr. Exit 0
 signals success. Neither old nor new contents are echoed. --dry-run still shows
@@ -37,11 +40,12 @@ ordinary intervening edits by non-locking writers. This is not transactional aga
 arbitrary direct file writes or power loss. In-place writes preserve hardlinks.
 Access policies apply to reading and rewriting; symlink aliases cannot be rewritten.
 
-Identical submissions are no-ops. Changed content loses prior whole-leaf
-verification and check times, sets `revised_at`, and becomes `status: yellow`.
-Rerun `kt prove` after reviewing the revised answer to record the new result.
-Unchanged assertion-paragraph plus fenced predicate retains its original proof
-marker, regardless of any replacement timestamp supplied. New or changed proofs
+An unchanged body with no metadata-option change is a no-op. Changed body or
+optional metadata clears manual check time, refreshes `revised_at`, and starts
+`status: yellow` unless brown was already sticky. Omitted options preserve
+existing expiry, verifiability, and skill entry fields. Rerun `kt prove` after
+reviewing the answer. An unchanged assertion-paragraph plus fenced predicate
+retains its original proof marker. New or changed proofs
 are reset to `Proof: (verified at _)` and must be checked separately. Rewriting
 never executes proof bodies or claims independent whole-leaf verification.
 A brown leaf stays brown through a rewrite until an independent whole-leaf

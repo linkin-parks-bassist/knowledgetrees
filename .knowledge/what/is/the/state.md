@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:34:31+10:00"
+revised_at: "2026-09-20T10:03:19+10:00"
 ---
 
 The repository's operational knowledge root is `.knowledge/`; `example/` is the
@@ -13,7 +13,10 @@ metadata. The installed executable matches repository source.
 `tools/kt` is the dependency-free Python CLI for lexical lookup, capture,
 revision-checked rewrite and maintenance, root access, and proof evaluation.
 Full reads return a SHA-256 revision for positional `kt rewrite ADDRESS HASH
-CONTENTS`; successful mutations are normally silent. Lookup caches only within
+BODY`; successful mutations are normally silent. Add and rewrite accept answer
+bodies, generate status/revision time, and set expiry or complete proof coverage
+through CLI options. Rewrite preserves omitted optional metadata and offers flags
+to clear expiry or verifiability. Lookup caches only within
 an invocation and never indexes private roots. Force-private wins over grants
 and bypass. Registered nested roots remain distinct. `kt boot` prints the
 global procedure, exact local orientation, dictionary, and local proof summary;
@@ -57,8 +60,10 @@ A repeat cleanup preview found zero changes. Archived snapshots and force-privat
 roots were outside the active-root audit. One registered agent-ecosystem root
 is absent on disk. The access registry was unchanged.
 
-All Python integration suites and the OpenCode adapter suite pass. Installer
-preview and force install completed. Project, public example, and installed
-global proof sweeps are green; curated instruction sync has zero drift; source
-and installed CLI bytes match. Git whitespace check passes. The validated change was committed and pushed to
-`origin/main` as `367d481`.
+The preceding metadata cleanup was published as `367d481` and `2b36a74`.
+The body-only add/rewrite interface, expiry/verifiability options, tests, README,
+and public guidance are now updated. Python and OpenCode suites pass. An install
+with `--no-hooks` deployed the CLI and guidance while leaving two pre-existing
+user hook edits untouched. Project, public example, and installed-global proofs
+are green; installed CLI bytes match source and instruction sync has zero drift.
+This change is pending publication.

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:26:54+10:00"
+revised_at: "2026-09-20T09:59:09+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -24,7 +24,7 @@ path supply scope. All stored timestamps are ISO 8601 with a timezone. Unsupport
 or malformed front matter is rejected by write commands and brown in proof checks.
 Empty orientation and spine leaves created by `kt init` remain empty until filled.
 
-`kt add`, `kt rewrite`, and `kt combine` set `revised_at` for content changes. New
+`kt add` and `kt rewrite` accept answer bodies and generate front matter. Options `--expires-at TIMESTAMP` and `--expires-every DURATION` set freshness; `--verifiable` asserts complete proof coverage. Rewrite preserves omitted optional fields; `--no-expiry` and `--no-verifiable` clear them. `kt add`, `kt rewrite`, and `kt combine` set `revised_at` for changes. New
 and revised answers start yellow; a brown leaf stays brown through a rewrite until
 an independent whole-leaf check. `kt prove` writes the evaluated color. Elapsed
 expiry makes an otherwise passing leaf yellow; it reports yellow counts without
@@ -43,7 +43,7 @@ The CLI supports sentence-prefix questions, root-qualified `kt open`, ranked
 `kt find`, `kt dict`, `kt add`, `kt rewrite`, `kt check`, `kt rm`, `kt mv`,
 `kt combine`, root registration/access, and `kt prove`. Exact reads print verbatim
 content on stdout and its SHA-256 revision on stderr. `kt rewrite ADDRESS HASH
-CONTENTS` requires the full-read revision, rejects stale writes, preserves
+BODY` requires the full-read revision, rejects stale writes, preserves
 hardlinks and still-valid answer text, resets changed proof markers, and produces
 no normal success output. Evidence belongs in the answer. `kt rm` and `kt mv`
 require `--expect`; move refuses overwrites and preserves bytes. `kt combine`

@@ -269,6 +269,11 @@ verifiable: false
 
 `checked_at`, expiry, and `verifiable` are optional. Keep origins, caveats,
 blockers, and next checks in the answer, not in front matter.
+`kt add` and `kt rewrite` take answer bodies and generate front matter. Use
+`--expires-at TIMESTAMP` or `--expires-every DURATION` to set freshness, and
+`--verifiable` after reviewing complete proof coverage. On rewrite, omitted
+options preserve existing expiry and verifiability; `--no-expiry` and
+`--no-verifiable` clear them. Use `kt check ADDRESS HASH` for manual review time.
 
 A leaf containing only concrete facts whose every claim is covered by eligible proofs
 should declare `verifiable: true` after that coverage has been reviewed.
@@ -765,13 +770,15 @@ the read brings both contents and revision into context without an extra call.
 Rewrite using that required positional hash:
 
 ```sh
-kt rewrite local:how/to/build.md HASH 'Complete revised Markdown'
+kt rewrite local:how/to/build.md HASH 'Complete revised answer body' --expires-every '2 weeks'
 ```
 
 There is no rewrite --expect option. If the leaf changed since the read, rewrite
 exits 4 without writing; reread and merge. A matching hash confirms unchanged
 contents, rather than measuring read recency. Keep the original in context and
-preserve still-valid knowledge. Contents may include literal newlines. Put evidence
+preserve still-valid knowledge. Supply only the answer body; kt retains the
+existing optional metadata unless a flag changes it, and generates status and
+revision time. Contents may include literal newlines. Put evidence
 in the answer; --dry-run previews the diff. Quote shell arguments correctly;
 operating-system argument size limits apply.
 

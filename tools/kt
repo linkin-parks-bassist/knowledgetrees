@@ -387,6 +387,45 @@ def metadata_errors(text):
     return errors
 
 
+def requested_lifecycle(args, existing=None):
+    """Preserve existing optional fields unless a CLI option changes them."""
+    fields = {key: existing[key] for key in
+              ("expires_at", "expires_every", "verifiable", "name", "description")
+              if existing and key in existing}
+    if getattr(args, "no_expiry", False):
+        fields.pop("expires_at", None)
+        fields.pop("expires_every", None)
+    elif getattr(args, "expires_at", None) is not None:
+        metadata_datetime(args.expires_at, "expires_at")
+        fields.pop("expires_every", None)
+        fields["expires_at"] = args.expires_at
+    elif getattr(args, "expires_every", None) is not None:
+        expiry_duration(args.expires_every)
+        fields.pop("expires_at", None)
+        fields["expires_every"] = args.expires_every
+    if getattr(args, "verifiable", None) is not None:
+        if args.verifiable:
+            fields["verifiable"] = "true"
+        else:
+            fields.pop("verifiable", None)
+    return fields
+
+
+def lifecycle_options(parser, clear=False):
+    expiry = parser.add_mutually_exclusive_group()
+    expiry.add_argument("--expires-at", help="ISO 8601 expiry timestamp with timezone")
+    expiry.add_argument("--expires-every", help="duration from manual checked_at, e.g. 14d or '2 weeks'")
+    if clear:
+        expiry.add_argument("--no-expiry", action="store_true", help="remove existing expiry")
+    coverage = parser.add_mutually_exclusive_group()
+    coverage.add_argument("--verifiable", dest="verifiable", action="store_true",
+                          help="assert every factual claim is covered by proofs")
+    if clear:
+        coverage.add_argument("--no-verifiable", dest="verifiable", action="store_false",
+                              help="remove the complete-proof-coverage assertion")
+    parser.set_defaults(verifiable=None)
+
+
 def words(value):
     return list(dict.fromkeys(re.findall(r"[^\W_]+", value.casefold())))
 
@@ -806,27 +845,20 @@ def proof_records(text):
     return lines, records
 
 
-def invalidate_review(text, original):
-    match = re.match(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|$)", text, re.S)
-    if text.startswith("---") and match is None:
-        raise ValueError("unclosed front matter")
-    body = text[match.end():] if match else text
+def require_verifiable_proof(body, fields):
+    if fields.get("verifiable") == "true" and not any(
+            identity is not None for _, identity, _ in proof_records(body)[1]):
+        raise ValueError("--verifiable requires at least one eligible proof in the answer body")
+
+
+def invalidate_review(body, original, args):
     previous, _ = leaf_parts(original)
-    kept = []
-    if match:
-        for line in match[1].splitlines():
-            key = line.partition(":")[0]
-            if key in ("status", "revised_at", "checked_at"):
-                continue
-            kept.append(line)
-    header = (f"status: {json.dumps('brown' if previous.get('status') == 'brown' else 'yellow')}\n"
-              f"revised_at: {json.dumps(datetime.now().astimezone().isoformat(timespec='seconds'))}")
-    if kept:
-        header += "\n" + "\n".join(kept)
-    updated = "---\n" + header + "\n---\n\n" + body.lstrip("\r\n")
-    if metadata_errors(updated):
-        raise ValueError("replacement contains unsupported or malformed metadata")
-    return updated
+    fields = {"status": "brown" if previous.get("status") == "brown" else "yellow",
+              "revised_at": datetime.now().astimezone().isoformat(timespec="seconds")}
+    fields.update(requested_lifecycle(args, previous))
+    header = "".join(f"{key}: {json.dumps(value, ensure_ascii=False)}\n"
+                     for key, value in fields.items())
+    return "---\n" + header + "---\n\n" + body.strip("\r\n") + "\n"
 
 
 def rewrite_leaf(args):
@@ -836,7 +868,9 @@ def rewrite_leaf(args):
         raise ValueError("revision must be the SHA-256 hash supplied by a leaf read")
     replacement = args.contents
     if not replacement.strip() or "\x00" in replacement or len(replacement.encode()) > 1048576:
-        raise ValueError("replacement must be nonempty UTF-8 text without NUL, at most 1 MiB")
+        raise ValueError("answer body must be nonempty UTF-8 text without NUL, at most 1 MiB")
+    if re.match(r"\A\s*---\s*\n", replacement):
+        raise ValueError("supply the answer body, not metadata front matter")
     descriptor = os.open(path, os.O_RDWR | os.O_NOFOLLOW)
     with os.fdopen(descriptor, "r+b") as stream:
         fcntl.flock(stream, fcntl.LOCK_EX)
@@ -845,7 +879,18 @@ def rewrite_leaf(args):
         if snapshot.digest != expected:
             raise RevisionConflict("kt: leaf changed; reread with kt open and merge before rewriting")
         original = original_bytes.decode("utf-8")
-        if replacement == original:
+        if metadata_errors(original):
+            raise ValueError("existing leaf has unsupported metadata")
+        prior_metadata, prior_body = leaf_parts(original)
+        requested = requested_lifecycle(args, prior_metadata)
+        require_verifiable_proof(replacement, requested)
+        existing = {key: prior_metadata[key] for key in
+                    ("expires_at", "expires_every", "verifiable", "name", "description")
+                    if key in prior_metadata}
+        if (not getattr(args, "reset_proofs", False) and
+                not getattr(args, "inherited_brown", False) and
+                replacement.strip("\r\n") == prior_body.strip("\r\n") and
+                requested == existing):
             return 0
         _, old_records = proof_records(original)
         previous = {identity: marker for _, identity, marker in old_records if identity is not None}
@@ -859,7 +904,7 @@ def rewrite_leaf(args):
             new_lines[index] = (saved or "Proof: (verified at _)") + ending
             if saved is None:
                 invalidated += 1
-        updated = invalidate_review("".join(new_lines), original)
+        updated = invalidate_review("".join(new_lines), original, args)
         if getattr(args, "inherited_brown", False):
             updated = set_lifecycle_status(updated, "brown")
         if args.dry_run:
@@ -977,13 +1022,14 @@ def combine_leaves(args):
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     metadata = {"status": "brown" if brown else "yellow", "revised_at": now}
     content = "---\n" + "".join(f"{key}: {json.dumps(value, ensure_ascii=False)}\n" for key, value in metadata.items())
-    content += "---\n\n" + "\n\n".join(bodies) + "\n"
+    body = "\n\n".join(bodies) + "\n"
+    content += "---\n\n" + body
     if destination.exists():
         if not args.expect:
             raise ValueError("existing destination requires --expect from a full leaf read")
         rewrite_leaf(argparse.Namespace(path=str(destination), hash=args.expect,
-            contents=content, dry_run=args.dry_run,
-            reset_proofs=True, inherited_brown=brown))
+            contents=body, dry_run=args.dry_run, no_expiry=True,
+            verifiable=False, reset_proofs=True, inherited_brown=brown))
         if args.dry_run:
             print("Would remove source leaves except the destination.", file=sys.stderr)
             return 0
@@ -1053,7 +1099,7 @@ def capture(args):
         if (root / ancestor).is_symlink():
             raise ValueError("symlink in leaf path")
     if path.exists() or path.is_symlink():
-        raise ValueError(f"leaf already exists: {path}; read the owner and use kt rewrite ADDRESS HASH CONTENTS")
+        raise ValueError(f"leaf already exists: {path}; read the owner and use kt rewrite ADDRESS HASH BODY")
     if args.answer == "-":
         if sys.stdin.isatty():
             raise ValueError("pipe the answer on stdin when using -")
@@ -1070,6 +1116,8 @@ def capture(args):
         raise ValueError("--blocker and --next-check require --unresolved")
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     metadata = {"status": "yellow", "revised_at": now}
+    metadata.update(requested_lifecycle(args))
+    require_verifiable_proof(answer, metadata)
     if args.unresolved:
         answer = answer.rstrip() + f"\n\nBlocker: {args.blocker}\n\nNext check: {args.next_check}"
     content = "---\n" + "".join(f"{k}: {json.dumps(v, ensure_ascii=False)}\n"
@@ -1741,12 +1789,13 @@ def command_parser():
     vocabulary = commands.add_parser("dict", help="print useful final-two leaf-path segments from accessible roots")
     vocabulary.set_defaults(handler=dictionary)
     vocabulary.add_argument("roots", nargs="*", help="optional root labels or configured root paths; default: all accessible roots")
-    replacing = commands.add_parser("rewrite", help="rewrite a leaf using its read revision and inline Markdown")
+    replacing = commands.add_parser("rewrite", help="rewrite a leaf body using its read revision")
     replacing.set_defaults(handler=rewrite_leaf)
     replacing.add_argument("path", help="existing leaf address")
     replacing.add_argument("hash", help="required SHA-256 revision supplied by the leaf read")
-    replacing.add_argument("contents", help="complete replacement Markdown; use -- before positional arguments beginning with -")
+    replacing.add_argument("contents", help="complete answer body; use -- before positional arguments beginning with -")
     replacing.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
+    lifecycle_options(replacing, clear=True)
     checking = commands.add_parser("check", help="record a manual review of the complete leaf")
     checking.set_defaults(handler=check_leaf)
     checking.add_argument("path", help="existing leaf address")
@@ -1778,6 +1827,7 @@ def command_parser():
     adding.add_argument("--unresolved", action="store_true")
     adding.add_argument("--blocker")
     adding.add_argument("--next-check")
+    lifecycle_options(adding)
     commands.add_parser("roots", help="show root policies without reading their contents")
     register = commands.add_parser("register", help="register an existing root as private (ask)")
     register.set_defaults(handler=register_command)
