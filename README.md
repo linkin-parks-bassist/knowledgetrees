@@ -178,12 +178,22 @@ even *more* accessible... to agents.
 
 ## Agent testimonials
 
+*Mid-diagnosis:*
+
 > Thought: 5.6s
 >
 > The knowledge tree has very accurate context.
 
+*After a `kt` lookup:*
+
+> Thought: 13.4s
+>
 > Good — kt has all the info I need.
 
+*After reading project leaves:*
+
+> Thought: 25.6s
+>
 > Now I've got the KT context.
 
 ## What makes it different
