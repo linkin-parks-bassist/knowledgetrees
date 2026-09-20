@@ -8,7 +8,9 @@ reviews with the knowledge-tree installer. For an existing root, use
 `./install --hooks-only --force` to update infrastructure while preserving leaves
 and hardlinked skills. Preview first with `--dry-run`.
 
-The shared Python handler lives at `~/.knowledge/.tools/kt-hooks`. Codex definitions
+The shared Python handler lives at `~/.knowledge/.tools/kt-hooks`. Claude Code definitions
+merge into `~/.claude/settings.json` (other settings and hooks are preserved, and the
+file's mode is kept); Codex definitions
 merge into `~/.codex/hooks.json`; OpenCode loads
 `~/.config/opencode/plugins/knowledgetrees.js`; Copilot CLI loads the dedicated
 `~/.copilot/hooks/knowledgetrees.json`. Unrelated hooks remain intact, and differing
@@ -53,6 +55,18 @@ days. Raw commands, inputs, outputs, errors, and knowledge are not stored. The
 handler performs no model calls and never runs or writes leaf bodies.
 
 ## Harness contracts and activation
+
+To establish a harness's real hook payloads, do not rely on a summarized docs fetch: on 2026-09-20 one gave wrong Claude Code field names (`session_start_reason`, `user_prompt`, a `permissionDecision` Stop output) and a second fetch was truncated. Instead run the harness non-interactively with a throwaway settings file whose hooks append their stdin to a scratch log (for Claude Code: `claude -p PROMPT --settings FILE --allowedTools Read`, with one tool call that fails and one that succeeds), then read the captured JSON. Use `--allowedTools`, redirect stdin from `/dev/null`, and set a timeout.
+
+Claude Code's `SessionStart` hook (matcher `startup|resume|clear|compact`) returns the same
+boot output as `hookSpecificOutput.additionalContext`. Claude payloads carry `source`, `prompt`,
+`session_id`, and `stop_hook_active`. Tool failures arrive as a separate `PostToolUseFailure`
+event (with `error` and `is_interrupt`); `PostToolUse` fires only on success and carries no exit
+status, so the adapter applies no text heuristics there. Interrupted calls do not count as
+failures. `Stop` continues via top-level `decision: block` and `reason`. Review new definitions
+with `/hooks` and restart Claude Code to test. Verified against a live session: it received the
+complete boot output and listed all five skills. The boot output was about 9.8 KB; if it
+grows much beyond 10 KB, confirm the harness does not truncate injected hook context.
 
 Codex's native `SessionStart` hook runs `kt boot` and injects its complete output,
 including the canonical procedure, exact local orientation, dictionary, and final

@@ -7,7 +7,7 @@ From a complete repository checkout, run `./install`. Preview the targets withou
 writing with `./install --dry-run`. The installer merges reusable example leaves
 into `~/.knowledge` without installing the example's illustrative spine, preserves
 an existing `where/am/i.md`, installs the unified CLI at
-`~/.knowledge/.tools/kt` (including `kt prove`), and installs startup hooks for Codex, OpenCode, and Copilot CLI. The installer removes its legacy managed block from `~/AGENTS.md`; if that was the whole file, it deletes the file. Other contents are preserved.
+`~/.knowledge/.tools/kt` (including `kt prove`), and installs startup hooks for Claude Code, Codex, OpenCode, and Copilot CLI. The installer removes its legacy managed block from `~/AGENTS.md`; if that was the whole file, it deletes the file. Other contents are preserved.
 
 For a new root, it seeds truthful generic navigation in `where/am/i.md`; add
 verified local environment facts. Before any writes, OpenCode configuration changes

@@ -460,7 +460,7 @@ Run the installer from a clone:
 The installer is knowledge-first. It safely merges the reusable leaves from
 `example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
 kt CLI with built-in proof verification under `~/.knowledge/.tools/`, and installs
-startup hooks that inject `kt boot` for Codex, OpenCode, and Copilot CLI. It removes
+startup hooks that inject `kt boot` for Claude Code, Codex, OpenCode, and Copilot CLI. It removes
 its old managed block from `~/AGENTS.md` and deletes that file if nothing else is
 in it. The loaded procedure remains
 active across messages and tasks; it is not reinvoked on every turn. The installer
@@ -534,7 +534,7 @@ next unrelated tool call or completion—not in a later documentation pass.
 
 ### Failure and capture-review hooks
 
-The installer adds reminders for **Codex, OpenCode, and GitHub Copilot CLI**:
+The installer adds reminders for **Claude Code, Codex, OpenCode, and GitHub Copilot CLI**:
 
 - After a detected tool failure, check `kt` for a known explanation or fix. Once
   the cause is understood, capture the reusable diagnosis or rewrite its owner.
@@ -542,7 +542,8 @@ The installer adds reminders for **Codex, OpenCode, and GitHub Copilot CLI**:
   follow-up. The agent checks existing owners and records missing discoveries,
   or reports that there is nothing new to retain.
 
-Codex uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, and `Stop`; Copilot CLI uses `sessionStart`, `userPromptSubmitted`, `postToolUse`,
+Claude Code uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, `PostToolUseFailure`, and `Stop`,
+merged into `~/.claude/settings.json`; Codex uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, and `Stop`; Copilot CLI uses `sessionStart`, `userPromptSubmitted`, `postToolUse`,
 `postToolUseFailure`, and `agentStop`; OpenCode uses a local plugin and
 `session.idle`. Existing unrelated hooks are preserved. In Codex, open `/hooks`
 and review/trust the installed definitions; new hooks are skipped until trusted.
@@ -559,7 +560,7 @@ The hook-run command loads the procedure from its canonical global owner and sta
 leaves from the exact local root; parent directories are not searched. Restart OpenCode after changing its
 plugin. The startup procedure and exact local orientation are injected by the hook.
 
-Codex's native `SessionStart` hook delivers the same complete `kt boot` output
+Claude Code's and Codex's native `SessionStart` hooks deliver the same complete `kt boot` output
 on startup, resume, clear, and after compaction—not on every user prompt.
 Copilot CLI's [`sessionStart` hook](https://docs.github.com/en/copilot/reference/hooks-reference) supplies the same output through `additionalContext`
 when a session starts or resumes.
@@ -567,6 +568,9 @@ These lifecycle events refresh the injected boot output.
 Review/trust the new `SessionStart` definition in `/hooks`, then start a fresh
 session to test startup behavior. The hook includes the canonical procedure and exact local orientation. A disabled
 or untrusted hook cannot supply it.
+
+Claude Code reports failed tool calls through `PostToolUseFailure`, so its adapter relies on that
+event and applies no text heuristics to successful results.
 
 Codex can send Bash output text without an exit code. The post-tool adapter prefers
 structured status and otherwise looks for common diagnostic lines, including compiler
@@ -606,10 +610,10 @@ a skill-shaped entry as compatibility plumbing and an explicit fallback, not as
 another knowledge store. After installing the canonical procedure at
 `~/.knowledge/how/to/use/knowledgetrees.md`, the installer creates
 `~/.agents/skills/knowledgetrees/SKILL.md` and
-`~/.codex/skills/knowledgetrees/SKILL.md` as hard links to that same file. All three
+`~/.codex/skills/knowledgetrees/SKILL.md`, and `~/.claude/skills/knowledgetrees/SKILL.md` as hard links to that same file. All four
 paths share one inode: there is no wrapper and no second body to drift.
 
-The installer also exposes four focused skills in both harness directories:
+The installer also exposes four focused skills in each harness directory:
 `knowledgetrees-lookup`, `knowledgetrees-capture`, `knowledgetrees-maintenance`,
 and `knowledgetrees-ingestion`. Each `SKILL.md` hardlinks to its corresponding
 canonical procedure leaf in the global KT. Their descriptions advertise when to
@@ -617,7 +621,7 @@ use them, while the bootstrap keeps its kt-first and miss-resolution rule inline
 and remains once per fresh session. Detailed knowledge is still stored and
 maintained in the tree.
 
-Quit and restart OpenCode, Codex, and Copilot CLI after installation or an upgrade so their
+Quit and restart Claude Code, OpenCode, Codex, and Copilot CLI after installation or an upgrade so their
 startup-loaded skill catalogs refresh; an already-running conversation may retain
 older descriptions or procedure content.
 

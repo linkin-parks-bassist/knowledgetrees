@@ -206,6 +206,32 @@ def permission_consent(target_home: Path) -> bool:
         print("Please answer n or Y.")
 
 
+def claude_settings_bytes(settings_path: Path, handler: Path) -> tuple[bytes, int]:
+    """Merge managed Claude Code hooks into settings.json, preserving everything else."""
+    storage = writable_target(settings_path)
+    current = storage.read_text() if storage.is_file() else ""
+    config = json.loads(current) if current.strip() else {}
+    if not isinstance(config, dict) or not isinstance(config.get("hooks", {}), dict):
+        raise ValueError("Claude Code settings must be an object whose hooks field is an object")
+    original = copy.deepcopy(config)
+    hooks = config.setdefault("hooks", {})
+    for name, event, matcher in (("SessionStart", "start", "startup|resume|clear|compact"),
+                                 ("UserPromptSubmit", "prompt", None),
+                                 ("PostToolUse", "after", None),
+                                 ("PostToolUseFailure", "failed", None),
+                                 ("Stop", "stop", None)):
+        groups = hooks.setdefault(name, [])
+        if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
+            raise ValueError(f"malformed Claude Code {name} hooks")
+        command = f"python3 {shlex.quote(str(handler))} claude {event}"
+        if not any(isinstance(h, dict) and h.get("command") == command for g in groups for h in g.get("hooks", [])):
+            groups.append({**({"matcher": matcher} if matcher else {}),
+                           "hooks": [{"type": "command", "command": command, "timeout": 5,
+                                      "statusMessage": "Knowledge-tree reminders"}]})
+    mode = storage.stat().st_mode & 0o777 if storage.is_file() else 0o600
+    return (current if config == original else json.dumps(config, indent=2) + "\n").encode(), mode
+
+
 def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes, int]]:
     """Preflight adapters and merge Codex hooks without replacing unrelated hooks."""
     handler = target_home / ".knowledge/.tools/kt-hooks"
@@ -248,10 +274,13 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
                   "args": [str(handler), "copilot", event], "timeoutSec": 5}]
                for name, event in (("sessionStart", "start"), ("userPromptSubmitted", "prompt"), ("postToolUse", "after"),
                                   ("postToolUseFailure", "failed"), ("agentStop", "stop"))}}
+    claude_path = target_home / ".claude/settings.json"
+    claude_bytes, claude_mode = claude_settings_bytes(claude_path, handler)
     return [
         (handler, (repository / "tools/kt-hooks").read_bytes(), 0o755),
         (target_home / ".config/opencode/plugins/knowledgetrees.js", (repository / "tools/kt-opencode.mjs").read_bytes(), 0o644),
         (codex_path, codex_bytes, 0o600),
+        (claude_path, claude_bytes, claude_mode),
         (target_home / ".copilot/hooks/knowledgetrees.json", (json.dumps(copilot, indent=2) + "\n").encode(), 0o600),
     ]
 
@@ -324,7 +353,7 @@ def main(arguments: list[str] | None = None) -> int:
     skill_links = [
         (knowledge_root / relative, target_home / harness / "skills" / name / "SKILL.md")
         for name, relative in SKILL_LEAVES.items()
-        for harness in (".agents", ".codex")
+        for harness in (".agents", ".codex", ".claude")
     ]
     if args.hooks_only:
         skill_links = []
@@ -383,8 +412,8 @@ def main(arguments: list[str] | None = None) -> int:
         if path_exists(destination) and not same_bytes(destination, kt_bytes):
             conflicts.append(destination)
     for destination, content, _mode in hook_files:
-        # Codex's hooks file is a safe merge target, not a managed source bundle.
-        if destination != target_home / ".codex/hooks.json" and path_exists(destination) and not same_bytes(destination, content):
+        # Codex and Claude Code settings are safe merge targets, not managed source bundles.
+        if destination not in (target_home / ".codex/hooks.json", target_home / ".claude/settings.json") and path_exists(destination) and not same_bytes(destination, content):
             conflicts.append(destination)
     for canonical, destination in skill_links:
         skill_bytes = rendered_leaf(example / canonical.relative_to(knowledge_root))
@@ -435,7 +464,7 @@ def main(arguments: list[str] | None = None) -> int:
         print(f"Would install {len(leaf_installs)} reusable leaves into {knowledge_root}")
         print(f"Would install kt at {kt_target} and link {kt_command}")
         for destination, _content, _mode in hook_files:
-            print(f"Would install lookup/capture reminders at {destination}")
+            print(f"Would install {destination}")
         for canonical, destination in skill_links:
             print(f"Would hard-link {destination} to {canonical}")
         if agents_updated != agents_current:
@@ -525,7 +554,7 @@ def main(arguments: list[str] | None = None) -> int:
         print("Installed failure and task-end reminders for Codex, OpenCode, and Copilot CLI.")
         print("Codex: review/trust the new definitions with /hooks. Restart OpenCode to load its plugin.")
     if not args.hooks_only:
-        print("Installed hard-linked compatibility skills for shared harnesses and Codex")
+        print("Installed hard-linked compatibility skills for shared harnesses, Codex, and Claude Code")
     if agents_updated != agents_current:
         print(f"Removed the managed bootstrap from {agents_path}")
     if not args.hooks_only:

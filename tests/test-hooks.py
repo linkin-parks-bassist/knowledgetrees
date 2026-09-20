@@ -33,13 +33,13 @@ def main():
         with patch.dict(os.environ, {"KT_BOOT_CLI": str(REPOSITORY / "tools/kt"),
                                   "KT_GLOBAL_ROOT": str(global_root),
                                   "KT_CONFIG": str(root / "config.json")}):
-            for harness in ("codex", "opencode", "copilot"):
+            for harness in ("codex", "opencode", "copilot", "claude"):
                 sources = ("startup", "resume", "new") if harness == "copilot" else ("startup", "resume", "clear", "compact")
                 for source in sources:
                     result, code = handle(harness, "start", {"source": source, "cwd": str(project)})
                     assert code == 0
                     context = (result["hookSpecificOutput"]["additionalContext"]
-                               if harness == "codex" else result["additionalContext"])
+                               if harness in ("codex", "claude") else result["additionalContext"])
                     assert "Canonical procedure fixture." in context
                     assert "Project orientation fixture." in context
                     assert context.rstrip().endswith("brown=0")
@@ -47,6 +47,7 @@ def main():
             assert "Boot failed" in failed_boot["hookSpecificOutput"]["additionalContext"]
     assert handle("codex", "start", {"source": "unexpected"}) == ({}, 0)
     assert handle("copilot", "start", {"source": "unexpected"}) == ({}, 0)
+    assert handle("claude", "start", {"source": "unexpected"}) == ({}, 0)
     failure = runpy.run_path(str(HANDLER))["failed"]
     for mode in ("default", "bypassPermissions", "plan", None):
         assert handle("codex", "before", {"permission_mode": mode}) == ({}, 0)
@@ -102,6 +103,21 @@ def main():
             errors = run(harness, "failed", {"sessionID": "error-session", "callID": "error-one"},
                          expected=2 if harness == "copilot" else 0)
             assert errors
+        # Claude Code: failures arrive as PostToolUseFailure; successes carry no exit status.
+        def claude(kind, **kwargs):
+            return run("claude", kind, {"session_id": "claude-one", **kwargs})
+        assert claude("prompt", prompt="ordinary task") == {}
+        assert claude("after", tool_use_id="ok-1", tool_response={"stdout": "ERROR: expected negative output"}) == {}
+        broken = claude("failed", tool_use_id="bad-1", error="Exit code 1", is_interrupt=False)
+        assert broken["hookSpecificOutput"]["hookEventName"] == "PostToolUseFailure"
+        assert "check kt" in broken["hookSpecificOutput"]["additionalContext"]
+        assert claude("failed", tool_use_id="bad-1", error="Exit code 1") == {}, "receipts are deduplicated"
+        assert claude("failed", tool_use_id="stopped", error="interrupted", is_interrupt=True) == {}
+        review = claude("stop", stop_hook_active=False)
+        assert review["decision"] == "block" and "capture review" in review["reason"]
+        assert claude("stop", stop_hook_active=True) == {}
+        assert run("claude", "stop", {"session_id": "claude-quiet"}) == {}
+        assert run("claude", "failed", {}) == {}, "missing ids fail open"
         # Stdout-only Codex transport: diagnostic failure triggers bookkeeping.
         actual_shape = {"session_id": "stdout-transport", "tool_name": "Bash",
                         "tool_use_id": "stdout-failure", "tool_response": "ERROR: operation failed"}

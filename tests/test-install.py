@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 import os
 import runpy
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -65,6 +66,14 @@ def main() -> None:
         assert malformed_config.read_text() == "{broken"
         assert not (malformed_home / ".knowledge").exists()
 
+        broken_claude_home = Path(temporary) / "broken-claude-user"
+        broken_claude = broken_claude_home / ".claude/settings.json"
+        broken_claude.parent.mkdir(parents=True)
+        broken_claude.write_text('{"hooks": {"Stop": "not an array"}}')
+        run("--home", str(broken_claude_home), expected=2)
+        assert not (broken_claude_home / ".knowledge").exists()
+        assert "not an array" in broken_claude.read_text()
+
         broken_hooks_home = Path(temporary) / "broken-hooks-user"
         broken_hooks = broken_hooks_home / ".codex/hooks.json"
         broken_hooks.parent.mkdir(parents=True)
@@ -87,6 +96,10 @@ def main() -> None:
         codex_hooks = target_home / ".codex/hooks.json"
         unrelated_hook = {"hooks": [{"type": "command", "command": "existing-review-command"}]}
         codex_hooks.write_text(json.dumps({"description": "existing hooks", "hooks": {"Stop": [unrelated_hook], "PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": f"python3 {target_home}/.knowledge/.tools/kt-hooks codex before"}, {"type": "command", "command": "unrelated-pre-check"}]}]}}))
+        claude_settings = target_home / ".claude/settings.json"
+        claude_settings.parent.mkdir(parents=True)
+        claude_settings.write_text(json.dumps({"theme": "dark", "hooks": {"Stop": [unrelated_hook]}}))
+        claude_settings.chmod(0o640)
         instructions = target_home / "user-instructions.md"
         instructions.write_text("# Existing user instructions\n\n<!-- BEGIN KNOWLEDGETREES BOOTSTRAP -->\nLegacy bootstrap.\n<!-- END KNOWLEDGETREES BOOTSTRAP -->\n")
         agents_path = target_home / "AGENTS.md"
@@ -108,6 +121,14 @@ def main() -> None:
         assert hooks["hooks"]["PreToolUse"][0]["hooks"] == [{"type": "command", "command": "unrelated-pre-check"}]
         assert hooks["hooks"]["SessionStart"][0]["matcher"] == "^(startup|resume|clear|compact)$"
         assert hooks["hooks"]["SessionStart"][0]["hooks"][0]["command"].endswith("codex start")
+        claude_config = json.loads(claude_settings.read_text())
+        assert claude_config["theme"] == "dark" and claude_config["hooks"]["Stop"][0] == unrelated_hook
+        assert len(claude_config["hooks"]["Stop"]) == 2
+        assert set(claude_config["hooks"]) == {"SessionStart", "UserPromptSubmit", "PostToolUse", "PostToolUseFailure", "Stop"}
+        assert claude_config["hooks"]["SessionStart"][0]["matcher"] == "startup|resume|clear|compact"
+        assert claude_config["hooks"]["SessionStart"][0]["hooks"][0]["command"].endswith("claude start")
+        assert claude_config["hooks"]["PostToolUseFailure"][0]["hooks"][0]["command"].endswith("claude failed")
+        assert claude_settings.stat().st_mode & 0o777 == 0o640
         assert (knowledge / ".tools/kt-hooks").is_file()
         assert os.access(knowledge / ".tools/kt-hooks", os.X_OK)
         assert (target_home / ".config/opencode/plugins/knowledgetrees.js").read_bytes() == (REPOSITORY / "tools/kt-opencode.mjs").read_bytes()
@@ -164,7 +185,7 @@ def main() -> None:
             assert owner.read_text().count("\n---\n") == 1
             assert "kt" in owner.read_text()
             assert "unrelated tool call" in owner.read_text()
-            for harness in (".agents", ".codex"):
+            for harness in (".agents", ".codex", ".claude"):
                 entry = target_home / harness / "skills" / name / "SKILL.md"
                 assert not entry.is_symlink()
                 assert entry.samefile(owner)
@@ -225,7 +246,7 @@ def main() -> None:
         run(*home_arguments, "--force")
         assert "Local customization" not in capture_owner.read_text()
         for name, relative in installed_skills.items():
-            for harness in (".agents", ".codex"):
+            for harness in (".agents", ".codex", ".claude"):
                 assert (target_home / harness / "skills" / name / "SKILL.md").samefile(knowledge / relative)
 
         changed_leaf = knowledge / "what" / "is" / "a" / "knowledge" / "tree.md"

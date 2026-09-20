@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:55:17+10:00"
+revised_at: "2026-09-20T14:54:03+10:00"
 ---
 
 The operational root is `.knowledge/`; `example/` is the public distributable specimen with an empty orientation. `tools/kt` is installed byte-for-byte from this repository. It supports body-only add/rewrite, flat lifecycle metadata, optional expiry and `verifiable`, access-controlled lookup, and proof checks. The installer preserves personal orientation and access policy, renders public guidance into the global root, and hardlinks compatibility skills.

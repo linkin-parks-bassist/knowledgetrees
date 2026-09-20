@@ -1,16 +1,16 @@
 ---
 status: green
-revised_at: "2026-09-20T10:51:44+10:00"
+revised_at: "2026-09-20T14:45:33+10:00"
 ---
 
 Run `python3 -B tests/test-install.py`. The test uses temporary target homes and
 checks dry-run behavior, knowledge installation, spine exclusion, empty-orientation
 creation and preservation, removal of the legacy managed `AGENTS.md` block while preserving unrelated content, deletion of a block-only file, and Codex configuration preservation,
 idempotency, conflict refusal, forced replacement, verifier execution, and same-device
-same-inode hard links for the skill entry points in both harnesses. It also rejects a
+same-inode hard links for the skill entry points in all three harness directories (`.agents`, `.codex`, `.claude`). It also rejects a
 regression to per-task skill invocation in the installed procedure.
 
-Hook integration also checks safe Codex merge, malformed-hook refusal before writes,
+Hook integration also checks safe Codex and Claude Code settings merges (unrelated keys, hooks, and file mode preserved), malformed-hook refusal before writes,
 dedicated Copilot startup and reminder event definitions, OpenCode adapter deployment, idempotent hook
 installation, and `--hooks-only` preservation of customized leaves, hardlinks, and
 permissions. Run `python3 -B tests/test-hooks.py` for shared protocol tests and

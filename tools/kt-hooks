@@ -153,7 +153,13 @@ def handle(harness, event, payload):
                 fresh = connection.execute("INSERT OR IGNORE INTO events VALUES (?, ?, ?)", (key, receipt, now)).rowcount
                 if fresh:
                     calls += 1
-                    if event == "failed" or failed(response):
+                    # Claude Code reports failures through its own event; its success
+                    # payloads carry no exit status, so heuristics would only add noise.
+                    if harness == "claude":
+                        broken = event == "failed" and not payload.get("is_interrupt")
+                    else:
+                        broken = event == "failed" or failed(response)
+                    if broken:
                         failures += 1
                         message = FAILURE
         elif event == "stop":
@@ -168,6 +174,8 @@ def handle(harness, event, payload):
         return {"decision": "block", "reason": message}, 0
     if harness == "codex":
         return {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": message}}, 0
+    if harness == "claude":
+        return {"hookSpecificOutput": {"hookEventName": "PostToolUseFailure", "additionalContext": message}}, 0
     if harness == "copilot" and event == "failed":
         # Copilot command failure hooks deliver recovery context through exit 2.
         return {"additionalContext": message}, 2
@@ -176,7 +184,7 @@ def handle(harness, event, payload):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("harness", choices=("codex", "copilot", "opencode"))
+    parser.add_argument("harness", choices=("claude", "codex", "copilot", "opencode"))
     parser.add_argument("event", choices=("start", "prompt", "before", "after", "failed", "stop"))
     args = parser.parse_args()
     try:

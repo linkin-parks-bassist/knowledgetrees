@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:52:39+10:00"
+revised_at: "2026-09-20T14:50:28+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -103,10 +103,10 @@ installing the example spine, preserves existing orientation, installs the CLI a
 hooks, removes its obsolete home AGENTS bootstrap, and hardlinks skill entry points to the
 canonical installed procedure leaves. It preserves unrelated configuration.
 OpenCode permission changes require informed `[n/Y]` consent before writes.
-Codex, OpenCode, and Copilot hooks provide startup, failure, and one-shot
+Claude Code, Codex, OpenCode, and Copilot hooks provide startup, failure, and one-shot
 capture-review reminders without storing raw logs. Hook support must respect
 session boundaries and avoid self-triggering loops. The OpenCode backend must
-restart to load a changed plugin; Codex hook definitions require native trust.
+restart to load a changed plugin; Codex hook definitions require native trust; Claude Code definitions are reviewed with `/hooks`.
 
 ## Proof and release checks
 
