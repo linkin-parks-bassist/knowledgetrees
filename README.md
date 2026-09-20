@@ -608,11 +608,14 @@ Copilot cloud jobs and VS Code need their own environment/distribution setup.
 ### Structured edits over MCP
 
 The installer also deploys `~/.knowledge/.tools/kt-mcp`, a small stdio MCP server that
-exposes `kt_read`, `kt_edit`, and `kt_rewrite` to Claude Code, Codex, OpenCode, and
-Copilot CLI. `kt_edit` replaces text that must match exactly once, against the revision
+exposes the workflow as tools to Claude Code, Codex, OpenCode, and Copilot CLI:
+`kt_lookup` (natural questions like `how to ...`), `kt_find`, `kt_read`, `kt_edit`,
+`kt_rewrite`, `kt_add`, `kt_dict`, `kt_roots`, and `kt_prove` (read-only unless asked to
+stamp). `kt_edit` replaces text that must match exactly once, against the revision
 you read; a stale revision, ambiguous match, or restricted root writes nothing. Every
-write goes through `kt rewrite`, so revision, access, locking, and proof semantics stay
-in the CLI. Registration merges into each harness's own MCP configuration (Claude Code
+write goes through the CLI, so revision, access, locking, and proof semantics stay
+there. Destructive and policy commands (`rm`, `mv`, `combine`, `register`, `access`)
+are not exposed. See [the design leaf](example/how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md). Registration merges into each harness's own MCP configuration (Claude Code
 via `claude mcp add`), leaves other servers and any existing `knowledgetrees` entry
 alone, and is skipped with `--no-mcp`. Restart each harness afterwards.
 

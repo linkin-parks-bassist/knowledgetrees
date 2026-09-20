@@ -48,7 +48,7 @@ def main():
         assert rpc("notifications/initialized", notify=True) is None
         assert rpc("ping")["result"] == {}
         names = {t["name"] for t in rpc("tools/list")["result"]["tools"]}
-        assert names == {"kt_read", "kt_edit", "kt_rewrite"}
+        assert names == {"kt_read", "kt_edit", "kt_rewrite", "kt_lookup", "kt_find", "kt_add", "kt_dict", "kt_roots", "kt_prove"}
         assert rpc("nope")["error"]["code"] == -32601
         server.stdin.write("{broken\n")
         server.stdin.flush()
@@ -91,6 +91,46 @@ def main():
         error, text = tool("kt_read", address="local:no/such/leaf.md")
         assert error
         assert rpc("tools/call", {"name": "kt_delete", "arguments": {}})["result"]["isError"]
+
+        # Retrieval, creation, and inspection tools wrap the same CLI semantics.
+        error, text = tool("kt_lookup", question="what is the fixture")
+        assert not error and "Whole new body." in text
+        error, text = tool("kt_lookup", question="-h what is")
+        assert error and "must not start" in text
+        error, text = tool("kt_find", terms="Whole body", limit=2)
+        assert not error and "local:what/is/the/fixture.md" in text
+        error, text = tool("kt_find", terms="zzzunfindablezzz")
+        assert not error and "no_matches" in text and "(exit 1)" in text, "a miss is data, not a tool error"
+        error, text = tool("kt_find", terms="--help")
+        assert error
+        error, text = tool("kt_add", question="how to bake the fixture", answer="- Preheat.\n- Bake.\n", dry_run=True)
+        assert not error and "Preheat." in text
+        assert not (project / ".knowledge/how/to/bake/the/fixture.md").exists(), "dry run must not write"
+        error, text = tool("kt_add", question="how to bake the fixture", answer="- Preheat.\n- Bake.\n")
+        created = project / ".knowledge/how/to/bake/the/fixture.md"
+        assert not error and created.is_file() and "- Preheat." in created.read_text()
+        error, text = tool("kt_add", question="how to bake the fixture", answer="Duplicate.\n")
+        assert error, "an existing owner must not be overwritten"
+        assert "Preheat" in created.read_text() and "Duplicate" not in created.read_text()
+        error, text = tool("kt_add", question="-x how to", answer="a")
+        assert error
+        error, text = tool("kt_add", question="how to be global", answer="Global answer.\n", scope="global")
+        assert not error and (global_root / "how/to/be/global.md").is_file()
+        error, text = tool("kt_add", question="how to be sloppy", answer="-")
+        assert error
+        error, text = tool("kt_add", question="how to nowhere", answer="x", scope="elsewhere")
+        assert error
+        error, text = tool("kt_dict")
+        assert not error and "fixture" in text
+        error, text = tool("kt_dict", roots=["local"])
+        assert not error and "fixture" in text
+        error, text = tool("kt_roots")
+        assert not error and str(project / ".knowledge") in text
+        before = created.read_text()
+        error, text = tool("kt_prove", scope="local")
+        assert not error and "brown=0" in text and created.read_text() == before, "default prove must not stamp"
+        error, text = tool("kt_prove", scope="galaxy")
+        assert error
         server.stdin.close()
         assert server.wait(timeout=10) == 0
 

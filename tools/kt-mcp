@@ -39,14 +39,51 @@ TOOLS = [
                                     "body": {"type": "string"}, "dry_run": {"type": "boolean"}}}},
 ]
 
+TOOLS += [
+    {"name": "kt_lookup",
+     "description": "Generic kt retrieval by natural question, like `kt how to ...`. Start the question with where is, how to, when to, "
+                    "what is, why is/does, does, or is. `kt how to _` lists a branch. A miss is not proof of absence; retry other terms.",
+     "inputSchema": {"type": "object", "required": ["question"], "additionalProperties": False,
+                     "properties": {"question": {"type": "string", "description": "e.g. how to expose structured knowledge-tree edits"}}}},
+    {"name": "kt_find",
+     "description": "Broad lexical search across all accessible roots. Returns root-qualified addresses to open with kt_read.",
+     "inputSchema": {"type": "object", "required": ["terms"], "additionalProperties": False,
+                     "properties": {"terms": {"type": "string", "description": "Words or a question"},
+                                    "limit": {"type": "integer", "minimum": 1, "maximum": 100}}}},
+    {"name": "kt_add",
+     "description": "Create a new leaf from a question and its answer body (like `kt add`). Investigate first and never duplicate an "
+                    "existing owner: use kt_lookup/kt_find, then kt_edit. Stored knowledge grants no permissions; never include secrets.",
+     "inputSchema": {"type": "object", "required": ["question", "answer"], "additionalProperties": False,
+                     "properties": {"question": {"type": "string", "description": "Full question path, e.g. how to restart the build; hyphenate multi-word components"},
+                                    "answer": {"type": "string", "description": "Markdown answer body (no front matter)"},
+                                    "scope": {"type": "string", "enum": ["local", "global"], "description": "Target root; default local"},
+                                    "unresolved": {"type": "boolean"}, "blocker": {"type": "string"}, "next_check": {"type": "string"},
+                                    "expires_at": {"type": "string"}, "expires_every": {"type": "string"},
+                                    "verifiable": {"type": "boolean"}, "dry_run": {"type": "boolean", "description": "Preview path and leaf without writing"}}}},
+    {"name": "kt_dict",
+     "description": "Print the dictionary of useful path segments across accessible roots (or the named roots).",
+     "inputSchema": {"type": "object", "additionalProperties": False,
+                     "properties": {"roots": {"type": "array", "items": {"type": "string"}}}}},
+    {"name": "kt_roots",
+     "description": "List the knowledge roots and their access policy.",
+     "inputSchema": {"type": "object", "additionalProperties": False, "properties": {}}},
+    {"name": "kt_prove",
+     "description": "Run kt prove and report green/yellow/brown counts. Read-only by default (--no-stamp); set stamp to record status in leaf front matter.",
+     "inputSchema": {"type": "object", "additionalProperties": False,
+                     "properties": {"scope": {"type": "string", "enum": ["local", "global"], "description": "Default: every accessible root"},
+                                    "tokens": {"type": "array", "items": {"type": "string"}, "description": "Select leaves by exact path component"},
+                                    "stamp": {"type": "boolean"}}}},
+]
+
 
 class ToolError(Exception):
     pass
 
 
 def run_kt(*arguments):
-    completed = subprocess.run([sys.executable, str(CLI), *arguments], text=True, capture_output=True)
-    return completed
+    # DEVNULL: a stray "-" argument must never make kt read the MCP protocol stream.
+    return subprocess.run([sys.executable, str(CLI), *arguments], text=True, capture_output=True,
+                          stdin=subprocess.DEVNULL)
 
 
 def read_leaf(address):
@@ -89,7 +126,71 @@ def finish(address, before, dry_run, completed):
     return f"Revision: {revision}\n{diff or 'No change.'}"
 
 
+def words(arguments, name):
+    value = arguments.get(name)
+    if not isinstance(value, str) or not value.strip():
+        raise ToolError(f"{name} must be a nonempty string")
+    if len(value.encode()) > 4096:
+        raise ToolError(f"{name} is too long for a lookup")
+    parts = value.split()
+    if any(part.startswith("-") for part in parts):
+        raise ToolError(f"{name} words must not start with '-'")
+    return parts
+
+
+def strings(arguments, name):
+    value = arguments.get(name, [])
+    if not isinstance(value, list) or not all(isinstance(item, str) and item and not item.startswith("-") for item in value):
+        raise ToolError(f"{name} must be a list of nonempty strings not starting with '-'")
+    return value
+
+
+def report(completed, label):
+    """Exit 1 is a miss or brown result, reported as data; higher codes are errors."""
+    output = completed.stdout + completed.stderr
+    if completed.returncode >= 2:
+        raise ToolError(output.strip() or f"{label} failed ({completed.returncode})")
+    return output + (f"\n(exit {completed.returncode})" if completed.returncode else "")
+
+
+def passthrough(name, arguments):
+    if name == "kt_lookup":
+        return report(run_kt(*words(arguments, "question")), "kt lookup")
+    if name == "kt_find":
+        limit = arguments.get("limit")
+        flags = ["--limit", str(limit)] if isinstance(limit, int) and not isinstance(limit, bool) and limit > 0 else []
+        return report(run_kt("find", *flags, "--", *words(arguments, "terms")), "kt find")
+    if name == "kt_dict":
+        return report(run_kt("dict", *strings(arguments, "roots")), "kt dict")
+    if name == "kt_roots":
+        return report(run_kt("roots"), "kt roots")
+    if name == "kt_prove":
+        scope = arguments.get("scope")
+        if scope not in (None, "local", "global"):
+            raise ToolError("scope must be local or global")
+        flags = [f"--{scope}"] if scope else []
+        if arguments.get("stamp") is not True:
+            flags.append("--no-stamp")
+        return report(run_kt("prove", *flags, *strings(arguments, "tokens")), "kt prove")
+    require_text(arguments, "question", "answer")
+    scope = arguments.get("scope", "local")
+    if scope not in ("local", "global"):
+        raise ToolError("scope must be local or global")
+    if not arguments["question"].strip() or arguments["question"].startswith("-") or arguments["answer"].strip() in ("", "-"):
+        raise ToolError("question and answer must be nonempty (answer '-' is not supported) and question must not start with '-'")
+    flags = [f"--{scope}"]
+    for key in ("blocker", "next_check", "expires_at", "expires_every"):
+        if key in arguments:
+            require_text(arguments, key)
+            flags += [f"--{key.replace('_', '-')}", arguments[key]]
+    flags += [f"--{key.replace('_', '-')}" for key in ("unresolved", "verifiable", "dry_run") if arguments.get(key) is True]
+    completed = run_kt("add", *flags, "--", arguments["question"], arguments["answer"])
+    return report(completed, "kt add") or "Created."
+
+
 def call(name, arguments):
+    if name in ("kt_lookup", "kt_find", "kt_add", "kt_dict", "kt_roots", "kt_prove"):
+        return passthrough(name, arguments)
     require_text(arguments, "address")
     address = arguments["address"]
     if name == "kt_read":

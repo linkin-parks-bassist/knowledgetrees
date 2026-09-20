@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T14:45:33+10:00"
+revised_at: "2026-09-20T15:05:56+10:00"
 ---
 
 Run `python3 -B tests/test-install.py`. The test uses temporary target homes and
@@ -13,7 +13,7 @@ regression to per-task skill invocation in the installed procedure.
 Hook integration also checks safe Codex and Claude Code settings merges (unrelated keys, hooks, and file mode preserved), malformed-hook refusal before writes,
 dedicated Copilot startup and reminder event definitions, OpenCode adapter deployment, idempotent hook
 installation, and `--hooks-only` preservation of customized leaves, hardlinks, and
-permissions. Run `python3 -B tests/test-mcp.py` for the structured-edit MCP server (protocol, exactly-one-match, stale revision, dry run, front-matter safety, inode preservation) and see the installer checks for its four registrations, respect for existing entries, `--no-mcp`, and malformed-config refusal. Run `python3 -B tests/test-hooks.py` for shared protocol tests and
+permissions. Run `python3 -B tests/test-mcp.py` for the MCP server (protocol, exactly-one-match, stale revision, dry run, front-matter safety, inode preservation, lookup/find/add/dict/roots/prove behavior, option-injection guards, no-overwrite on add, misses reported as data) and see the installer checks for its four registrations, respect for existing entries, `--no-mcp`, and malformed-config refusal. Run `python3 -B tests/test-hooks.py` for shared protocol tests and
 `node tests/test-opencode-hooks.mjs` for the mocked OpenCode adapter. Neither runs
 models. Run `python3 -B tests/test-kt.py` for retrieval and weak-result exit checks.
 
