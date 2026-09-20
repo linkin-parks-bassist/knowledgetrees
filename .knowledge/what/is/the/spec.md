@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T16:12:17+10:00"
+revised_at: "2026-09-20T16:23:47+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -138,5 +138,5 @@ root selection. The verifier does not repair prose or infer complete proof
 coverage. Agents inspect claim-to-proof coverage before setting `verifiable`.
 Publication checks include Python and OpenCode regressions, scoped project,
 example, and installed-global proof sweeps, instruction-sync checks, installed
-CLI byte comparison, a public-content audit, and Git whitespace/working-tree
+CLI byte comparison, a public-content audit (`how/to/audit/public/content/before/publishing.md`), and Git whitespace/working-tree
 checks. User authorization to publish persists for in-scope work across turns unless changed or withdrawn; no separate release gate is imposed by this repository.

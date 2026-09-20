@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T15:15:55+10:00"
+revised_at: "2026-09-20T16:23:47+10:00"
 ---
 
 This is the project knowledge root for the `knowledgetrees` public repository maintained in this working directory.
@@ -21,7 +21,7 @@ not an operational orientation.
 
 - `how/` contains repository procedures: `how/to/work/on/this/repository.md`,
   `how/to/test/the/installer.md`, and `how/to/test/proof/stamps.md`, and
-  `how/to/update/installed/kt/instructions.md`; architecture lives in `how/is/kt/structured.md`.
+  `how/to/update/installed/kt/instructions.md`, and `how/to/audit/public/content/before/publishing.md`; architecture lives in `how/is/kt/structured.md`.
 - `what/` owns requirements and progress: `what/is/the/spec.md`,
   `what/is/the/plan.md`, `what/is/the/state.md`, and `what/is/next.md`.
 - `where/` establishes repository scope through `where/am/i.md`.
