@@ -129,7 +129,7 @@ New question -> `kt` first unless adequately checked knowledge is already loaded
 miss -> determine whether a leaf exists; absent -> investigate and add it (or an
 unresolved record) before the next unrelated tool call or completion. Use nearest
 project and global roots; the skills own proof checks, scope, paths, and maintenance.
-Full leaf reads supply a revision hash; edit with `kt rewrite ADDRESS HASH CONTENTS`
+Full leaf reads supply a revision hash; edit with `kt rewrite ADDRESS HASH BODY`
 and preserve still-valid knowledge already in context.
 Current higher-authority instructions and permissions always govern.
 {AGENTS_END}"""

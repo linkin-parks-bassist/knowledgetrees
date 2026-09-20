@@ -248,6 +248,8 @@ plans, procedures, opinions, and other content that is not mechanically verifiab
 An unreviewed new or revised leaf starts `status: yellow`; elapsed `expires_at` or
 `expires_every` freshness also makes it yellow and unusable until re-verification. Brown means
 falsified, malformed, or proof-failing; it makes the tree busted and must be repaired.
+On a later proof run, a non-expiring leaf evaluates green if it has no failure;
+that color alone does not record a manual whole-leaf review.
 Agents should add expiry metadata to facts likely to change, while leaving durable
 or non-verifiable knowledge green unless there is a concrete reason for review.
 Normal proof evaluation writes `status: green|yellow|brown` in flat front matter.
@@ -257,13 +259,15 @@ freshness limits, and `verifiable: true` asserts complete proof coverage.
 Timestamps use ISO 8601 with a timezone. Unsupported front matter makes a leaf
 brown; `--no-stamp` writes nothing.
 
+For example, `kt` can emit this front matter; supply only the answer body to
+`kt add` or `kt rewrite`:
+
 ```yaml
 ---
 status: green
 revised_at: "2026-09-20T09:00:00+10:00"
 checked_at: "2026-09-20T09:10:00+10:00"
 expires_every: 2 weeks
-verifiable: false
 ---
 ```
 
@@ -278,8 +282,8 @@ options preserve existing expiry and verifiability; `--no-expiry` and
 A leaf containing only concrete facts whose every claim is covered by eligible proofs
 should declare `verifiable: true` after that coverage has been reviewed.
 It must contain at least one eligible proof. If every proof runs and passes,
-`kt prove` clears sticky falsification and auto-greens the
-leaf. Missing, malformed, skipped, or failed proofs make it brown. The author is
+`kt prove` clears sticky falsification and auto-greens the leaf, including after
+an expiry. Missing, malformed, skipped, or failed proofs make it brown. The author is
 responsible for ensuring every claim is covered; the flag cannot detect uncovered
 prose.
 
@@ -489,7 +493,8 @@ New leaves receive `revised_at` and `status: yellow`, not an invented
 verification claim. Capture neither executes nor manufactures proofs. Independently
 review the whole answer and check eligible proofs before relying on it.
 For unresolved answers, add `--unresolved --blocker "missing evidence" --next-check
-"specific next investigation"`; the record remains yellow until checked.
+"specific next investigation"`. The blocker remains in the answer until it is
+resolved; a green proof result does not resolve an unanswered question.
 
 The agent default is **new question → `kt` first**, unless adequately checked
 knowledge is already loaded. If `kt` does not find the information, the agent must

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:59:34+10:00"
+revised_at: "2026-09-20T10:09:06+10:00"
 name: "knowledgetrees-capture"
 description: "Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs."
 ---
@@ -48,7 +48,7 @@ Use `kt open ROOT:PATH` for that read and `kt prove --root ROOT TOKEN` after
 changing eligible proofs. Create a new leaf in one call:
 
 ```sh
-kt add "how to prepare the demo" "Run the project's documented demo command." --expires-every "2 weeks"
+kt add "how to prepare the demo" "Run the project's documented demo command."
 ```
 
 `capture` is an alias for `add`. The exact current-directory local root is the default, falling
@@ -100,7 +100,8 @@ If every declared proof runs and passes, `kt prove` clears
 sticky falsification, and auto-greens the leaf. A missing, malformed, skipped, or
 failing proof makes it brown. The flag asserts complete coverage; proof execution
 cannot detect uncovered prose. An unresolved reusable question retains a blocker
-and next check and stays yellow until reviewed.
+and next check in its answer until the question is resolved. A green proof result
+does not resolve an unanswered question.
 
 Freshness may additionally use either `--expires-at` (ISO 8601 with timezone) or
 `--expires-every` (for example `14d`, `2 weeks`, or `two weeks`, measured from

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:05:01+10:00"
+revised_at: "2026-09-20T10:11:06+10:00"
 ---
 
 The repository's operational knowledge root is `.knowledge/`; `example/` is the
@@ -27,7 +27,8 @@ Leaf front matter has `status` and `revised_at`; optional fields are manual
 entry points may also have `name` and `description`. All timestamps need an
 ISO 8601 timezone. `kt check` records a manual whole-leaf review; `kt prove`
 updates status and individual proof markers without advancing that time.
-Expired leaves are yellow and appear only in the summary count. Brown is sticky
+Ordinary expired leaves are yellow and appear only in the summary count;
+complete passing proofs auto-green a fully covered `verifiable: true` leaf. Brown is sticky
 until manual review or, for a fully proof-covered `verifiable: true` leaf,
 all proofs pass. The coverage flag requires author review; passing individual
 proofs otherwise do not check a whole leaf. Unsupported front matter is
@@ -67,3 +68,10 @@ with `--no-hooks` deployed the CLI and guidance while leaving two pre-existing
 user hook edits untouched. Project, public example, and installed-global proofs
 are green; installed CLI bytes match source and instruction sync has zero drift.
 The validated change was committed and pushed to `origin/main` as `54c461a`.
+
+The documentation audit corrected the generated and repository AGENTS rewrite
+syntax, clarified how proof runs recolor new or unresolved leaves, and explained
+the verifiable expiry exception. README, public leaves, installed instructions,
+and the home bootstrap now agree with the CLI. The installer integration test,
+local/example/global proof sweeps, instruction sync, and Git whitespace check
+pass. The current documentation correction is pending publication.

@@ -151,6 +151,7 @@ def main() -> None:
         assert "startup hook runs `kt boot`" in agents
         assert "New question -> `kt` first" in agents
         assert "determine whether a leaf exists" in agents
+        assert "kt rewrite ADDRESS HASH BODY" in agents
         assert "first move of every task" not in agents
         config = codex_config.read_text()
         assert 'model = "example-model"' in config

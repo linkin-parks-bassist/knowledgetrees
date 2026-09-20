@@ -10,7 +10,7 @@ unresolved record) before the next unrelated tool call or completion. The skills
 own proof checks, scope, paths, and maintenance. Higher-authority instructions and
 permissions always govern.
 
-Full leaf reads supply a revision hash; edit with `kt rewrite ADDRESS HASH CONTENTS`
+Full leaf reads supply a revision hash; edit with `kt rewrite ADDRESS HASH BODY`
 and preserve still-valid knowledge already in context.
 
 Keep the roots distinct: `.knowledge/` is this repository's actual operational

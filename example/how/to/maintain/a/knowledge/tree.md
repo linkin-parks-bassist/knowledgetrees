@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:58:36+10:00"
+revised_at: "2026-09-20T10:09:06+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
 ---
@@ -68,14 +68,18 @@ preserve hardlink identity; `--no-stamp` makes checks read-only.
 
 `kt prove` always reports green, yellow, and brown totals and prints brown
 root-qualified leaf paths. Leaves are green by default, including non-verifiable
-specifications, plans, procedures, and opinions. Yellow is explicitly marked or
-expired and is a warning; do not use it until re-verification.
+specifications, plans, procedures, and opinions. A newly changed leaf initially
+shows yellow. Proof evaluation recalculates non-expiring leaves as green when no
+proof has failed; elapsed expiry remains yellow pending manual review, except
+when complete passing proofs verify a `verifiable: true` leaf. Do not rely on a
+currently yellow leaf until re-verification.
 Brown is falsified, malformed, or proof-failing and makes `kt prove` fail because
 the tree is busted.
 Normal evaluation persists `status: green|yellow|brown` in front matter.
 `kt check ADDRESS HASH` records `checked_at` only after manual review.
-`--no-stamp` is read-only. Content rewrites set `status: yellow` and
-`revised_at` until the leaf is checked again.
+`--no-stamp` is read-only. Content rewrites initially set `status: yellow`
+and refresh `revised_at`; `kt prove` then recalculates status. Manual review is
+needed to renew expiry or clear unflagged sticky brown status.
 
 Stop relying on falsified knowledge. An agent encountering a brown leaf must inspect
 evidence and repair or remove false,

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:23:47+10:00"
+revised_at: "2026-09-20T10:11:17+10:00"
 ---
 
 Use `kt prove` to check marked proofs. Verification is built into kt; it does
@@ -54,19 +54,21 @@ individual markers. `kt prove` never updates manual `checked_at`. Use `--no-stam
 execute proofs without writing markers or lifecycle status. Writes preserve existing hardlinks.
 
 Every selected leaf has one lifecycle state. Proof-free specs, plans, procedures,
-and opinions can be green. Green requires no elapsed expiry, no sticky brown status,
-valid proof structure, and passing proofs. Yellow means freshness review is required:
+and opinions can be green. For an ordinary leaf, green requires no elapsed expiry, no sticky brown status,
+valid proof structure, and passing proofs. A fully proof-covered `verifiable: true`
+leaf can also be green after expiry when all proofs pass. Yellow means freshness
+review is required:
 `expires_at` has passed, or `expires_every` after manual `checked_at` has elapsed. Agents
 must not rely on yellow contents until they re-verify them. `expires_at` is ISO 8601
 with timezone. `expires_every` accepts durations such as `14d`, `2 weeks`, or
-`two weeks`; when both forms exist, the earlier expiry wins.
+`two weeks`; add or rewrite accepts one expiry option at a time.
 Add expiry metadata to facts liable to change; do not
 penalize inherently non-verifiable knowledge for lacking whole-leaf verification.
 
-Leaf falsification is sticky and makes checks fail until an agent independently
-reviews and repairs the leaf, then uses `kt check ADDRESS HASH` to clear brown status. Passing every
-proof is necessary but not sufficient for leaf validation; the verifier never
-promotes the whole leaf to verified or repairs its knowledge automatically.
+For an unflagged leaf, falsification is sticky and makes checks fail until an agent
+independently reviews and repairs it, then uses `kt check ADDRESS HASH` to clear
+brown status. For an unflagged leaf, passing every proof is necessary but does not establish
+whole-leaf correctness. The verifier never repairs its knowledge automatically.
 Such falsified, malformed, or proof-failing leaves are brown. An agent encountering
 one must diagnose and repair it rather than use or ignore it.
 
