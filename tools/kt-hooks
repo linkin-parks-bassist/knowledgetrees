@@ -35,6 +35,11 @@ REVIEW = (
 )
 
 
+# Claude Code replaces hook context past ~10,000 characters with a file pointer and a short
+# preview (observed live with a 10,034-byte boot), so oversized boot output is never sent.
+CLAUDE_CONTEXT_LIMIT = 9500
+
+
 def decode(value):
     if isinstance(value, str):
         try:
@@ -97,7 +102,7 @@ def state_database():
     return database
 
 
-def bootstrap_context(payload):
+def bootstrap_context(payload, limit=None):
     source = payload.get("source")
     if source not in ("startup", "resume", "new", "clear", "compact"):
         return {}, 0
@@ -108,13 +113,23 @@ def bootstrap_context(payload):
     context = "Knowledge-tree startup: `kt boot` output follows. Consume it through the final proof summary.\n"
     if boot.returncode:
         context += f"Boot failed (exit {boot.returncode}); diagnose before relying on this tree.\n"
-    context += boot.stdout + boot.stderr
+    output = boot.stdout + boot.stderr
+    if limit is not None and len((context + output).encode()) > limit:
+        context = (f"Knowledge-tree startup: `kt boot` produced {len(output.encode())} bytes, more than this "
+                   f"harness will inject from a hook (about {limit}).")
+        if boot.returncode:
+            context += f" It exited {boot.returncode}."
+        context += (" Run `kt boot` directly now, unfiltered and untruncated, and consume its complete "
+                    "output through the final proof summary before other work.")
+        return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
+    context += output
     return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
 
 
 def handle(harness, event, payload):
     if event == "start":
-        result, code = bootstrap_context(payload)
+        limit = int(os.environ.get("KT_HOOK_CONTEXT_LIMIT", CLAUDE_CONTEXT_LIMIT)) if harness == "claude" else None
+        result, code = bootstrap_context(payload, limit)
         if harness in ("opencode", "copilot") and result:
             return {"additionalContext": result["hookSpecificOutput"]["additionalContext"]}, code
         return result, code

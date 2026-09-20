@@ -23,7 +23,8 @@ This repository contains:
 
 - a visible, self-describing public corpus in [`example/`](example/where/am/i.md);
 - the knowledge-first [`install`](install) script;
-- the proof engine built into [`kt`](tools/kt), accessed through `kt prove`; and
+- the proof engine built into [`kt`](tools/kt), accessed through `kt prove`;
+- startup/failure hooks for Claude Code, Codex, OpenCode, and Copilot CLI ([`kt-hooks`](tools/kt-hooks), [`kt-opencode.mjs`](tools/kt-opencode.mjs)) and a local MCP server ([`kt-mcp`](tools/kt-mcp)); and
 - selected planning and specification practices distilled into semantic leaves,
   without inheriting an inflexible skill-driven workflow.
 
@@ -463,7 +464,7 @@ Run the installer from a clone:
 The installer is knowledge-first. It safely merges the reusable leaves from
 `example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
 kt CLI with built-in proof verification under `~/.knowledge/.tools/`, and installs
-startup hooks that inject `kt boot` for Claude Code, Codex, OpenCode, and Copilot CLI. It removes
+startup hooks that inject `kt boot` for Claude Code, Codex, OpenCode, and Copilot CLI, plus a local MCP server registered with all four (`--no-mcp` skips it). It removes
 its old managed block from `~/AGENTS.md` and deletes that file if nothing else is
 in it. The loaded procedure remains
 active across messages and tasks; it is not reinvoked on every turn. The installer
@@ -563,8 +564,11 @@ The hook-run command loads the procedure from its canonical global owner and sta
 leaves from the exact local root; parent directories are not searched. Restart OpenCode after changing its
 plugin. The startup procedure and exact local orientation are injected by the hook.
 
-Claude Code's and Codex's native `SessionStart` hooks deliver the same complete `kt boot` output
-on startup, resume, clear, and after compaction—not on every user prompt.
+Claude Code's and Codex's native `SessionStart` hooks deliver the same `kt boot` output
+on startup, resume, clear, and after compaction—not on every user prompt. Claude Code drops
+hook context past roughly 10,000 characters, so when the output is larger than 9,500 bytes its hook
+sends only an instruction to run `kt boot` directly and read its complete output. This is the expected case in
+most trees; `KT_HOOK_CONTEXT_LIMIT` overrides the threshold.
 Copilot CLI's [`sessionStart` hook](https://docs.github.com/en/copilot/reference/hooks-reference) supplies the same output through `additionalContext`
 when a session starts or resumes.
 These lifecycle events refresh the injected boot output.
@@ -593,7 +597,7 @@ These are reliability reminders, not semantic capture verification or a security
 boundary. Failures need detectable result status or diagnostic text; arbitrary prose errors cannot
 always be recognized. They do not grant permissions or automatically write leaves.
 
-Existing installations can update the CLI and hooks without replacing their leaves:
+Existing installations can update the CLI, hooks, and MCP server without replacing their leaves:
 
 ```sh
 ./install --hooks-only --force
@@ -708,13 +712,20 @@ The installer is covered by an isolated-home integration test. It verifies that:
 - repeated installation is idempotent;
 - differing knowledge is rejected before overwrite unless `--force` is explicit;
 - built-in verification through `kt prove` runs successfully; and
-- both compatibility `SKILL.md` paths have the same device and inode as the
-  canonical installed procedure.
+- each compatibility `SKILL.md` path (`.agents`, `.codex`, `.claude`) has the same
+  device and inode as the canonical installed procedure;
+- Claude Code and Codex hook settings are merged without disturbing unrelated keys,
+  hooks, or file mode, and malformed configuration is refused before any write; and
+- the MCP server is deployed and registered with each harness while existing
+  entries and other servers are preserved.
 
 Run the checks with:
 
 ```bash
-python3 -B tests/test-install.py
+python3 -B tests/test-install.py   # installer
+python3 -B tests/test-hooks.py     # shared hook handler
+python3 -B tests/test-mcp.py       # MCP server
+node tests/test-opencode-hooks.mjs # OpenCode plugin
 ```
 
 ## The proposal in one sentence

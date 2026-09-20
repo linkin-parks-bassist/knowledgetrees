@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-14T22:46:24+10:00"
+revised_at: "2026-09-20T15:15:55+10:00"
 ---
 
 This is the project knowledge root for the `knowledgetrees` public repository maintained in this working directory.
@@ -27,6 +27,8 @@ not an operational orientation.
 - `where/` establishes repository scope through `where/am/i.md`.
 - `why/` explains layout through `why/is/the/example/visible.md`, and lookup latency through
   `why/is/kt/slow/on/a/miss.md`.
+
+Harness integration (startup and failure hooks for four CLIs, and the MCP tools) is documented in the distributable `how/to/use/knowledgetree/hooks.md` and `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`; its repository-specific state is in `what/is/the/state.md`.
 
 Reusable procedures live in the global root and distributable `example/`, not in
 this repository's project-state leaves.

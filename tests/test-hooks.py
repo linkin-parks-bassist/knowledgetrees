@@ -43,6 +43,17 @@ def main():
                     assert "Canonical procedure fixture." in context
                     assert "Project orientation fixture." in context
                     assert context.rstrip().endswith("brown=0")
+            # Claude Code drops hook context past ~10,000 characters, so an oversized boot is
+            # replaced by an instruction to run it directly; other harnesses keep the full text.
+            with patch.dict(os.environ, {"KT_HOOK_CONTEXT_LIMIT": "200"}):
+                big, _ = handle("claude", "start", {"source": "startup", "cwd": str(project)})
+                text = big["hookSpecificOutput"]["additionalContext"]
+                assert "Run `kt boot` directly" in text and "Canonical procedure fixture." not in text
+                assert len(text) < 700
+                whole, _ = handle("codex", "start", {"source": "startup", "cwd": str(project)})
+                assert "Canonical procedure fixture." in whole["hookSpecificOutput"]["additionalContext"]
+            small, _ = handle("claude", "start", {"source": "startup", "cwd": str(project)})
+            assert "Canonical procedure fixture." in small["hookSpecificOutput"]["additionalContext"]
             # Without a local root, boot falls back to the global root instead of failing.
             fallback, _ = handle("claude", "start", {"source": "startup", "cwd": str(root)})
             context = fallback["hookSpecificOutput"]["additionalContext"]

@@ -1,12 +1,12 @@
 ---
 status: green
-revised_at: "2026-09-20T10:52:38+10:00"
+revised_at: "2026-09-20T15:15:54+10:00"
 ---
 
 Install failure-triggered lookup/capture reminders and one-shot task-end capture
 reviews with the knowledge-tree installer. For an existing root, use
 `./install --hooks-only --force` to update infrastructure while preserving leaves
-and hardlinked skills. Preview first with `--dry-run`.
+and hardlinked skills. Preview first with `--dry-run`. The same run also deploys and registers the MCP server (`~/.knowledge/.tools/kt-mcp`) unless `--no-mcp` is given; see `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
 
 The shared Python handler lives at `~/.knowledge/.tools/kt-hooks`. Claude Code definitions
 merge into `~/.claude/settings.json` (other settings and hooks are preserved, and the
@@ -64,9 +64,14 @@ boot output as `hookSpecificOutput.additionalContext`. Claude payloads carry `so
 event (with `error` and `is_interrupt`); `PostToolUse` fires only on success and carries no exit
 status, so the adapter applies no text heuristics there. Interrupted calls do not count as
 failures. `Stop` continues via top-level `decision: block` and `reason`. Review new definitions
-with `/hooks` and restart Claude Code to test. Verified against a live session: it received the
-complete boot output and listed all five skills. The boot output was about 9.8 KB; if it
-grows much beyond 10 KB, confirm the harness does not truncate injected hook context.
+with `/hooks` and restart Claude Code to test. Verified against live sessions: a fresh session listed all five skills and
+received the complete boot output while it was 9.8 KB. Claude Code caps injected hook context near 10,000 characters: on 2026-09-20 a
+10,034-byte boot was replaced by a `<persisted-output>` file pointer with a short preview, so the model never saw the full startup text.
+The handler therefore compares the boot output with `CLAUDE_CONTEXT_LIMIT` (9,500 bytes; override with
+`KT_HOOK_CONTEXT_LIMIT`) and, when it is larger, injects only a short instruction to run `kt boot` directly and consume its
+complete output. A live session followed that instruction and obtained the full output. Other harnesses keep the full injection.
+The procedure alone is about 6 KB and the dictionary grows with the tree, so in most trees expect Claude Code to receive the
+instruction rather than the full text.
 
 Codex's native `SessionStart` hook runs `kt boot` and injects its complete output,
 including the canonical procedure, exact local orientation, dictionary, and final
@@ -99,10 +104,10 @@ current Codex live stdout-only payload shape and the documented heuristic tradeo
 
 ## Startup initialization
 
-Claude Code and Codex SessionStart, OpenCode system-context startup, and Copilot CLI sessionStart run `kt boot` in the exact working directory and inject its complete output: canonical global procedure,
+Claude Code and Codex SessionStart, OpenCode system-context startup, and Copilot CLI sessionStart run `kt boot` in the exact working directory and inject its complete output (Claude Code substitutes a run-it-directly instruction when the output exceeds its hook-context limit): canonical global procedure,
 exact local orientation, dictionary, and local proof result. A missing local tree is not a failed boot: `kt boot` falls back to the global root. A genuinely failed boot (unreachable procedure, access needing approval, brown proofs) is reported in context, and the hook still injects it. OpenCode and Copilot CLI require restart after installed hook changes. The handler protocol tests cover Copilot startup output; live Copilot model reception has not been observed. [GitHub Copilot hook reference](https://docs.github.com/en/copilot/reference/hooks-reference).
 
-The harnesses share diagnostic failure detection and Stop/idle bookkeeping.
+Codex, OpenCode, and Copilot CLI share diagnostic failure detection; Claude Code relies on its native failure event. All four share Stop/idle bookkeeping.
 Startup uses the exact current-directory local root for orientation and normal
 access policy for the dictionary; it never searches parent directories. The
 injected contents follow that same scope and access boundary.

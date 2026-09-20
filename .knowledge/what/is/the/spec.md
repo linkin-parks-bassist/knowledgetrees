@@ -1,10 +1,11 @@
 ---
 status: green
-revised_at: "2026-09-20T14:50:28+10:00"
+revised_at: "2026-09-20T15:15:54+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
-CLI, the `install` script, tests, this operational `.knowledge/` tree, and the
+CLI, the harness adapters (`tools/kt-hooks`, `tools/kt-opencode.mjs`, and the
+`tools/kt-mcp` MCP server), the `install` script, tests, this operational `.knowledge/` tree, and the
 public `example/` corpus. The example is distributable guidance with an empty
 `where/am/i.md`; repository-specific state stays here. Public leaves must not
 contain private host, customer, or owner-identifying material. The repository
@@ -100,14 +101,22 @@ ingestion, and proof guidance. An encountered miss is resolved to an existing
 owner or an investigated new or unresolved answer before unrelated work resumes.
 
 The installer merges the public example guidance into `~/.knowledge` without
-installing the example spine, preserves existing orientation, installs the CLI and
-hooks, removes its obsolete home AGENTS bootstrap, and hardlinks skill entry points to the
+installing the example spine, preserves existing orientation, installs the CLI,
+hooks, and MCP server (registered with all four harnesses; `--no-mcp` skips it), removes its obsolete home AGENTS bootstrap, and hardlinks skill entry points to the
 canonical installed procedure leaves. It preserves unrelated configuration.
 OpenCode permission changes require informed `[n/Y]` consent before writes.
 Claude Code, Codex, OpenCode, and Copilot hooks provide startup, failure, and one-shot
 capture-review reminders without storing raw logs. Hook support must respect
 session boundaries and avoid self-triggering loops. The OpenCode backend must
 restart to load a changed plugin; Codex hook definitions require native trust; Claude Code definitions are reviewed with `/hooks`.
+Claude Code drops hook context past roughly 10,000 characters, so its startup
+hook sends an instruction to run `kt boot` directly when the output exceeds
+9,500 bytes, rather than a silently truncated boot.
+
+The MCP tools (`kt_lookup`, `kt_find`, `kt_read`, `kt_edit`, `kt_rewrite`, `kt_add`,
+`kt_dict`, `kt_roots`, `kt_prove`) delegate every operation to the CLI so revision,
+access, locking, and proof semantics are unchanged. Destructive, startup, and
+access-policy commands stay CLI-only, and no input may inject a CLI option.
 
 ## Proof and release checks
 

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:58:35+10:00"
+revised_at: "2026-09-20T15:15:54+10:00"
 ---
 
 ## Success output policy
@@ -135,6 +135,10 @@ Empty or weak-only keyword matches exit 1; blocked root access exits 3.
 Results show the current leaf status. Manual check time is distinct from proof
 verification time. Check relevant proofs before reliance.
 The installer puts the script in the global `.tools/kt` and links `~/.local/bin/kt`.
+
+## MCP tools
+
+When a harness has the knowledgetrees MCP server (installed by `./install`), the workflow is also available as tools with the same semantics: `kt_lookup` (`kt how to ...`), `kt_find`, `kt_read` (`kt open`, returning the revision), `kt_edit`, `kt_rewrite`, `kt_add`, `kt_dict`, `kt_roots`, and `kt_prove` (read-only unless `stamp` is set). Prefer `kt_edit` for small changes: it replaces exact text that must occur once in the answer body, against the revision from your read, and returns a diff. A miss or brown result comes back as data marked `(exit 1)`; only exit 2 or higher is a tool error. `boot`, `init`, `check`, `rm`, `mv`, `combine`, `register`, `access`, and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
 
 ## Persistent access settings
 
