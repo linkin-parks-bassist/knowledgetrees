@@ -23,7 +23,6 @@ PROTOCOL = "2025-06-18"
 CLI = Path(os.environ.get("KT_MCP_CLI", str(Path(__file__).resolve().with_name("kt"))))
 MAX_TEXT = 1048576
 UNDO_DEPTH = 20
-MAX_ELICITATIONS = int(os.environ.get("KT_MCP_PROMPT_LIMIT", "10"))
 
 INSTRUCTIONS = (
     "Knowledge trees: look up before you search elsewhere (kt_lookup with how to/where is/what is/..., "
@@ -474,10 +473,6 @@ def read_response(identifier):
             PENDING.append(message)
 
 
-def can_prompt():
-    return CLIENT["elicitation"] and ELICITATIONS[0] < MAX_ELICITATIONS
-
-
 def elicit(message, schema):
     """Ask the user (never the model) through the client. Returns the accepted content, or None if the
     user declined or cancelled."""
@@ -522,8 +517,6 @@ def tool_access_request(arguments):
     if str(root) in DECLINED:
         return ("The user declined this request earlier in this session. Do not ask again or work around it; continue "
                 "without that root or ask the user in conversation.")
-    if not can_prompt():
-        return "Too many approval requests this session; ask the user in conversation instead."
     project = str(Path.cwd().resolve())
     content = elicit(
         f"An agent is asking to read a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
@@ -567,8 +560,6 @@ def tool_access_revoke(arguments):
         if not CLIENT["elicitation"]:
             return ("This change reaches beyond this project directory, and this client cannot show confirmation prompts. "
                     f"Ask the user to run this in their terminal:\nkt access {root} revoke --scope {scope}")
-        if not can_prompt():
-            return "Too many prompts this session; ask the user in conversation instead."
         content = elicit(f"An agent asks to revoke access to a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
                          f"Project directory: {cwd}\nEffect: {effect}\n\nAccept to make this change; decline to leave access as it is.",
                          {"type": "object", "required": ["confirm"], "properties": {"confirm": {

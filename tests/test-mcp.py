@@ -454,19 +454,6 @@ def main():
         client.stdin.close()
         assert client.wait(timeout=10) == 0
 
-        # The per-session prompt cap stops an agent from spamming the user.
-        client, send, receive = start_client({"elicitation": {}}, {"KT_MCP_PROMPT_LIMIT": "1"})
-        identifier = ask(vaults["vault"])
-        prompt = receive()
-        assert prompt["method"] == "elicitation/create"
-        send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "decline"}})
-        assert receive()["id"] == identifier
-        identifier = ask(vaults["vault2"])
-        reply = receive()
-        assert reply["id"] == identifier and "Too many approval requests" in reply["result"]["content"][0]["text"]
-        client.stdin.close()
-        assert client.wait(timeout=10) == 0
-
         # A client without the elicitation capability gets the terminal command instead of a prompt.
         client, send, receive = start_client({})
         identifier = ask(base_extra)
