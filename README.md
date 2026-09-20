@@ -45,9 +45,9 @@ policy, and proofs behave identically.
 
 Writes are checked against the revision the agent read, so a stale edit fails instead of
 clobbering. Read tools are annotated read-only, so harnesses can skip their prompts and keep
-them for writes. `rm`, `mv`, and policy commands are deliberately not exposed. Three prompts
-(`capture_review`, `garden`, `verify_leaf`) appear as slash commands where the client supports
-them.
+them for writes. `rm`, `mv`, and policy commands are deliberately not exposed. Four prompts
+(`capture_review`, `garden`, `verify_leaf`, `revoke_access`) appear as slash commands where the
+client supports them.
 
 ### Approving access without leaving the harness
 
@@ -706,7 +706,7 @@ The installer is covered by an isolated-home integration test. It verifies that:
   are preserved while the legacy managed block is removed;
 - repeated installation is idempotent;
 - differing knowledge is rejected before overwrite unless `--force` is explicit;
-- built-in verification through `kt prove` runs successfully; and
+- built-in verification through `kt prove` runs successfully;
 - each compatibility `SKILL.md` path (`.agents`, `.codex`, `.claude`) has the same
   device and inode as the canonical installed procedure;
 - Claude Code and Codex hook settings are merged without disturbing unrelated keys,

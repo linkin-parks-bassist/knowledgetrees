@@ -377,7 +377,7 @@ def parser_for_cli() -> argparse.ArgumentParser:
     )
     parser.add_argument("--hooks-only", action="store_true", help="install/update CLI and hooks without replacing installed leaves or skills")
     parser.add_argument("--no-hooks", action="store_true", help="skip hook installation (does not remove existing hooks)")
-    parser.add_argument("--no-mcp", action="store_true", help="skip the structured-edit MCP server and its harness registrations")
+    parser.add_argument("--no-mcp", action="store_true", help="skip the MCP server and its harness registrations")
     return parser
 
 
@@ -529,7 +529,7 @@ def main(arguments: list[str] | None = None) -> int:
         if agents_updated != agents_current:
             print(f"Would remove the managed bootstrap from {agents_path}")
         if not args.no_mcp:
-            print("Would register the structured-edit MCP server with Claude Code (via `claude mcp add`), Codex, OpenCode, and Copilot CLI")
+            print("Would register the knowledge-tree MCP server with Claude Code (via `claude mcp add`), Codex, OpenCode, and Copilot CLI")
         if not args.hooks_only:
             print(f"Would enable the Codex skill in {codex_config}")
         if opencode_updated != opencode_current:
@@ -538,7 +538,7 @@ def main(arguments: list[str] | None = None) -> int:
         return 0
 
     if opencode_final != opencode_current:
-        print("Adding the knowledge-tree structured-edit MCP server to OpenCode configuration.")
+        print("Adding the knowledge-tree MCP server to OpenCode configuration.")
     if opencode_updated != opencode_current and not permission_consent(target_home):
         return 2
 
@@ -619,7 +619,7 @@ def main(arguments: list[str] | None = None) -> int:
         print("Installed failure and task-end reminders for Claude Code, Codex, OpenCode, and Copilot CLI.")
         print("Claude Code and Codex: review/trust the new definitions with /hooks. Restart OpenCode to load its plugin.")
     if claude_mcp is not None:
-        print(f"Structured-edit MCP server (kt_read, kt_edit, kt_rewrite) for Codex, OpenCode, and Copilot CLI is configured; Claude Code: {claude_mcp}.")
+        print(f"Knowledge-tree MCP server (lookup, search, edit, access approval, and more) is configured for Codex, OpenCode, and Copilot CLI; Claude Code: {claude_mcp}.")
         print("Restart each harness to load it.")
     if not args.hooks_only:
         print("Installed hard-linked compatibility skills for shared harnesses, Codex, and Claude Code")

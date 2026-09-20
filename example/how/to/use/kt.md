@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T16:11:03+10:00"
+revised_at: "2026-09-20T16:19:32+10:00"
 ---
 
 ## Success output policy
@@ -103,6 +103,8 @@ roots. If it exists, read or rewrite it; if absent, investigate and add the scop
 leaf. Preserve the established answer before the next unrelated tool call or
 completion. Add a truthful unresolved record if blocked; forbidden writes require
 a scoped handoff. Do not silently move on or create a duplicate from a lexical miss.
+
+`kt register NAME PATH` registers an existing knowledge-root directory as a private (`ask`) root under a lowercase-hyphen name; it does not grant access.
 
 `kt roots` labels the exact current-directory tree local, the user-global tree global,
 and other roots by full canonical root directory path. It lists the local/global trees
