@@ -182,6 +182,10 @@ even *more* accessible... to agents.
 >
 > The knowledge tree has very accurate context.
 
+> Good — kt has all the info I need.
+
+> Now I've got the KT context.
+
 ## What makes it different
 
 This is not a search system bolted onto documentation. The tree itself is the
