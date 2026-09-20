@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:16:52+10:00"
+revised_at: "2026-09-20T10:33:14+10:00"
 ---
 
-Yes. Publishing this repository requires the owner’s authorization for the release at hand. Knowledge leaves do not grant that authorization, and approval for a prior release does not automatically cover new work.
+No separate per-release approval step is required. Publishing follows the user’s authorization in the active conversation, including earlier in-scope instructions to install, commit, and push. Do not ask again merely because the work spans turns. A knowledge leaf does not grant or revoke permission; if the user narrows or withdraws authorization, follow the newer instruction.

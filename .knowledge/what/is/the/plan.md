@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:17:58+10:00"
+revised_at: "2026-09-20T10:33:14+10:00"
 ---
 
 Keep the CLI, README, public `example/` guidance, installed global guidance,
@@ -19,7 +19,7 @@ For each change:
    manually review expired yellow leaves before relying on them.
 5. Preview installation, install authorized changes, refresh curated instruction
    copies, and check installed bytes and proof results.
-6. Update current state and next action, then publish within owner authorization.
+6. Update current state and next action, then publish under the user’s current authorization, including earlier in-scope instructions.
 
 Keep repository-specific knowledge in `.knowledge/`, the public example generic,
 and the example orientation empty. Preserve access policy and archived trees.

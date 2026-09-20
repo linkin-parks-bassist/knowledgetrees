@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:29:23+10:00"
+revised_at: "2026-09-20T10:33:14+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -8,8 +8,7 @@ CLI, the `install` script, tests, this operational `.knowledge/` tree, and the
 public `example/` corpus. The example is distributable guidance with an empty
 `where/am/i.md`; repository-specific state stays here. Public leaves must not
 contain private host, customer, or owner-identifying material. The repository
-remains connected to its intended GitHub remote; publication requires the owner's
-authorization.
+remains connected to its intended GitHub remote; publication follows the owner's current instructions, including earlier in-scope authorization.
 
 ## Leaf format and lifecycle
 
@@ -119,4 +118,4 @@ coverage. Agents inspect claim-to-proof coverage before setting `verifiable`.
 Publication checks include Python and OpenCode regressions, scoped project,
 example, and installed-global proof sweeps, instruction-sync checks, installed
 CLI byte comparison, a public-content audit, and Git whitespace/working-tree
-checks. Only the owner authorizes publishing changes.
+checks. User authorization to publish persists for in-scope work across turns unless changed or withdrawn; no separate release gate is imposed by this repository.
