@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T15:43:06+10:00"
+revised_at: "2026-09-20T15:52:13+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -113,10 +113,16 @@ Claude Code drops hook context past roughly 10,000 characters, so its startup
 hook sends an instruction to run `kt info` directly when the output exceeds
 9,500 bytes, rather than a silently truncated startup output.
 
-The MCP tools (`kt_lookup`, `kt_find`, `kt_read`, `kt_edit`, `kt_rewrite`, `kt_add`,
-`kt_dict`, `kt_roots`, `kt_prove`) delegate every operation to the CLI so revision,
-access, locking, and proof semantics are unchanged. Destructive, startup, and
-access-policy commands stay CLI-only, and no input may inject a CLI option.
+The 15 MCP tools (`kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_edit`,
+`kt_rewrite`, `kt_undo`, `kt_add`, `kt_dict`, `kt_roots`, `kt_prove`, `kt_status`,
+`kt_access_status`, `kt_access_request`) delegate every operation to the CLI so
+revision, access, locking, and proof semantics are unchanged, and carry read-only and
+destructive annotations. Destructive, initialization, and access-policy commands stay
+CLI-only, and no input may inject a CLI option. The one exception is access approval:
+`kt_access_request` asks the user through MCP elicitation and persists an accepted
+`allow` with the CLI's own `apply_access_decision`. Only the user's answer grants;
+denied and force-private roots are never prompted for, and the CLI itself keeps its
+own-terminal confirmation.
 
 ## Proof and release checks
 

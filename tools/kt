@@ -180,7 +180,7 @@ def require_root(root, label=None):
         if policy == "force-private":
             raise AccessRequired("kt: requested root is unavailable")
         name = root_identity(root)
-        message = f"kt: root {name!r} is denied" if policy == "deny" else f"kt: root {name!r} requires approval; in your terminal run: kt access {shlex.quote(name)} allow --scope project"
+        message = f"kt: root {name!r} is denied" if policy == "deny" else f"kt: root {name!r} requires approval; ask the user with the kt_access_request tool if you have it, otherwise have them run in their terminal: kt access {shlex.quote(name)} allow --scope project"
         raise AccessRequired(message)
 
 

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-13T13:54:52+10:00"
+revised_at: "2026-09-20T15:51:45+10:00"
 ---
 
 Root discovery uses only the exact current-directory tree, the known global
@@ -45,6 +45,8 @@ unless bypass is enabled. ask, deny, and reset replace or revoke decisions at
 root-wide policy; revoke it with `kt access ROOT reset --scope all` or replace it
 with a different root-wide policy. Project/session grants cannot revoke privacy.
 Agents must not provide the interactive confirmation on the user's behalf.
+
+Asking through the harness: where the knowledgetrees MCP server is installed and the client can prompt (MCP elicitation), an agent calls `kt_access_request(root, reason)` instead of telling the user to open a terminal. The harness shows the user the root, the project directory, and the reason, with three choices: this project directory, this project and subdirectories, or everywhere. Only the user's accept saves the grant (an `allow`; session scope is not offered because the server cannot know the agent's session id); decline or cancel changes nothing, and the same root is not asked about again that session. Denied and force-private roots are never prompted for, and a client without the capability receives the terminal command instead. `kt_access_status` reports a root's state read-only. This is a guardrail against an agent granting itself access, not a sandbox: the CLI still requires the user's own terminal, and an agent that can run arbitrary commands as the same user can already edit the policy files, so the real boundary is what the harness lets the agent run.
 
 ## Persistent bypass
 

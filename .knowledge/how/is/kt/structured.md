@@ -1,11 +1,11 @@
 ---
 status: green
-revised_at: "2026-09-20T15:43:06+10:00"
+revised_at: "2026-09-20T15:52:13+10:00"
 ---
 
 The CLI remains one self-contained standard-library Python executable for standalone installation. Sections separate root discovery and access, lookup and rendering, leaf maintenance, capture, proof execution, and parser construction. RootAccessView loads discovery and policies once per invocation; LookupContext lazily reads permitted leaf text once. LeafSnapshot centralizes revision and inode checks for rewrite and destructive maintenance. command_parser separates command schemas and handler dispatch from execution. All verification is exposed through kt prove. Regression suites cover access, lookup, maintenance, installation, hooks, MCP tools, and proof timestamps.
 
-Harness adapters are separate files so the CLI stays standalone. `tools/kt-hooks` is one Python handler shared by Claude Code, Codex, Copilot CLI, and OpenCode's plugin (`tools/kt-opencode.mjs`); it runs `kt info` and keeps only hashed counters. `tools/kt-mcp` is a newline-delimited JSON-RPC stdio server that owns no policy: each tool runs the sibling `kt` in a subprocess with stdin closed and arguments after `--`, and edits compute their replacement from the locked read revision before delegating to `kt rewrite`.
+Harness adapters are separate files so the CLI stays standalone. `tools/kt-hooks` is one Python handler shared by Claude Code, Codex, Copilot CLI, and OpenCode's plugin (`tools/kt-opencode.mjs`); it runs `kt info` and keeps only hashed counters. `tools/kt-mcp` is a newline-delimited JSON-RPC stdio server that owns no policy beyond the elicitation flow (a server-to-client request whose response is read inline while a tool call is in flight; other requests arriving meanwhile are queued and served afterward, and pings are answered): each tool runs the sibling `kt` in a subprocess with stdin closed and arguments after `--`, and edits compute their replacement from the locked read revision before delegating to `kt rewrite`.
 
 `kt grep` and `kt status` walk leaves through the same `RootAccessView`/`leaves()` policy filter as `find`, so restricted roots are never read; `status` derives colors from stored metadata and `lifecycle_state` without running proofs. Access changes are split into `resolve_access_root` and `apply_access_decision`: the latter persists an already-confirmed decision and never prompts, so the CLI keeps its own-terminal confirmation while another trusted front end (the MCP server's elicitation) can supply a different confirmation.
 

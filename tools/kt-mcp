@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Local stdio MCP server exposing structured knowledge-tree reads and edits.
+"""Local stdio MCP server exposing the knowledge-tree workflow as tools.
 
-Every mutation is delegated to `kt rewrite`, so revision conflicts, access policy,
-locking, proof invalidation, and inode preservation stay owned by the CLI.
+Every operation is delegated to the sibling `kt` CLI, so revision conflicts, access
+policy, locking, proof invalidation, and inode preservation stay owned by the CLI.
+The one deliberate exception is access approval: `kt_access_request` asks the user
+through the harness (MCP elicitation) and persists an accepted grant with the CLI's
+own `apply_access_decision`. The model never sees or answers that prompt.
 """
 
+import collections
 import difflib
 import json
 import os
@@ -17,73 +21,174 @@ import sys
 PROTOCOL = "2025-06-18"
 CLI = Path(os.environ.get("KT_MCP_CLI", str(Path(__file__).resolve().with_name("kt"))))
 MAX_TEXT = 1048576
+UNDO_DEPTH = 20
+MAX_ELICITATIONS = 5
+
+INSTRUCTIONS = (
+    "Knowledge trees: look up before you search elsewhere (kt_lookup with how to/where is/what is/..., "
+    "kt_find, kt_grep for exact text). Read with kt_read, then change leaves with kt_edit against the revision "
+    "you read. A miss is not proof of absence. If a root needs approval, call kt_access_request: it asks "
+    "the user through the harness. Never ask the user to type kt access unless it tells you the client "
+    "cannot prompt, and never work around a refusal."
+)
+
+
+def tool(name, title, description, properties=None, required=(), *, read_only=False, destructive=False,
+         idempotent=False):
+    schema = {"type": "object", "additionalProperties": False, "properties": properties or {}}
+    if required:
+        schema["required"] = list(required)
+    return {"name": name, "title": title, "description": description, "inputSchema": schema,
+            "annotations": {"title": title, "readOnlyHint": read_only,
+                            "destructiveHint": destructive and not read_only,
+                            "idempotentHint": idempotent, "openWorldHint": False}}
+
+
+STR = {"type": "string"}
+BOOL = {"type": "boolean"}
+ADDRESS = {"type": "string", "description": "Root-qualified leaf address returned by kt, e.g. local:what/is/next.md"}
+REVISION = {"type": "string", "description": "Revision from the read this change is based on"}
+DRY_RUN = {"type": "boolean", "description": "Show the diff without writing"}
+SCOPE = {"type": "string", "enum": ["local", "global"]}
 
 TOOLS = [
-    {"name": "kt_read",
-     "description": "Read a knowledge-tree leaf. Returns its revision and full text; pass that revision to kt_edit or kt_rewrite.",
-     "inputSchema": {"type": "object", "required": ["address"], "additionalProperties": False,
-                     "properties": {"address": {"type": "string", "description": "Root-qualified leaf address returned by kt, e.g. local:what/is/next.md"}}}},
-    {"name": "kt_edit",
-     "description": "Replace exact text in a leaf's answer body. old_text must occur exactly once. Fails on a stale revision, "
-                    "restricted access, or ambiguous/missing match; nothing is written on failure. Returns a diff and the new revision.",
-     "inputSchema": {"type": "object", "required": ["address", "revision", "old_text", "new_text"], "additionalProperties": False,
-                     "properties": {"address": {"type": "string"},
-                                    "revision": {"type": "string", "description": "Revision from the read this edit is based on"},
-                                    "old_text": {"type": "string", "description": "Exact body text to replace; must match once"},
-                                    "new_text": {"type": "string"},
-                                    "dry_run": {"type": "boolean", "description": "Show the diff without writing"}}}},
-    {"name": "kt_rewrite",
-     "description": "Replace a leaf's whole answer body (no front matter). Prefer kt_edit for small changes so still-valid knowledge is not lost.",
-     "inputSchema": {"type": "object", "required": ["address", "revision", "body"], "additionalProperties": False,
-                     "properties": {"address": {"type": "string"}, "revision": {"type": "string"},
-                                    "body": {"type": "string"}, "dry_run": {"type": "boolean"}}}},
+    tool("kt_info", "Startup info",
+         "Print the startup knowledge (procedure, orientation, dictionary, proof summary) like `kt info`. Falls back to the "
+         "global root when there is no local tree. Refreshes leaf status stamps.", idempotent=True),
+    tool("kt_lookup", "Look up by question",
+         "Generic kt retrieval by natural question, like `kt how to ...`. Start with where is, how to, when to, what is, "
+         "why is/does, does, or is. `how to _` lists a branch. A miss is not proof of absence; retry other terms.",
+         {"question": {"type": "string", "description": "e.g. how to expose structured knowledge-tree edits"}},
+         ["question"], read_only=True),
+    tool("kt_find", "Broad search",
+         "Ranked keyword search across all accessible roots. Returns root-qualified addresses to open with kt_read. "
+         "Set json for structured results.",
+         {"terms": {"type": "string", "description": "Words or a question"},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 100}, "json": BOOL}, ["terms"], read_only=True),
+    tool("kt_grep", "Exact text search",
+         "Literal (or regex) text search over leaf text in every readable root, like `kt grep`. Use it to find every "
+         "place that states a fact. Output is ADDRESS:LINE: text.",
+         {"pattern": {"type": "string", "description": "Literal text, or a Python regular expression with regex"},
+          "regex": BOOL, "ignore_case": BOOL, "files_only": BOOL,
+          "context": {"type": "integer", "minimum": 0, "maximum": 10},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 500}}, ["pattern"], read_only=True),
+    tool("kt_read", "Read a leaf",
+         "Read a knowledge-tree leaf. Returns its revision and text; pass that revision to kt_edit or kt_rewrite. "
+         "body_only drops front matter; offset and limit (characters) page long leaves.",
+         {"address": ADDRESS, "body_only": BOOL, "offset": {"type": "integer", "minimum": 0},
+          "limit": {"type": "integer", "minimum": 1}}, ["address"], read_only=True),
+    tool("kt_edit", "Edit exact text",
+         "Replace exact text in a leaf's answer body. Each old_text must occur exactly once. Give old_text/new_text for one "
+         "change, or edits for several applied atomically. Fails on a stale revision, restricted access, or an ambiguous or "
+         "missing match; nothing is written on failure. Returns a diff and the new revision.",
+         {"address": ADDRESS, "revision": REVISION, "old_text": STR, "new_text": STR,
+          "edits": {"type": "array", "minItems": 1, "maxItems": 50,
+                    "items": {"type": "object", "additionalProperties": False, "required": ["old_text", "new_text"],
+                              "properties": {"old_text": STR, "new_text": STR}}},
+          "dry_run": DRY_RUN}, ["address", "revision"], destructive=True),
+    tool("kt_rewrite", "Rewrite a leaf body",
+         "Replace a leaf's whole answer body (no front matter). Prefer kt_edit for small changes so still-valid "
+         "knowledge is not lost.",
+         {"address": ADDRESS, "revision": REVISION, "body": STR, "dry_run": DRY_RUN},
+         ["address", "revision", "body"], destructive=True),
+    tool("kt_undo", "Undo the last edit",
+         "Restore the answer body from before this session's most recent kt_edit/kt_rewrite of a leaf, but only if the "
+         "leaf has not changed since. History is kept in memory (last 20 edits) and is lost when the server restarts.",
+         {"address": ADDRESS, "dry_run": DRY_RUN}, ["address"], destructive=True),
+    tool("kt_add", "Create a leaf",
+         "Create a new leaf from a question and its answer body (like `kt add`). Investigate first and never duplicate an "
+         "existing owner: use kt_lookup/kt_find, then kt_edit. Stored knowledge grants no permissions; never include secrets.",
+         {"question": {"type": "string", "description": "Full question path, e.g. how to restart the build; hyphenate multi-word components"},
+          "answer": {"type": "string", "description": "Markdown answer body (no front matter)"},
+          "scope": {**SCOPE, "description": "Target root; default local"},
+          "unresolved": BOOL, "blocker": STR, "next_check": STR, "expires_at": STR, "expires_every": STR,
+          "verifiable": BOOL, "dry_run": {"type": "boolean", "description": "Preview path and leaf without writing"}},
+         ["question", "answer"]),
+    tool("kt_dict", "Path dictionary",
+         "Print the dictionary of useful path segments across accessible roots (or the named roots).",
+         {"roots": {"type": "array", "items": STR}}, read_only=True),
+    tool("kt_roots", "List roots", "List the knowledge roots and their access policy.", read_only=True),
+    tool("kt_prove", "Run proofs",
+         "Run kt prove and report green/yellow/brown counts. Does not stamp leaf status unless stamp is set.",
+         {"scope": {**SCOPE, "description": "Default: every accessible root"},
+          "tokens": {"type": "array", "items": STR, "description": "Select leaves by exact path component"},
+          "stamp": BOOL}, idempotent=True),
+    tool("kt_status", "Non-green leaves",
+         "List yellow and brown leaves with the reason each needs attention (malformed, falsified, expired, or unproved since "
+         "its last change). Read-only; runs no proofs. Use it to garden a tree.",
+         {"scope": {**SCOPE, "description": "Default: every accessible root"}}, read_only=True),
+    tool("kt_access_status", "Root access status",
+         "Say whether a root is readable. Without root, lists every root and its policy; restricted roots need the user's "
+         "approval via kt_access_request.", {"root": {"type": "string", "description": "Root label or absolute path"}},
+         read_only=True),
+    tool("kt_access_request", "Ask the user for root access",
+         "Ask the USER, through the harness, to allow reading a restricted root. Only the user can answer; you cannot "
+         "grant access yourself. Give a short honest reason. If the user declines, do not ask again or work around it.",
+         {"root": {"type": "string", "description": "Root label or absolute path shown as restricted by kt_roots"},
+          "reason": {"type": "string", "description": "Why you need it (shown to the user, 300 characters)"}},
+         ["root", "reason"]),
 ]
 
-TOOLS += [
-    {"name": "kt_lookup",
-     "description": "Generic kt retrieval by natural question, like `kt how to ...`. Start the question with where is, how to, when to, "
-                    "what is, why is/does, does, or is. `kt how to _` lists a branch. A miss is not proof of absence; retry other terms.",
-     "inputSchema": {"type": "object", "required": ["question"], "additionalProperties": False,
-                     "properties": {"question": {"type": "string", "description": "e.g. how to expose structured knowledge-tree edits"}}}},
-    {"name": "kt_find",
-     "description": "Broad lexical search across all accessible roots. Returns root-qualified addresses to open with kt_read.",
-     "inputSchema": {"type": "object", "required": ["terms"], "additionalProperties": False,
-                     "properties": {"terms": {"type": "string", "description": "Words or a question"},
-                                    "limit": {"type": "integer", "minimum": 1, "maximum": 100}}}},
-    {"name": "kt_add",
-     "description": "Create a new leaf from a question and its answer body (like `kt add`). Investigate first and never duplicate an "
-                    "existing owner: use kt_lookup/kt_find, then kt_edit. Stored knowledge grants no permissions; never include secrets.",
-     "inputSchema": {"type": "object", "required": ["question", "answer"], "additionalProperties": False,
-                     "properties": {"question": {"type": "string", "description": "Full question path, e.g. how to restart the build; hyphenate multi-word components"},
-                                    "answer": {"type": "string", "description": "Markdown answer body (no front matter)"},
-                                    "scope": {"type": "string", "enum": ["local", "global"], "description": "Target root; default local"},
-                                    "unresolved": {"type": "boolean"}, "blocker": {"type": "string"}, "next_check": {"type": "string"},
-                                    "expires_at": {"type": "string"}, "expires_every": {"type": "string"},
-                                    "verifiable": {"type": "boolean"}, "dry_run": {"type": "boolean", "description": "Preview path and leaf without writing"}}}},
-    {"name": "kt_dict",
-     "description": "Print the dictionary of useful path segments across accessible roots (or the named roots).",
-     "inputSchema": {"type": "object", "additionalProperties": False,
-                     "properties": {"roots": {"type": "array", "items": {"type": "string"}}}}},
-    {"name": "kt_roots",
-     "description": "List the knowledge roots and their access policy.",
-     "inputSchema": {"type": "object", "additionalProperties": False, "properties": {}}},
-    {"name": "kt_prove",
-     "description": "Run kt prove and report green/yellow/brown counts. Read-only by default (--no-stamp); set stamp to record status in leaf front matter.",
-     "inputSchema": {"type": "object", "additionalProperties": False,
-                     "properties": {"scope": {"type": "string", "enum": ["local", "global"], "description": "Default: every accessible root"},
-                                    "tokens": {"type": "array", "items": {"type": "string"}, "description": "Select leaves by exact path component"},
-                                    "stamp": {"type": "boolean"}}}},
-]
+ACCESS_CHOICES = {
+    "project": ("Allow for this project directory only", "project", False),
+    "project_and_subdirectories": ("Allow for this project and its subdirectories", "project", True),
+    "all": ("Allow everywhere (all projects, persistent)", "all", False),
+}
+
+CLIENT = {"elicitation": False}
+PENDING = collections.deque()
+HISTORY = collections.deque(maxlen=UNDO_DEPTH)
+DECLINED = set()
+ELICITATIONS = [0]
+CURRENT = []
+_KT = []
 
 
 class ToolError(Exception):
     pass
 
 
-def run_kt(*arguments):
+def send(message):
+    print(json.dumps(message), flush=True)
+
+
+def read_message():
+    while True:
+        line = sys.stdin.readline()
+        if not line:
+            return None
+        if not line.strip():
+            continue
+        try:
+            message = json.loads(line)
+            if not isinstance(message, dict):
+                raise ValueError("expected a JSON object")
+            return message
+        except ValueError:
+            send({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "parse error"}})
+
+
+def kt_namespace():
+    if not _KT:
+        _KT.append(runpy.run_path(str(CLI)))
+    return _KT[0]
+
+
+def run_kt(*arguments, timeout=60):
     # DEVNULL: a stray "-" argument must never make kt read the MCP protocol stream.
-    return subprocess.run([sys.executable, str(CLI), *arguments], text=True, capture_output=True,
-                          stdin=subprocess.DEVNULL)
+    try:
+        return subprocess.run([sys.executable, str(CLI), *arguments], text=True, capture_output=True,
+                              stdin=subprocess.DEVNULL, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise ToolError(f"kt timed out after {timeout}s; narrow the request")
+
+
+def report(completed, label):
+    """Exit 1 is a miss or brown result, reported as data; higher codes are errors."""
+    output = completed.stdout + completed.stderr
+    if completed.returncode >= 2:
+        raise ToolError(output.strip() or f"{label} failed ({completed.returncode})")
+    return output + (f"\n(exit {completed.returncode})" if completed.returncode else "")
 
 
 def read_leaf(address):
@@ -97,42 +202,34 @@ def read_leaf(address):
 
 
 def body_of(text):
-    leaf_parts = runpy.run_path(str(CLI))["leaf_parts"]
-    return leaf_parts(text)[1]
+    return kt_namespace()["leaf_parts"](text)[1]
 
 
-def require_text(arguments, *names):
-    for name in names:
-        if not isinstance(arguments.get(name), str):
-            raise ToolError(f"{name} must be a string")
-    if any(len(arguments[name].encode()) > MAX_TEXT for name in names):
-        raise ToolError("text exceeds 1 MiB")
+def text_arg(arguments, name, required=True, limit=MAX_TEXT):
+    value = arguments.get(name)
+    if value is None and not required:
+        return None
+    if not isinstance(value, str):
+        raise ToolError(f"{name} must be a string")
+    if len(value.encode()) > limit:
+        raise ToolError(f"{name} is too long")
+    return value
 
 
-def rewrite(address, revision, body, dry_run):
-    flags = ["--dry-run"] if dry_run else []
-    completed = run_kt("rewrite", *flags, address, revision, body)
-    if completed.returncode:
-        raise ToolError((completed.stderr or completed.stdout).strip() or f"kt rewrite failed ({completed.returncode})")
-    return completed
-
-
-def finish(address, before, dry_run, completed):
-    if dry_run:
-        return (completed.stdout or "No change.\n") + completed.stderr
-    after, revision = read_leaf(address)
-    diff = "".join(difflib.unified_diff(before.splitlines(keepends=True), after.splitlines(keepends=True),
-                                       fromfile="before", tofile="after"))
-    return f"Revision: {revision}\n{diff or 'No change.'}"
+def int_arg(arguments, name, default=None, minimum=0, maximum=None):
+    value = arguments.get(name, default)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < minimum or (maximum is not None and value > maximum):
+        raise ToolError(f"{name} must be an integer" + (f" from {minimum} to {maximum}" if maximum else f" of at least {minimum}"))
+    return value
 
 
 def words(arguments, name):
-    value = arguments.get(name)
-    if not isinstance(value, str) or not value.strip():
-        raise ToolError(f"{name} must be a nonempty string")
-    if len(value.encode()) > 4096:
-        raise ToolError(f"{name} is too long for a lookup")
+    value = text_arg(arguments, name, limit=4096)
     parts = value.split()
+    if not parts:
+        raise ToolError(f"{name} must not be empty")
     if any(part.startswith("-") for part in parts):
         raise ToolError(f"{name} words must not start with '-'")
     return parts
@@ -145,77 +242,335 @@ def strings(arguments, name):
     return value
 
 
-def report(completed, label):
-    """Exit 1 is a miss or brown result, reported as data; higher codes are errors."""
-    output = completed.stdout + completed.stderr
-    if completed.returncode >= 2:
-        raise ToolError(output.strip() or f"{label} failed ({completed.returncode})")
-    return output + (f"\n(exit {completed.returncode})" if completed.returncode else "")
+def scope_flag(arguments):
+    scope = arguments.get("scope")
+    if scope not in (None, "local", "global"):
+        raise ToolError("scope must be local or global")
+    return [f"--{scope}"] if scope else []
 
 
-def passthrough(name, arguments):
-    if name == "kt_lookup":
-        return report(run_kt(*words(arguments, "question")), "kt lookup")
-    if name == "kt_find":
-        limit = arguments.get("limit")
-        flags = ["--limit", str(limit)] if isinstance(limit, int) and not isinstance(limit, bool) and limit > 0 else []
-        return report(run_kt("find", *flags, "--", *words(arguments, "terms")), "kt find")
-    if name == "kt_dict":
-        return report(run_kt("dict", *strings(arguments, "roots")), "kt dict")
-    if name == "kt_roots":
-        return report(run_kt("roots"), "kt roots")
-    if name == "kt_prove":
-        scope = arguments.get("scope")
-        if scope not in (None, "local", "global"):
-            raise ToolError("scope must be local or global")
-        flags = [f"--{scope}"] if scope else []
-        if arguments.get("stamp") is not True:
-            flags.append("--no-stamp")
-        return report(run_kt("prove", *flags, *strings(arguments, "tokens")), "kt prove")
-    require_text(arguments, "question", "answer")
+def rewrite(address, revision, body, dry_run):
+    completed = run_kt("rewrite", *(["--dry-run"] if dry_run else []), address, revision, body)
+    if completed.returncode:
+        raise ToolError((completed.stderr or completed.stdout).strip() or f"kt rewrite failed ({completed.returncode})")
+    return completed
+
+
+def finish(address, before, dry_run, completed, before_body, record=True):
+    if dry_run:
+        return (completed.stdout or "No change.\n") + completed.stderr
+    after, revision = read_leaf(address)
+    if record and after != before:
+        HISTORY.append({"address": address, "body": before_body, "revision": revision})
+    diff = "".join(difflib.unified_diff(before.splitlines(keepends=True), after.splitlines(keepends=True),
+                                       fromfile="before", tofile="after"))
+    return f"Revision: {revision}\n{diff or 'No change.'}"
+
+
+def checked_read(arguments):
+    address = text_arg(arguments, "address")
+    revision = text_arg(arguments, "revision")
+    text, current = read_leaf(address)
+    if current != revision:
+        raise ToolError("leaf changed since your read; call kt_read again and merge before editing")
+    return address, text, current
+
+
+# ---- tools ---------------------------------------------------------------------------------------
+
+def tool_info(arguments):
+    return report(run_kt("info", timeout=120), "kt info")
+
+
+def tool_lookup(arguments):
+    return report(run_kt(*words(arguments, "question")), "kt lookup")
+
+
+def parse_find(output):
+    lines = output.splitlines()
+    results = []
+    for line in lines[1:]:
+        parts = line.split("\t")
+        if len(parts) < 2 or ":" not in parts[0]:
+            continue
+        item = {"address": parts[0]}
+        for part in parts[1:]:
+            coverage = re.fullmatch(r"coverage=(\d+)%( weak)?", part)
+            if coverage:
+                item["coverage"], item["weak"] = int(coverage[1]), bool(coverage[2])
+            elif part in ("green", "yellow", "brown"):
+                item["status"] = part
+            else:
+                item["excerpt"] = part
+        results.append(item)
+    return {"summary": lines[0] if lines else "", "results": results}
+
+
+def tool_find(arguments):
+    limit = int_arg(arguments, "limit", minimum=1, maximum=100)
+    completed = run_kt("find", *(["--limit", str(limit)] if limit else []), "--", *words(arguments, "terms"))
+    text = report(completed, "kt find")
+    if arguments.get("json") is True:
+        structured = {**parse_find(completed.stdout), "exit": completed.returncode}
+        return json.dumps(structured), structured
+    return text
+
+
+def tool_grep(arguments):
+    pattern = text_arg(arguments, "pattern", limit=1000)
+    if not pattern:
+        raise ToolError("pattern must not be empty")
+    flags = []
+    for key, flag in (("regex", "-E"), ("ignore_case", "-i"), ("files_only", "-l")):
+        if arguments.get(key) is True:
+            flags.append(flag)
+    context = int_arg(arguments, "context", minimum=0, maximum=10)
+    limit = int_arg(arguments, "limit", minimum=1, maximum=500)
+    flags += ["-C", str(context)] if context else []
+    flags += ["--limit", str(limit)] if limit else []
+    return report(run_kt("grep", *flags, "--", pattern, timeout=20), "kt grep")
+
+
+def tool_read(arguments):
+    text, revision = read_leaf(text_arg(arguments, "address"))
+    shown = body_of(text) if arguments.get("body_only") is True else text
+    offset = int_arg(arguments, "offset", 0, minimum=0)
+    limit = int_arg(arguments, "limit", minimum=1)
+    piece = shown[offset:offset + limit] if limit else shown[offset:]
+    note = ""
+    if offset or (limit and offset + limit < len(shown)):
+        note = f"\n(characters {offset}-{offset + len(piece)} of {len(shown)}; pass offset to continue)"
+    return f"Revision: {revision}\n---\n{piece}{note}"
+
+
+def tool_edit(arguments):
+    dry_run = arguments.get("dry_run") is True
+    edits = arguments.get("edits")
+    if edits is None:
+        edits = [{"old_text": text_arg(arguments, "old_text"), "new_text": text_arg(arguments, "new_text")}]
+    elif "old_text" in arguments or "new_text" in arguments:
+        raise ToolError("give either old_text/new_text or edits, not both")
+    if not isinstance(edits, list) or not 1 <= len(edits) <= 50:
+        raise ToolError("edits must be a list of 1 to 50 items")
+    address, text, current = checked_read(arguments)
+    body = before_body = body_of(text)
+    for number, edit in enumerate(edits, 1):
+        label = f"edit {number}: " if len(edits) > 1 else ""
+        if not isinstance(edit, dict):
+            raise ToolError(f"{label}each edit must be an object with old_text and new_text")
+        old, new = text_arg(edit, "old_text"), text_arg(edit, "new_text")
+        if not old:
+            raise ToolError(f"{label}old_text must not be empty")
+        matches = body.count(old)
+        if matches != 1:
+            raise ToolError(f"{label}old_text must match exactly once in the answer body; found {matches} matches"
+                            + (" (front matter is not editable here)" if not matches and old in text else ""))
+        body = body.replace(old, new, 1)
+    return finish(address, text, dry_run, rewrite(address, current, body, dry_run), before_body)
+
+
+def tool_rewrite(arguments):
+    dry_run = arguments.get("dry_run") is True
+    address, text, current = checked_read(arguments)
+    completed = rewrite(address, current, text_arg(arguments, "body"), dry_run)
+    return finish(address, text, dry_run, completed, body_of(text))
+
+
+def tool_undo(arguments):
+    dry_run = arguments.get("dry_run") is True
+    address = text_arg(arguments, "address")
+    record = next((item for item in reversed(HISTORY) if item["address"] == address), None)
+    if record is None:
+        raise ToolError("nothing to undo for this leaf in this server session (history is in memory, last "
+                        f"{UNDO_DEPTH} edits)")
+    text, current = read_leaf(address)
+    if current != record["revision"]:
+        raise ToolError("the leaf changed after the recorded edit, so undo is refused to protect later work; "
+                        "kt_read it and merge by hand")
+    completed = rewrite(address, current, record["body"], dry_run)
+    if not dry_run:
+        HISTORY.remove(record)
+    return finish(address, text, dry_run, completed, None, record=False)
+
+
+def tool_add(arguments):
+    question = text_arg(arguments, "question", limit=2048)
+    answer = text_arg(arguments, "answer")
     scope = arguments.get("scope", "local")
     if scope not in ("local", "global"):
         raise ToolError("scope must be local or global")
-    if not arguments["question"].strip() or arguments["question"].startswith("-") or arguments["answer"].strip() in ("", "-"):
+    if not question.strip() or question.startswith("-") or answer.strip() in ("", "-"):
         raise ToolError("question and answer must be nonempty (answer '-' is not supported) and question must not start with '-'")
     flags = [f"--{scope}"]
     for key in ("blocker", "next_check", "expires_at", "expires_every"):
         if key in arguments:
-            require_text(arguments, key)
-            flags += [f"--{key.replace('_', '-')}", arguments[key]]
+            flags += [f"--{key.replace('_', '-')}", text_arg(arguments, key, limit=4096)]
     flags += [f"--{key.replace('_', '-')}" for key in ("unresolved", "verifiable", "dry_run") if arguments.get(key) is True]
-    completed = run_kt("add", *flags, "--", arguments["question"], arguments["answer"])
-    return report(completed, "kt add") or "Created."
+    return report(run_kt("add", *flags, "--", question, answer), "kt add") or "Created."
 
 
-def call(name, arguments):
-    if name in ("kt_lookup", "kt_find", "kt_add", "kt_dict", "kt_roots", "kt_prove"):
-        return passthrough(name, arguments)
-    require_text(arguments, "address")
-    address = arguments["address"]
-    if name == "kt_read":
-        text, revision = read_leaf(address)
-        return f"Revision: {revision}\n---\n{text}"
-    require_text(arguments, "revision")
-    dry_run = arguments.get("dry_run") is True
-    text, current = read_leaf(address)
-    if current != arguments["revision"]:
-        raise ToolError("leaf changed since your read; call kt_read again and merge before editing")
-    if name == "kt_rewrite":
-        require_text(arguments, "body")
-        return finish(address, text, dry_run, rewrite(address, current, arguments["body"], dry_run))
-    if name == "kt_edit":
-        require_text(arguments, "old_text", "new_text")
-        old, new = arguments["old_text"], arguments["new_text"]
-        body = body_of(text)
-        if not old:
-            raise ToolError("old_text must not be empty")
-        matches = body.count(old)
-        if matches != 1:
-            raise ToolError(f"old_text must match exactly once in the answer body; found {matches} matches"
-                            + (" (front matter is not editable here)" if not matches and old in text else ""))
-        return finish(address, text, dry_run, rewrite(address, current, body.replace(old, new, 1), dry_run))
-    raise ToolError(f"unknown tool {name}")
+def tool_dict(arguments):
+    return report(run_kt("dict", *strings(arguments, "roots")), "kt dict")
+
+
+def tool_roots(arguments):
+    return report(run_kt("roots"), "kt roots")
+
+
+def tool_prove(arguments):
+    flags = scope_flag(arguments)
+    if arguments.get("stamp") is not True:
+        flags.append("--no-stamp")
+    return report(run_kt("prove", *flags, *strings(arguments, "tokens"), timeout=300), "kt prove")
+
+
+def tool_status(arguments):
+    return report(run_kt("status", *scope_flag(arguments)), "kt status")
+
+
+def tool_access_status(arguments):
+    root = arguments.get("root")
+    if root is None:
+        return report(run_kt("roots"), "kt roots") + (
+            "\nRoots marked (restricted) need the user's approval: call kt_access_request with the root path.")
+    root = text_arg(arguments, "root", limit=4096)
+    if root.startswith("-"):
+        raise ToolError("root must not start with '-'")
+    output = report(run_kt("access", root), "kt access")
+    if "ask" in output:
+        output += "\nThis root needs the user's approval: call kt_access_request."
+    elif "force-private" in output:
+        output += "\nThis root is unavailable and cannot be approved through the harness."
+    return output
+
+
+def clean_reason(value):
+    return re.sub(r"\s+", " ", re.sub(r"[\x00-\x1f\x7f]", " ", value)).strip()[:300] or "(no reason given)"
+
+
+def read_response(identifier):
+    """Block for the elicitation response, deferring any other requests that arrive first."""
+    while True:
+        message = read_message()
+        if message is None:
+            raise ToolError("the client disconnected during the approval prompt")
+        if message.get("id") == identifier and ("result" in message or "error" in message):
+            return message
+        if message.get("method") == "notifications/cancelled" and (message.get("params") or {}).get("requestId") in CURRENT:
+            raise ToolError("the request was cancelled")
+        if message.get("method") == "ping" and "id" in message:
+            send({"jsonrpc": "2.0", "id": message["id"], "result": {}})
+        elif "method" in message and "id" in message:
+            PENDING.append(message)
+
+
+def tool_access_request(arguments):
+    value = text_arg(arguments, "root", limit=4096)
+    reason = clean_reason(text_arg(arguments, "reason", limit=4096))
+    if value.startswith("-"):
+        raise ToolError("root must not start with '-'")
+    namespace = kt_namespace()
+    try:
+        config = namespace["access_config"]()
+        root, label, available = namespace["resolve_access_root"](config, value)
+        current = namespace["root_access"](root, label, config=config)
+    except ValueError as error:
+        raise ToolError(str(error))
+    if current == "allow":
+        return "That root is already readable; no approval is needed."
+    if current == "force-private":
+        raise ToolError("that root is unavailable and cannot be approved through the harness")
+    if current == "deny":
+        raise ToolError("that root is denied by the user's policy; only the user can change that, deliberately, in their "
+                        "own terminal. Do not work around it.")
+    terminal = f"kt access {root} allow --scope project"
+    if not CLIENT["elicitation"]:
+        return ("This client cannot show approval prompts. Ask the user to run this in their terminal, then retry:\n"
+                + terminal)
+    if str(root) in DECLINED:
+        return ("The user declined this request earlier in this session. Do not ask again or work around it; continue "
+                "without that root or ask the user in conversation.")
+    if ELICITATIONS[0] >= MAX_ELICITATIONS:
+        return "Too many approval requests this session; ask the user in conversation instead."
+    ELICITATIONS[0] += 1
+    project = str(Path.cwd().resolve())
+    message = (f"An agent is asking to read a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
+               f"Project directory: {project}\nReason (from the agent): {reason}\n\n"
+               "Approving lets kt read this root's leaves for this project; retrieved text may be sent to your model provider. "
+               "It does not grant direct filesystem access. Decline to refuse.")
+    identifier = f"kt-elicit-{ELICITATIONS[0]}"
+    send({"jsonrpc": "2.0", "id": identifier, "method": "elicitation/create", "params": {
+        "message": message,
+        "requestedSchema": {"type": "object", "required": ["decision"], "properties": {"decision": {
+            "type": "string", "title": "Grant", "description": "Where the approval applies",
+            "enum": list(ACCESS_CHOICES), "enumNames": [choice[0] for choice in ACCESS_CHOICES.values()]}}}}})
+    response = read_response(identifier)
+    result = response.get("result") or {}
+    decision = (result.get("content") or {}).get("decision") if isinstance(result.get("content"), dict) else None
+    if result.get("action") != "accept" or "error" in response:
+        DECLINED.add(str(root))
+        return ("The user declined. Do not ask again or work around it; continue without that root or ask the user in "
+                "conversation.")
+    if decision not in ACCESS_CHOICES:
+        raise ToolError("the approval response was not one of the offered choices; nothing was granted")
+    _title, scope, subdirectories = ACCESS_CHOICES[decision]
+    namespace["apply_access_decision"](config, root, label, available, "allow", scope, project, subdirectories)
+    where = {"project": "this project directory", "project_and_subdirectories": "this project and its subdirectories",
+             "all": "all projects"}[decision]
+    return f"The user approved reading that root for {where}. Retry your lookup."
+
+
+HANDLERS = {"kt_info": tool_info, "kt_lookup": tool_lookup, "kt_find": tool_find, "kt_grep": tool_grep,
+            "kt_read": tool_read, "kt_edit": tool_edit, "kt_rewrite": tool_rewrite, "kt_undo": tool_undo,
+            "kt_add": tool_add, "kt_dict": tool_dict, "kt_roots": tool_roots, "kt_prove": tool_prove,
+            "kt_status": tool_status, "kt_access_status": tool_access_status, "kt_access_request": tool_access_request}
+
+
+# ---- prompts (user-invoked slash commands in harnesses that support them) ------------------------------
+
+def review_text():
+    try:
+        return runpy.run_path(str(CLI.with_name("kt-hooks")))["REVIEW"]
+    except Exception:  # noqa: BLE001 - the hook file is optional here
+        return ("Knowledge-tree capture review: check kt for existing owners of anything reusable you learned, "
+                "capture missing answers with evidence, and record blockers for unresolved questions.")
+
+
+PROMPTS = {
+    "capture_review": ("Review this work and capture reusable knowledge", [], lambda a: review_text()),
+    "garden": ("List non-green leaves and work through them", [],
+               lambda a: "Garden the knowledge tree: call kt_status, then for each yellow or brown leaf kt_read it, "
+                         "check its claims against current evidence, repair it with kt_edit (never delete still-valid "
+                         "knowledge), and run kt_prove with stamp to record the result. Report what you changed and "
+                         "anything you could not verify."),
+    "verify_leaf": ("Verify one leaf against current evidence", [{"name": "address", "description": "Leaf address", "required": True}],
+                    lambda a: f"Verify the knowledge leaf {a['address']}: kt_read it, check each claim against the "
+                              "source evidence, use kt_grep to find other leaves stating the same fact, fix what is "
+                              "stale with kt_edit, and report what remains unverified."),
+}
+
+
+def prompt_get(params):
+    name = params.get("name")
+    if name not in PROMPTS:
+        raise ToolError("unknown prompt")
+    _description, arguments, build = PROMPTS[name]
+    given = params.get("arguments") or {}
+    if not isinstance(given, dict):
+        raise ToolError("prompt arguments must be an object")
+    for spec in arguments:
+        if not isinstance(given.get(spec["name"]), str) or not given[spec["name"]].strip():
+            raise ToolError(f"missing prompt argument {spec['name']}")
+    return {"description": PROMPTS[name][0], "messages": [{"role": "user", "content": {"type": "text", "text": build(given)}}]}
+
+
+# ---- protocol ---------------------------------------------------------------------------------------
+
+def result_for(name, arguments):
+    if name not in HANDLERS or not isinstance(arguments, dict):
+        raise ToolError("unknown tool or malformed arguments")
+    outcome = HANDLERS[name](arguments)
+    return outcome if isinstance(outcome, tuple) else (outcome, None)
 
 
 def respond(message):
@@ -223,25 +578,42 @@ def respond(message):
     if ident is None:
         return None  # notifications such as notifications/initialized need no reply
     if method == "initialize":
-        requested = (message.get("params") or {}).get("protocolVersion")
+        params = message.get("params") or {}
+        capabilities = params.get("capabilities")
+        CLIENT["elicitation"] = isinstance(capabilities, dict) and isinstance(capabilities.get("elicitation"), dict)
+        requested = params.get("protocolVersion")
         return {"jsonrpc": "2.0", "id": ident, "result": {
             "protocolVersion": requested if isinstance(requested, str) else PROTOCOL,
-            "capabilities": {"tools": {}},
-            "serverInfo": {"name": "knowledgetrees", "version": "1"}}}
+            "capabilities": {"tools": {}, "prompts": {}},
+            "serverInfo": {"name": "knowledgetrees", "version": "2"},
+            "instructions": INSTRUCTIONS}}
     if method == "ping":
         return {"jsonrpc": "2.0", "id": ident, "result": {}}
     if method == "tools/list":
         return {"jsonrpc": "2.0", "id": ident, "result": {"tools": TOOLS}}
+    if method == "prompts/list":
+        return {"jsonrpc": "2.0", "id": ident, "result": {"prompts": [
+            {"name": name, "description": description, "arguments": arguments}
+            for name, (description, arguments, _build) in PROMPTS.items()]}}
+    if method == "prompts/get":
+        try:
+            return {"jsonrpc": "2.0", "id": ident, "result": prompt_get(message.get("params") or {})}
+        except ToolError as failure:
+            return {"jsonrpc": "2.0", "id": ident, "error": {"code": -32602, "message": str(failure)}}
     if method == "tools/call":
         params = message.get("params") or {}
-        arguments = params.get("arguments")
+        CURRENT.append(ident)
         try:
-            if params.get("name") not in {tool["name"] for tool in TOOLS} or not isinstance(arguments, dict):
-                raise ToolError("unknown tool or malformed arguments")
-            text, error = call(params["name"], arguments), False
+            text, structured = result_for(params.get("name"), params.get("arguments"))
+            error = False
         except ToolError as failure:
-            text, error = str(failure), True
-        return {"jsonrpc": "2.0", "id": ident, "result": {"content": [{"type": "text", "text": text}], "isError": error}}
+            text, structured, error = str(failure), None, True
+        finally:
+            CURRENT.remove(ident)
+        result = {"content": [{"type": "text", "text": text}], "isError": error}
+        if structured is not None:
+            result["structuredContent"] = structured
+        return {"jsonrpc": "2.0", "id": ident, "result": result}
     return {"jsonrpc": "2.0", "id": ident, "error": {"code": -32601, "message": f"method not found: {method}"}}
 
 
@@ -255,19 +627,13 @@ def main():
         if not directory.is_dir():
             raise NotADirectoryError(directory)
         os.chdir(directory)
-    for line in sys.stdin:
-        if not line.strip():
-            continue
-        try:
-            message = json.loads(line)
-            if not isinstance(message, dict):
-                raise ValueError("expected a JSON object")
-        except ValueError:
-            print(json.dumps({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "parse error"}}), flush=True)
-            continue
+    while True:
+        message = PENDING.popleft() if PENDING else read_message()
+        if message is None:
+            break
         reply = respond(message)
         if reply is not None:
-            print(json.dumps(reply), flush=True)
+            send(reply)
     return 0
 
 

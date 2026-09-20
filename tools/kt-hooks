@@ -119,8 +119,8 @@ def startup_context(payload, limit=None):
                    f"harness will inject from a hook (about {limit}).")
         if info.returncode:
             context += f" It exited {info.returncode}."
-        context += (" Run `kt info` directly now, unfiltered and untruncated, and consume its complete "
-                    "output through the final proof summary before other work.")
+        context += (" Run `kt info` directly now (or call the kt_info tool if you have it), unfiltered and untruncated, "
+                    "and consume its complete output through the final proof summary before other work.")
         return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
     context += output
     return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0

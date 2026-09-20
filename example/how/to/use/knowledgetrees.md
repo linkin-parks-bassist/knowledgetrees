@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:30:20+10:00"
+revised_at: "2026-09-20T15:51:44+10:00"
 name: "knowledgetrees"
 description: "Initialize once; use knowledge trees as the sole maintained knowledge source for their scope."
 ---
@@ -35,14 +35,16 @@ After substantive repository work, update `what/is/the/state.md` and `what/is/ne
 - `kt info` — print all startup knowledge, dictionary, then local (or, without a local tree, global) proof result; never truncate or filter it.
 - `kt QUESTION` — retrieve by natural question path; `kt how to _` lists a branch.
 - `kt find WORDS` — broad lexical search across accessible roots.
+- `kt grep PATTERN [-E] [-i] [-l]` — literal or regex text search across accessible roots.
 - `kt open ADDRESS` — print a leaf verbatim and emit its revision hash.
 - `kt dict [ROOT...]` — print useful final-two path segments.
 - `kt add QUESTION ANSWER [--expires-at TIME|--expires-every WINDOW] [--verifiable]` — create a leaf from its answer body.
 - `kt rewrite ADDRESS HASH BODY` — revision-checked answer-body replacement; options set or clear expiry and verifiability.
 - `kt rm` / `kt mv` / `kt combine` — revision-checked leaf maintenance.
 - `kt prove [--local|--global|--root ROOT] [TOKEN...]` — report green/yellow/brown state and run marked proofs.
+- `kt status` — list non-green leaves with reasons; read-only.
 - `kt roots` / `kt access` / `kt permissions` — inspect roots and access policy.
 
-Use root-qualified addresses returned by kt. Access-required output is not a lookup miss; do not bypass policy or approve access yourself. `force-private` always wins. Successful mutations are normally silent; exit status is authoritative.
+Use root-qualified addresses returned by kt. Access-required output is not a lookup miss; do not bypass policy or approve access yourself. If you have the `kt_access_request` tool, use it to ask the user through the harness; otherwise give them the exact `kt access` command. MCP `kt_*` tools mirror these commands (`kt_edit` for small edits). `force-private` always wins. Successful mutations are normally silent; exit status is authoritative.
 
 Focused procedures: `how/should/an/agent/traverse/a/knowledge/tree.md`, `how/to/add/knowledge/leaves.md`, `how/to/maintain/a/knowledge/tree.md`, and `how/should/legacy/documents/be/ingested/into/a/knowledge/tree.md`.

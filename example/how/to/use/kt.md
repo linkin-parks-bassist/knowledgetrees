@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T15:43:06+10:00"
+revised_at: "2026-09-20T15:51:45+10:00"
 ---
 
 ## Success output policy
@@ -140,7 +140,7 @@ The installer puts the script in the global `.tools/kt` and links `~/.local/bin/
 
 ## MCP tools
 
-When a harness has the knowledgetrees MCP server (installed by `./install`), the workflow is also available as tools with the same semantics: `kt_lookup` (`kt how to ...`), `kt_find`, `kt_read` (`kt open`, returning the revision), `kt_edit`, `kt_rewrite`, `kt_add`, `kt_dict`, `kt_roots`, and `kt_prove` (read-only unless `stamp` is set). Prefer `kt_edit` for small changes: it replaces exact text that must occur once in the answer body, against the revision from your read, and returns a diff. A miss or brown result comes back as data marked `(exit 1)`; only exit 2 or higher is a tool error. `info`, `init`, `check`, `rm`, `mv`, `combine`, `register`, `access`, and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
+When a harness has the knowledgetrees MCP server (installed by `./install`), the workflow is also available as tools with the same semantics: `kt_info`, `kt_lookup` (`kt how to ...`), `kt_find` (optional `json`), `kt_grep`, `kt_read` (`kt open`, returning the revision; `body_only`, `offset`, `limit`), `kt_edit`, `kt_rewrite`, `kt_undo`, `kt_add`, `kt_dict`, `kt_roots`, `kt_prove` (does not stamp unless `stamp` is set), `kt_status`, `kt_access_status`, and `kt_access_request`. Prefer `kt_edit` for changes: it replaces exact text that must occur once in the answer body, against the revision from your read (several edits apply atomically), and returns a diff; `kt_undo` reverses your latest edit of a leaf while it is unchanged. `kt_access_request` asks the user through the harness to approve a restricted root; the model cannot answer it, and a decline is final for the session. A miss or brown result comes back as data marked `(exit 1)`; only exit 2 or higher is a tool error. `check`, `init`, `rm`, `mv`, `combine`, `register`, `access`, and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
 
 ## Persistent access settings
 

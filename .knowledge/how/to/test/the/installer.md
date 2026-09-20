@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T15:43:07+10:00"
+revised_at: "2026-09-20T15:52:13+10:00"
 ---
 
 Run `python3 -B tests/test-install.py`. The test uses temporary target homes and
@@ -13,7 +13,7 @@ regression to per-task skill invocation in the installed procedure.
 Hook integration also checks safe Codex and Claude Code settings merges (unrelated keys, hooks, and file mode preserved), malformed-hook refusal before writes,
 dedicated Copilot startup and reminder event definitions, OpenCode adapter deployment, idempotent hook
 installation, and `--hooks-only` preservation of customized leaves, hardlinks, and
-permissions. Run `python3 -B tests/test-mcp.py` for the MCP server (protocol, exactly-one-match, stale revision, dry run, front-matter safety, inode preservation, lookup/find/add/dict/roots/prove behavior, option-injection guards, no-overwrite on add, misses reported as data) and see the installer checks for its four registrations, respect for existing entries, `--no-mcp`, and malformed-config refusal. Run `python3 -B tests/test-hooks.py` for shared protocol tests (including the Claude Code oversized-output instruction and the global-root fallback) and
+permissions. Run `python3 -B tests/test-mcp.py` for the MCP server (protocol, annotations, exactly-one-match, atomic multi-edit, stale revision, undo and its refusal after a hand edit, dry run, front-matter safety, inode preservation, lookup/find/grep/status/info/add/dict/roots/prove behavior, JSON find, ranged reads, prompts, option-injection guards, no-overwrite on add, misses reported as data, and the elicitation flow with a fake client: accept in three scopes, decline, cancel, invalid answer, no prompt for denied or force-private roots, no re-nagging, mid-prompt requests still served) and see the installer checks for its four registrations, respect for existing entries, `--no-mcp`, and malformed-config refusal. Run `python3 -B tests/test-hooks.py` for shared protocol tests (including the Claude Code oversized-output instruction and the global-root fallback) and
 `node tests/test-opencode-hooks.mjs` for the mocked OpenCode adapter. Neither runs
 models. Run `python3 -B tests/test-kt.py` for retrieval and weak-result exit checks and `python3 -B tests/test-grep-status.py` for `kt grep` (fixed string versus regex, case, files-only, context, limit, invalid pattern, restricted roots hidden), `kt status` (reasons, ordering, read-only, scoping), and the reusable `apply_access_decision` function.
 

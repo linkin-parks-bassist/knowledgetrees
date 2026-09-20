@@ -28,6 +28,47 @@ This repository contains:
 - selected planning and specification practices distilled into semantic leaves,
   without inheriting an inflexible skill-driven workflow.
 
+## Tools for agents
+
+Knowledge only compounds if using it is effortless, so `./install` gives Claude Code, Codex,
+OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 15 tools
+that mirror the `kt` workflow. Every one delegates to the CLI, so revision checks, access
+policy, and proofs behave identically.
+
+| Job | Tools |
+| --- | --- |
+| Find | `kt_lookup` (`how to …` questions), `kt_find` (ranked, optional JSON), `kt_grep` (literal or regex exact text), `kt_dict`, `kt_roots` |
+| Read | `kt_read` (body-only, paged), `kt_info` (startup knowledge) |
+| Change | `kt_edit` (text must match once; several edits apply atomically), `kt_rewrite`, `kt_undo`, `kt_add` |
+| Check | `kt_prove`, `kt_status` (every non-green leaf, with why) |
+| Access | `kt_access_status`, `kt_access_request` |
+
+Writes are checked against the revision the agent read, so a stale edit fails instead of
+clobbering. Read tools are annotated read-only, so harnesses can skip their prompts and keep
+them for writes. `rm`, `mv`, and policy commands are deliberately not exposed. Three prompts
+(`capture_review`, `garden`, `verify_leaf`) appear as slash commands where the client supports
+them.
+
+### Approving access without leaving the harness
+
+Access control used to mean opening another terminal. Now, when an agent hits a restricted root,
+it calls `kt_access_request` and **your harness asks you**, through MCP elicitation:
+
+1. The prompt names the root, the project directory, and the agent's reason.
+2. You choose *this directory*, *this directory and subdirectories*, *everywhere*, or decline.
+3. Only your answer saves the grant. The model never sees or answers the prompt, and it is not
+   asked again about a root you declined.
+
+Denied and force-private roots are never prompted for, and a client that cannot prompt gets the
+exact `kt access` command instead. This guards against an agent granting itself access to
+private material; it is not a sandbox. The CLI still needs your own terminal, and the real
+boundary is what your harness lets an agent run. Details, including safeguards and what is
+verified, are in [the design leaf](example/how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md).
+
+Registration merges into each harness's own MCP configuration (Claude Code via
+`claude mcp add`), leaves other servers and any existing `knowledgetrees` entry alone, and is
+skipped with `--no-mcp`. Restart each harness afterwards.
+
 ## Two roots, two jobs
 
 This repository intentionally contains two different semantic trees:
@@ -542,88 +583,35 @@ next unrelated tool call or completion—not in a later documentation pass.
 
 The installer adds reminders for **Claude Code, Codex, OpenCode, and GitHub Copilot CLI**:
 
-- After a detected tool failure, check `kt` for a known explanation or fix. Once
-  the cause is understood, capture the reusable diagnosis or rewrite its owner.
-- At task end, a failure or 10 completed tool calls requests one capture-review
-  follow-up. The agent checks existing owners and records missing discoveries,
-  or reports that there is nothing new to retain.
+- After a detected tool failure, check `kt` for a known fix; once the cause is understood,
+  capture the reusable diagnosis or rewrite its owner.
+- At task end, a failure or 10 completed tool calls requests one capture-review follow-up:
+  check existing owners, record missing discoveries, or report that there is nothing new.
 
-Claude Code uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, `PostToolUseFailure`, and `Stop`,
-merged into `~/.claude/settings.json`; Codex uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, and `Stop`; Copilot CLI uses `sessionStart`, `userPromptSubmitted`, `postToolUse`,
-`postToolUseFailure`, and `agentStop`; OpenCode uses a local plugin and
-`session.idle`. Existing unrelated hooks are preserved. In Codex, open `/hooks`
-and review/trust the installed definitions; new hooks are skipped until trusted.
-Fully quit and relaunch OpenCode to load its plugin. You can resume an existing
-session with `opencode --continue` or `opencode --session SESSION_ID`, including
-one started before installation. Hooks apply to subsequent activity; historical
-tool calls are not replayed. If you attach to a separate OpenCode server, restart
-that backend too. See the [OpenCode plugin](https://opencode.ai/docs/plugins/) and
-[CLI](https://opencode.ai/docs/cli/) documentation. Start a new Copilot CLI session.
+The same hooks run `kt info` at session start, resume, clear, and compaction and inject its
+complete output: the procedure, orientation, dictionary, and proof summary. With no local tree
+it falls back to the global root. Claude Code drops hook context past roughly 10,000
+characters, so above 9,500 bytes its hook sends an instruction to run `kt info` (or call the
+`kt_info` tool) instead, which is the usual case; `KT_HOOK_CONTEXT_LIMIT` tunes the threshold.
 
-OpenCode's plugin runs `kt info` when loading and supplies its complete output in system context. Compaction preserves the checked state.
-Focused lookup, capture, maintenance, and ingestion skills remain available as needed.
-The hook-run command loads the procedure from its canonical global owner and startup
-leaves from the exact local root; parent directories are not searched. Restart OpenCode after changing its
-plugin. The startup procedure and exact local orientation are injected by the hook.
+Claude Code uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, `PostToolUseFailure`, and
+`Stop` (merged into `~/.claude/settings.json`); Codex uses `SessionStart`, `UserPromptSubmit`,
+`PostToolUse`, and `Stop`; Copilot CLI uses `sessionStart`, `userPromptSubmitted`,
+`postToolUse`, `postToolUseFailure`, and `agentStop`; OpenCode uses a local plugin and
+`session.idle`. Unrelated hooks are preserved. Review new definitions with `/hooks` (Codex
+skips untrusted ones), fully restart OpenCode and start a new Copilot CLI session, and note
+that hooks apply to later activity only. Claude Code relies on its native failure event; Codex,
+OpenCode, and Copilot CLI also use diagnostic-line heuristics, so silent failures can be missed and
+printed examples can false-trigger. Commands are never rewritten.
 
-Claude Code's and Codex's native `SessionStart` hooks deliver the same `kt info` output
-on startup, resume, clear, and after compaction—not on every user prompt. Claude Code drops
-hook context past roughly 10,000 characters, so when the output is larger than 9,500 bytes its hook
-sends only an instruction to run `kt info` directly and read its complete output. This is the expected case in
-most trees; `KT_HOOK_CONTEXT_LIMIT` overrides the threshold.
-Copilot CLI's [`sessionStart` hook](https://docs.github.com/en/copilot/reference/hooks-reference) supplies the same output through `additionalContext`
-when a session starts or resumes.
-These lifecycle events refresh the injected info output.
-Review/trust the new `SessionStart` definition in `/hooks`, then start a fresh
-session to test startup behavior. The hook includes the canonical procedure and exact local orientation. A disabled
-or untrusted hook cannot supply it.
-
-Claude Code reports failed tool calls through `PostToolUseFailure`, so its adapter relies on that
-event and applies no text heuristics to successful results.
-
-Codex can send Bash output text without an exit code. The post-tool adapter prefers
-structured status and otherwise looks for common diagnostic lines, including compiler
-errors, Python tracebacks, shell failures, and build-tool errors. Explicit successful
-exit status takes precedence over expected error text. Commands stay unchanged;
-hook updates remove the former managed pre-tool wrapper while preserving unrelated
-hooks. Silent failures can be missed, and printed diagnostic examples can produce
-false positives. Iterate on the patterns during ordinary use.
-
-Set `KT_HOOK_MIN_CALLS` in the harness environment to change the activity threshold.
-Session-isolated counters and hashed event receipts live under
-`${XDG_STATE_HOME:-~/.local/state}/knowledgetrees`, not inside tree payloads.
-They store no raw commands, tool outputs, passwords, or knowledge contents.
-Reviews can consume an extra model turn. A one-shot guard prevents the review
-from recursively waking itself; the next ordinary user prompt starts a new cycle.
-These are reliability reminders, not semantic capture verification or a security
-boundary. Failures need detectable result status or diagnostic text; arbitrary prose errors cannot
-always be recognized. They do not grant permissions or automatically write leaves.
-
-Existing installations can update the CLI, hooks, and MCP server without replacing their leaves:
-
-```sh
-./install --hooks-only --force
-```
-
-Preview with `--dry-run`. Use `--no-hooks` during installation to skip hook setup.
-The handler and OpenCode adapter need only Python 3 and the harness's existing JS
-runtime. See [the hook procedure](example/how/to/use/knowledgetree/hooks.md) for
-event contracts and limitations. This integration targets local Copilot CLI;
-Copilot cloud jobs and VS Code need their own environment/distribution setup.
-
-### Structured edits over MCP
-
-The installer also deploys `~/.knowledge/.tools/kt-mcp`, a small stdio MCP server that
-exposes the workflow as tools to Claude Code, Codex, OpenCode, and Copilot CLI:
-`kt_lookup` (natural questions like `how to ...`), `kt_find`, `kt_read`, `kt_edit`,
-`kt_rewrite`, `kt_add`, `kt_dict`, `kt_roots`, and `kt_prove` (read-only unless asked to
-stamp). `kt_edit` replaces text that must match exactly once, against the revision
-you read; a stale revision, ambiguous match, or restricted root writes nothing. Every
-write goes through the CLI, so revision, access, locking, and proof semantics stay
-there. Destructive and policy commands (`rm`, `mv`, `combine`, `register`, `access`)
-are not exposed. See [the design leaf](example/how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md). Registration merges into each harness's own MCP configuration (Claude Code
-via `claude mcp add`), leaves other servers and any existing `knowledgetrees` entry
-alone, and is skipped with `--no-mcp`. Restart each harness afterwards.
+`KT_HOOK_MIN_CALLS` changes the activity threshold. Session-isolated counters and hashed receipts
+live under `${XDG_STATE_HOME:-~/.local/state}/knowledgetrees` and store no commands, outputs, or
+knowledge. Reviews can cost an extra model turn; a one-shot guard prevents loops. These are
+reliability reminders, not capture verification or a security boundary, and they grant no
+permissions. Update in place with `./install --hooks-only --force` (`--dry-run` previews;
+`--no-hooks` and `--no-mcp` skip parts). The handler needs only Python 3; see
+[the hook procedure](example/how/to/use/knowledgetree/hooks.md) for contracts and limits. This
+targets local Copilot CLI, not its cloud jobs or VS Code.
 
 ### Why did skills appear after installation?
 
