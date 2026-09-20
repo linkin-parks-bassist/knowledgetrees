@@ -24,15 +24,7 @@ try {
   const prompts = [];
   const plugin = await KnowledgeTreesPlugin({ directory: temporary,
     client: { session: { promptAsync: async (value) => { prompts.push(value); return {}; } } } });
-  const before = plugin["tool.execute.before"];
-  await assert.rejects(() => before({ tool: "bash" }, { args: { command: "kt boot 2>&1 | tail -5" } }), /Read kt boot\/init output directly/);
-  await assert.rejects(() => before({ tool: "bash" }, { args: { command: "echo ready; kt init | head -40" } }), /Read kt boot\/init output directly/);
-  await before({ tool: "bash" }, { args: { command: "git diff --stat | tail -30" } });
-  await before({ tool: "bash" }, { args: { command: "grep pattern file | head -40" } });
-  await before({ tool: "bash" }, { args: { command: "kt open what/is/next.md | head -40" } });
-  await before({ tool: "bash" }, { args: { command: "kt open what/is/next.md" } });
-  await before({ tool: "bash" }, { args: { command: "kt find foo || true" } });
-  await before({ tool: "bash" }, { args: { command: "git diff --stat || true" } });
+  assert.equal(plugin["tool.execute.before"], undefined);
   const model = { providerID: "local", modelID: "test-model" };
   const startup = { system: ["existing harness instructions"] };
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);

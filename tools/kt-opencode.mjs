@@ -4,7 +4,6 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 const BOOTSTRAP_MARKER = "Knowledge-tree startup:";
-const FILTERED_KT_BOOT = /(?:^|[;&\n])\s*kt\s+(?:boot|init)\b[^\n;]*?\s+\|(?!\|)/m;
 
 export const KnowledgeTreesPlugin = async ({ client, directory }) => {
   const pending = new Map();
@@ -35,13 +34,6 @@ export const KnowledgeTreesPlugin = async ({ client, directory }) => {
     if (result.additionalContext) pending.set(session, result.additionalContext);
   };
   return {
-    "tool.execute.before": async (input, output) => {
-      const command = output.args?.command;
-      if (input.tool !== "bash" || typeof command !== "string") return;
-      if (FILTERED_KT_BOOT.test(command)) {
-        throw new Error("Read kt boot/init output directly and completely; retry without the pipe.");
-      }
-    },
     "chat.message": async (input, output) => {
       const agent = input.agent || output.message?.agent;
       const model = input.model || output.message?.model;
