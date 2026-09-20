@@ -88,7 +88,7 @@ def main() -> None:
         unrelated_hook = {"hooks": [{"type": "command", "command": "existing-review-command"}]}
         codex_hooks.write_text(json.dumps({"description": "existing hooks", "hooks": {"Stop": [unrelated_hook], "PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": f"python3 {target_home}/.knowledge/.tools/kt-hooks codex before"}, {"type": "command", "command": "unrelated-pre-check"}]}]}}))
         instructions = target_home / "user-instructions.md"
-        instructions.write_text("# Existing user instructions\n")
+        instructions.write_text("# Existing user instructions\n\n<!-- BEGIN KNOWLEDGETREES BOOTSTRAP -->\nLegacy bootstrap.\n<!-- END KNOWLEDGETREES BOOTSTRAP -->\n")
         agents_path = target_home / "AGENTS.md"
         agents_path.symlink_to(instructions.name)
 
@@ -112,7 +112,8 @@ def main() -> None:
         assert os.access(knowledge / ".tools/kt-hooks", os.X_OK)
         assert (target_home / ".config/opencode/plugins/knowledgetrees.js").read_bytes() == (REPOSITORY / "tools/kt-opencode.mjs").read_bytes()
         copilot_hooks = json.loads((target_home / ".copilot/hooks/knowledgetrees.json").read_text())
-        assert set(copilot_hooks["hooks"]) == {"userPromptSubmitted", "postToolUse", "postToolUseFailure", "agentStop"}
+        assert set(copilot_hooks["hooks"]) == {"sessionStart", "userPromptSubmitted", "postToolUse", "postToolUseFailure", "agentStop"}
+        assert copilot_hooks["hooks"]["sessionStart"][0]["args"][-2:] == ["copilot", "start"]
         assert copilot_hooks["hooks"]["agentStop"][0]["args"][-2:] == ["copilot", "stop"]
         canonical = knowledge / "how" / "to" / "use" / "knowledgetrees.md"
         shared_skill = target_home / ".agents" / "skills" / "knowledgetrees" / "SKILL.md"
@@ -146,15 +147,7 @@ def main() -> None:
 
         assert agents_path.is_symlink()
         agents = agents_path.read_text()
-        assert "Existing user instructions" in agents
-        assert agents.count("BEGIN KNOWLEDGETREES BOOTSTRAP") == 1
-        assert "startup hook runs `kt boot`" in agents
-        assert "New question -> `kt` first" in agents
-        assert "determine whether a leaf exists" in agents
-        assert "kt rewrite ADDRESS HASH BODY" in agents
-        assert "Known stale or contradictory active knowledge takes priority" in agents
-        assert "no brown-level failure was detected" in agents
-        assert "first move of every task" not in agents
+        assert agents == "# Existing user instructions\n"
         config = codex_config.read_text()
         assert 'model = "example-model"' in config
         assert config.count(str(codex_skill)) == 1
@@ -199,9 +192,7 @@ def main() -> None:
         assert "[n/Y]" not in rerun.stdout
         assert orientation.read_text().startswith("---\nstatus: green\n")
         assert orientation.read_text().endswith("Local environment orientation.\n")
-        assert agents_path.read_text().count(
-            "BEGIN KNOWLEDGETREES BOOTSTRAP"
-        ) == 1
+        assert agents_path.read_text() == "# Existing user instructions\n"
         assert codex_config.read_text().count(str(codex_skill)) == 1
         for name, relative in installed_skills.items():
             assert (target_home / ".agents/skills" / name / "SKILL.md").samefile(knowledge / relative)
@@ -253,6 +244,12 @@ def main() -> None:
             env=proof_environment,
             check=True,
         )
+        agents_path.unlink()
+        agents_path.write_text("<!-- BEGIN KNOWLEDGETREES BOOTSTRAP -->\nLegacy bootstrap.\n<!-- END KNOWLEDGETREES BOOTSTRAP -->\n")
+        run(*home_arguments)
+        assert not agents_path.exists()
+        run(*home_arguments)
+        assert not agents_path.exists()
 
     print("installer integration checks passed")
 

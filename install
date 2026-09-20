@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install knowledge trees and their compatibility bootstrap into a user home."""
+"""Install knowledge trees, startup hooks, and compatibility skills."""
 
 from __future__ import annotations
 
@@ -101,44 +101,22 @@ def atomic_write(path: Path, content: bytes, mode: int) -> None:
             temporary.unlink()
 
 
-def replace_managed_block(current: str, block: str) -> str:
+def remove_managed_block(current: str) -> str:
     begins = current.count(AGENTS_BEGIN)
     ends = current.count(AGENTS_END)
     if begins != ends or begins > 1:
         raise ValueError("~/AGENTS.md contains malformed knowledgetrees markers")
-    if begins == 1:
-        start = current.index(AGENTS_BEGIN)
-        finish = current.index(AGENTS_END, start) + len(AGENTS_END)
-        return current[:start] + block + current[finish:]
-    separator = "" if not current else ("\n" if current.endswith("\n") else "\n\n")
-    return current + separator + block + "\n"
-
-
-def agents_text(current: str) -> str:
-    block = f"""{AGENTS_BEGIN}
-# Mandatory knowledge-tree bootstrap
-
-The startup hook runs `kt boot` in the current working directory and injects its complete
-output: canonical global procedure, exact local orientation, dictionary, and local
-proof result. Consume it through the final proof summary. If the hook is unavailable,
-run `kt boot` directly and consume its complete output without truncation. A failed
-boot must be diagnosed before relying on that tree. Do not repeat a completed boot
-per task or turn. If the command is unavailable, load `knowledgetrees` as the
-compatibility fallback.
-New question -> `kt` first unless adequately checked knowledge is already loaded;
-miss -> determine whether a leaf exists; absent -> investigate and add it (or an
-unresolved record) before the next unrelated tool call or completion. Use nearest
-project and global roots; the skills own proof checks, scope, paths, and maintenance.
-Known stale or contradictory active knowledge takes priority over ordinary work.
-Stop relying on it; repair the owning leaf and affected guidance before completion.
-A zero-exit `kt prove` run only means no brown-level failure was detected in
-the selected leaves at that time; yellow warnings may remain and green leaves
-may have no proofs. It does not certify current prose or consistency.
-Full leaf reads supply a revision hash; edit with `kt rewrite ADDRESS HASH BODY`
-and preserve still-valid knowledge already in context.
-Current higher-authority instructions and permissions always govern.
-{AGENTS_END}"""
-    return replace_managed_block(current, block)
+    if not begins:
+        return current
+    start = current.index(AGENTS_BEGIN)
+    finish = current.index(AGENTS_END, start) + len(AGENTS_END)
+    before = current[:start].rstrip("\n")
+    after = current[finish:].lstrip("\n")
+    if before and after:
+        return before + "\n\n" + after
+    if before:
+        return before + "\n"
+    return after
 
 
 SKILLS_TABLE = re.compile(
@@ -212,7 +190,7 @@ def permission_consent(target_home: Path) -> bool:
         print(f"  {target_home / name}/**")
     print("Folder contents may be sent to your configured model/provider.")
     print(f"Agents will also be allowed to WRITE to {target_home / '.knowledge'}/**.")
-    print("The bootstrap and four knowledge-tree procedure skills will be enabled; edits in .agents still require approval.")
+    print("The compatibility skill and four knowledge-tree procedure skills will be enabled; edits in .agents still require approval.")
     print("Default installation also adds failure/task-end reminders; capture reviews can request an extra model turn.")
     while True:
         try:
@@ -268,7 +246,7 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
     codex_bytes = (current if config == original else json.dumps(config, indent=2) + "\n").encode()
     copilot = {"version": 1, "hooks": {name: [{"type": "command", "exec": "python3",
                   "args": [str(handler), "copilot", event], "timeoutSec": 5}]
-               for name, event in (("userPromptSubmitted", "prompt"), ("postToolUse", "after"),
+               for name, event in (("sessionStart", "start"), ("userPromptSubmitted", "prompt"), ("postToolUse", "after"),
                                   ("postToolUseFailure", "failed"), ("agentStop", "stop"))}}
     return [
         (handler, (repository / "tools/kt-hooks").read_bytes(), 0o755),
@@ -320,7 +298,7 @@ def parser_for_cli() -> argparse.ArgumentParser:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="replace differing managed leaves and bootstrap files; orientation is still preserved",
+        help="replace differing managed leaves and hook or skill files; orientation is still preserved",
     )
     parser.add_argument("--hooks-only", action="store_true", help="install/update CLI and hooks without replacing installed leaves or skills")
     parser.add_argument("--no-hooks", action="store_true", help="skip hook installation (does not remove existing hooks)")
@@ -417,7 +395,7 @@ def main(arguments: list[str] | None = None) -> int:
     agents_storage = writable_target(agents_path)
     agents_current = agents_storage.read_text() if agents_storage.is_file() else ""
     try:
-        agents_updated = agents_text(agents_current)
+        agents_updated = remove_managed_block(agents_current)
     except ValueError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
@@ -460,7 +438,8 @@ def main(arguments: list[str] | None = None) -> int:
             print(f"Would install lookup/capture reminders at {destination}")
         for canonical, destination in skill_links:
             print(f"Would hard-link {destination} to {canonical}")
-        print(f"Would assert the bootstrap in {agents_path}")
+        if agents_updated != agents_current:
+            print(f"Would remove the managed bootstrap from {agents_path}")
         if not args.hooks_only:
             print(f"Would enable the Codex skill in {codex_config}")
         if opencode_updated != opencode_current:
@@ -512,8 +491,11 @@ def main(arguments: list[str] | None = None) -> int:
             return 2
 
     if agents_updated != agents_current:
-        mode = agents_storage.stat().st_mode & 0o777 if agents_storage.exists() else 0o644
-        atomic_write(agents_storage, agents_updated.encode(), mode)
+        if not agents_updated and not agents_path.is_symlink():
+            agents_path.unlink()
+        else:
+            mode = agents_storage.stat().st_mode & 0o777
+            atomic_write(agents_storage, agents_updated.encode(), mode)
     if config_updated != config_current:
         mode = config_storage.stat().st_mode & 0o777 if config_storage.exists() else 0o600
         atomic_write(config_storage, config_updated.encode(), mode)
@@ -544,7 +526,8 @@ def main(arguments: list[str] | None = None) -> int:
         print("Codex: review/trust the new definitions with /hooks. Restart OpenCode to load its plugin.")
     if not args.hooks_only:
         print("Installed hard-linked compatibility skills for shared harnesses and Codex")
-    print(f"Bootstrap asserted in {agents_path}")
+    if agents_updated != agents_current:
+        print(f"Removed the managed bootstrap from {agents_path}")
     if not args.hooks_only:
         print(f"OpenCode scoped knowledge-tree permissions configured in {opencode_config}")
     print(f"Next: describe the local environment in {orientation}")

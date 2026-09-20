@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:33:14+10:00"
+revised_at: "2026-09-20T10:52:39+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -52,7 +52,7 @@ metadata colors do not establish correctness of unproved prose.
 
 A behavior or policy change is complete only after a semantic consistency review
 of affected code and CLI behavior against local/global owners, public example,
-README, AGENTS instructions and installer templates, and installed guidance.
+README, startup hook payloads and installer templates, and installed guidance.
 Generated copies must be refreshed and checked for drift. Tests and `kt prove`
 are necessary checks, not substitutes for reading and reconciling prose.
 
@@ -100,7 +100,7 @@ owner or an investigated new or unresolved answer before unrelated work resumes.
 
 The installer merges the public example guidance into `~/.knowledge` without
 installing the example spine, preserves existing orientation, installs the CLI and
-hooks, asserts the home AGENTS bootstrap, and hardlinks skill entry points to the
+hooks, removes its obsolete home AGENTS bootstrap, and hardlinks skill entry points to the
 canonical installed procedure leaves. It preserves unrelated configuration.
 OpenCode permission changes require informed `[n/Y]` consent before writes.
 Codex, OpenCode, and Copilot hooks provide startup, failure, and one-shot

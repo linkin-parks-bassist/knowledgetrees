@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:19:40+10:00"
+revised_at: "2026-09-20T10:52:38+10:00"
 ---
 
 Install failure-triggered lookup/capture reminders and one-shot task-end capture
@@ -85,12 +85,10 @@ current Codex live stdout-only payload shape and the documented heuristic tradeo
 
 ## Startup initialization
 
-Codex SessionStart and OpenCode system-context startup run `kt boot` in the exact
-working directory and inject its complete output: canonical global procedure,
-exact local orientation, dictionary, and local proof result. A failed boot is
-reported in context. OpenCode still requires restart after installed plugin changes.
+Codex SessionStart, OpenCode system-context startup, and Copilot CLI sessionStart run `kt boot` in the exact working directory and inject its complete output: canonical global procedure,
+exact local orientation, dictionary, and local proof result. A failed boot is reported in context. OpenCode and Copilot CLI require restart after installed hook changes. The handler protocol tests cover Copilot startup output; live Copilot model reception has not been observed. [GitHub Copilot hook reference](https://docs.github.com/en/copilot/reference/hooks-reference).
 
-Both harnesses share diagnostic failure detection and Stop/idle bookkeeping.
+The harnesses share diagnostic failure detection and Stop/idle bookkeeping.
 Startup uses the exact current-directory local root for orientation and normal
 access policy for the dictionary; it never searches parent directories. The
 injected contents follow that same scope and access boundary.

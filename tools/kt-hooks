@@ -99,7 +99,7 @@ def state_database():
 
 def bootstrap_context(payload):
     source = payload.get("source")
-    if source not in ("startup", "resume", "clear", "compact"):
+    if source not in ("startup", "resume", "new", "clear", "compact"):
         return {}, 0
     cli = Path(os.environ.get("KT_BOOT_CLI", str(Path(__file__).resolve().with_name("kt"))))
     cwd = payload.get("cwd") or os.getcwd()
@@ -114,10 +114,8 @@ def bootstrap_context(payload):
 
 def handle(harness, event, payload):
     if event == "start":
-        if harness not in ("codex", "opencode"):
-            return {}, 0
         result, code = bootstrap_context(payload)
-        if harness == "opencode" and result:
+        if harness in ("opencode", "copilot") and result:
             return {"additionalContext": result["hookSpecificOutput"]["additionalContext"]}, code
         return result, code
     if event == "before":

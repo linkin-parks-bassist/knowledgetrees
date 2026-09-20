@@ -459,8 +459,10 @@ Run the installer from a clone:
 
 The installer is knowledge-first. It safely merges the reusable leaves from
 `example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
-kt CLI with built-in proof verification under `~/.knowledge/.tools/`, and adds the
-mandatory once-per-session bootstrap to `~/AGENTS.md`. The loaded procedure remains
+kt CLI with built-in proof verification under `~/.knowledge/.tools/`, and installs
+startup hooks that inject `kt boot` for Codex, OpenCode, and Copilot CLI. It removes
+its old managed block from `~/AGENTS.md` and deletes that file if nothing else is
+in it. The loaded procedure remains
 active across messages and tasks; it is not reinvoked on every turn. The installer
 refuses to overwrite differing knowledge unless `--force` is supplied explicitly.
 Preview its work with `./install --dry-run`.
@@ -540,7 +542,7 @@ The installer adds reminders for **Codex, OpenCode, and GitHub Copilot CLI**:
   follow-up. The agent checks existing owners and records missing discoveries,
   or reports that there is nothing new to retain.
 
-Codex uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, and `Stop`; Copilot CLI uses `postToolUse`,
+Codex uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, and `Stop`; Copilot CLI uses `sessionStart`, `userPromptSubmitted`, `postToolUse`,
 `postToolUseFailure`, and `agentStop`; OpenCode uses a local plugin and
 `session.idle`. Existing unrelated hooks are preserved. In Codex, open `/hooks`
 and review/trust the installed definitions; new hooks are skipped until trusted.
@@ -559,6 +561,8 @@ plugin. The startup procedure and exact local orientation are injected by the ho
 
 Codex's native `SessionStart` hook delivers the same complete `kt boot` output
 on startup, resume, clear, and after compaction—not on every user prompt.
+Copilot CLI's [`sessionStart` hook](https://docs.github.com/en/copilot/reference/hooks-reference) supplies the same output through `additionalContext`
+when a session starts or resumes.
 These lifecycle events refresh the injected boot output.
 Review/trust the new `SessionStart` definition in `/hooks`, then start a fresh
 session to test startup behavior. The hook includes the canonical procedure and exact local orientation. A disabled
@@ -597,9 +601,9 @@ Copilot cloud jobs and VS Code need their own environment/distribution setup.
 ### Why did skills appear after installation?
 
 After installation, Codex and other harnesses may appear to contain a
-`knowledgetrees` skill. Current agent harnesses still require a skill-shaped entry
-point to start the procedure, so the installer creates one as compatibility
-plumbing—not as another knowledge store. After installing the canonical procedure at
+`knowledgetrees` skill. Startup hooks deliver the procedure; the installer retains
+a skill-shaped entry as compatibility plumbing and an explicit fallback, not as
+another knowledge store. After installing the canonical procedure at
 `~/.knowledge/how/to/use/knowledgetrees.md`, the installer creates
 `~/.agents/skills/knowledgetrees/SKILL.md` and
 `~/.codex/skills/knowledgetrees/SKILL.md` as hard links to that same file. All three
@@ -613,7 +617,7 @@ use them, while the bootstrap keeps its kt-first and miss-resolution rule inline
 and remains once per fresh session. Detailed knowledge is still stored and
 maintained in the tree.
 
-Quit and restart OpenCode and Codex after installation or an upgrade so their
+Quit and restart OpenCode, Codex, and Copilot CLI after installation or an upgrade so their
 startup-loaded skill catalogs refresh; an already-running conversation may retain
 older descriptions or procedure content.
 
@@ -678,7 +682,8 @@ The installer is covered by an isolated-home integration test. It verifies that:
 
 - reusable knowledge is installed without importing the example's illustrative
   spec, plan, state, or next-action leaves;
-- an existing orientation, `AGENTS.md`, and Codex configuration are preserved;
+- an existing orientation, unrelated `AGENTS.md` content, and Codex configuration
+  are preserved while the legacy managed block is removed;
 - repeated installation is idempotent;
 - differing knowledge is rejected before overwrite unless `--force` is explicit;
 - built-in verification through `kt prove` runs successfully; and

@@ -33,8 +33,9 @@ def main():
         with patch.dict(os.environ, {"KT_BOOT_CLI": str(REPOSITORY / "tools/kt"),
                                   "KT_GLOBAL_ROOT": str(global_root),
                                   "KT_CONFIG": str(root / "config.json")}):
-            for harness in ("codex", "opencode"):
-                for source in ("startup", "resume", "clear", "compact"):
+            for harness in ("codex", "opencode", "copilot"):
+                sources = ("startup", "resume", "new") if harness == "copilot" else ("startup", "resume", "clear", "compact")
+                for source in sources:
                     result, code = handle(harness, "start", {"source": source, "cwd": str(project)})
                     assert code == 0
                     context = (result["hookSpecificOutput"]["additionalContext"]
@@ -45,7 +46,7 @@ def main():
             failed_boot, _ = handle("codex", "start", {"source": "startup", "cwd": str(root)})
             assert "Boot failed" in failed_boot["hookSpecificOutput"]["additionalContext"]
     assert handle("codex", "start", {"source": "unexpected"}) == ({}, 0)
-    assert handle("copilot", "start", {"source": "startup"}) == ({}, 0)
+    assert handle("copilot", "start", {"source": "unexpected"}) == ({}, 0)
     failure = runpy.run_path(str(HANDLER))["failed"]
     for mode in ("default", "bypassPermissions", "plan", None):
         assert handle("codex", "before", {"permission_mode": mode}) == ({}, 0)

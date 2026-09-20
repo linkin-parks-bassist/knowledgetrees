@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:30:20+10:00"
+revised_at: "2026-09-20T10:52:38+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
 ---
@@ -26,8 +26,7 @@ relies on an author-reviewed coverage assertion and faithful predicates.
 
 After a behavior or policy change, compare the implemented behavior and CLI help
 with every affected knowledge owner and presentation: local/project and global
-leaves, public example, README, repository AGENTS instructions, installer-generated
-bootstrap, and installed copies when those surfaces apply. Read the relevant
+leaves, public example, README, startup hook payloads, and installed copies when those surfaces apply. Read the relevant
 passages and compare meaning, not just matching strings. Refresh generated and
 installed guidance, run relevant tests and proof checks, and check instruction
 sync. Do not report completion while a known contradiction or stale instruction

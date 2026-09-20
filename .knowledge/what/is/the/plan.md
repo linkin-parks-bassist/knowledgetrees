@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:33:14+10:00"
+revised_at: "2026-09-20T10:52:39+10:00"
 ---
 
 Keep the CLI, README, public `example/` guidance, installed global guidance,
@@ -12,7 +12,7 @@ For each change:
    owner, check current evidence, and preserve still-valid content.
 2. Change the CLI and focused regression coverage together.
 3. Compare behavior and CLI help with affected local/global leaves, README,
-   AGENTS source and generated templates, public example, and installed guidance.
+   startup hook payloads, public example, and installed guidance.
    Reconcile the meaning of each claim, then run the Python and OpenCode suites
    plus `git diff --check`.
 4. Run `kt prove --no-stamp` across affected roots. Inspect brown leaves and

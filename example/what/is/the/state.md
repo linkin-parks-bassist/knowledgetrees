@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-18T12:22:12+10:00"
+revised_at: "2026-09-20T10:51:44+10:00"
 ---
 
 The visible example contains the complete curated generic knowledge-tree corpus and
@@ -11,10 +11,9 @@ explains that current harness skills are hard-linked bootstraps into the canonic
 installed knowledge. A deliberately terse, metadata-complete leaf answers how many
 Dedekind-complete ordered fields there are.
 
-The compatibility skill is invoked once when a fresh agent session bootstraps. It
-is not reinvoked for each message, turn, or task after the procedure is loaded.
+Startup hooks deliver the complete `kt boot` output once for a fresh agent session. The compatibility skill remains an available fallback if hook delivery is unavailable; it is not invoked for each task after the procedure is loaded.
 
-The kt-first rule and mandatory miss resolution remain inline in the compact bootstrap. Retrieval, capture,
+The kt-first rule and mandatory miss resolution remain in the hook-delivered canonical procedure. Retrieval, capture,
 maintenance, and ingestion detail have direct semantic owners. Installation exposes
 those owners as four focused, enabled, hardlinked skills alongside the bootstrap,
 so their task triggers are advertised directly in the harness. Installation seeds
