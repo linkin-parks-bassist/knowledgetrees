@@ -176,6 +176,12 @@ Comments can be stored separately to code, and retrieved as needed - keeping the
 codebase itself compact, saving precious tokens, while (arguably) leaving the code
 even *more* accessible... to agents.
 
+## Agent testimonials
+
+> Thought: 5.6s
+>
+> The knowledge tree has very accurate context.
+
 ## What makes it different
 
 This is not a search system bolted onto documentation. The tree itself is the
