@@ -10,6 +10,10 @@ unresolved record) before the next unrelated tool call or completion. The skills
 own proof checks, scope, paths, and maintenance. Higher-authority instructions and
 permissions always govern.
 
+Known stale or contradictory active knowledge takes priority over ordinary work.
+Stop relying on it; repair the owning leaf and affected guidance before completion.
+A green status or passing proof does not certify unproved prose.
+
 Full leaf reads supply a revision hash; edit with `kt rewrite ADDRESS HASH BODY`
 and preserve still-valid knowledge already in context.
 

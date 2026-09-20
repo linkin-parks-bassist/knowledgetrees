@@ -1,7 +1,8 @@
 ---
 status: green
-revised_at: "2026-09-14T22:50:13+10:00"
+revised_at: "2026-09-20T10:17:12+10:00"
 ---
 
-From this repository directory, run python3 sync-kt-instructions.py after changing or pulling core kt guidance. This intentionally untracked, Git-excluded local script force-refreshes fourteen curated core instruction leaves from example/ into the installed global tree, rendering public example scope as personal global scope just like the installer, and relinks both harnesses five skill entry points to their installed canonical leaves. Use --check to detect drift without writes. Successful proof timestamp refreshes
-are normalized during comparison, so they do not appear as guidance drift. Replaced content is backed up under ~/.local/state/knowledgetrees/instruction-backups/. The repository and installed leaves no longer share inodes, so installed rewrites cannot change public source. Personal leaves, orientations and project spines are untouched. Executables and hooks still require installer deployment. Updates are manual, not automatic; run the script when repo guidance changes. Restart clients or start fresh sessions to refresh loaded instructions.
+From this repository directory, run `python3 sync-kt-instructions.py --check` to compare curated source guidance with installed global leaves and skill hardlinks. Run `python3 sync-kt-instructions.py` to refresh them after source guidance changes. The intentionally untracked, Git-excluded script defines its current leaf and skill sets in `LEAVES` and `SKILLS`; do not maintain a separate count here. It renders public example scope as personal global scope like the installer and normalizes successful proof timestamps during comparison.
+
+Replaced content is backed up under `~/.local/state/knowledgetrees/instruction-backups/`. Repository and installed leaves have separate inodes; installed rewrites cannot change public source. Personal leaves, orientations, and project spines are untouched. Executables, generated AGENTS bootstrap, and hooks still require installer deployment. Updates are manual; refresh after repository guidance changes, then recheck drift and relevant proofs. Restart clients or start fresh sessions to refresh loaded instructions.

@@ -215,6 +215,11 @@ When an agent has to determine something, it asks whether a future agent would h
 to rediscover the answer. If so, verifying and preserving it is part of finishing
 the work—not a documentation chore deferred until later.
 
+Correctness comes first. If current evidence contradicts an active leaf, repair its
+owning answer and affected guidance before relying on the tree or finishing the
+task. A green proof result checks the declared predicates and freshness; it cannot
+certify unproved prose or detect a contradiction between two leaves.
+
 ### Concrete facts can reconnect themselves to reality
 
 Agents are encouraged to attach small executable proofs to factual claims that are
@@ -373,7 +378,7 @@ knowledgetree makes maintenance part of normal agent work.
 | --- | --- |
 | Agent searches documents | Agent follows the semantic tree to the current answer |
 | Agent discovers a missing fact | Agent verifies and records it at the right scope |
-| Documents become stale | Leaves carry provenance, review triggers, and eligible proofs |
+| Documents become stale | Agents repair affected owners as soon as evidence changes; proofs and expiry catch only some drift |
 | Documentation is linear | Knowledge is addressed by question and assembled on demand |
 | One giant guide | Focused answers plus deliberate orientation and spine projections |
 | Skills are separate blobs | Procedures share a namespace with their facts and policies |
@@ -596,11 +601,12 @@ older descriptions or procedure content.
    `why/`, `does/`, and `is/` branches.
 2. For repositories, create current-truth spine leaves for the spec, plan, state,
    and next action.
-3. Project frequently needed answers into paths that read as natural-language
+3. Teach agents to repair stale or contradictory active answers before relying on
+   them, including affected guidance and installed copies.
+4. Project frequently needed answers into paths that read as natural-language
    questions.
-4. Teach agents to retrieve from and continuously maintain the tree.
 5. Add proofs only where a concrete fact is cheap and safe to check.
-6. Garden ambiguous branches, stale answers, duplication, and fragmentation when
+6. Garden ambiguous branches, duplication, and fragmentation when
    actual use exposes friction.
 
 ## Common questions

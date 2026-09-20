@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:09:06+10:00"
+revised_at: "2026-09-20T10:15:42+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
 ---
@@ -9,6 +9,28 @@ Maintain current truth in place within current authority. Knowledge records fact
 and procedure; it neither grants execution permission nor resurrects superseded
 requirements. Keep one clear canonical owner per answer across composed directory
 scopes, not parallel monolithic documentation authorities.
+
+## Current truth first
+
+Treat known stale, poisoned, or contradictory active knowledge as an immediate
+repair task, even when its metadata says green or its proofs pass. Stop relying
+on the affected answer. Check current source evidence, read the full owning leaf,
+and rewrite it before unrelated work; preserve its still-valid claims. Correct
+other active leaves and guidance that repeat the same error. If evidence cannot
+settle the answer, remove the unsupported claim and record the blocker and next
+check in a truthful unresolved answer. Surface any remaining unsafe reliance.
+Proofs detect only the claims they actually cover; they cannot certify prose or
+consistency between leaves.
+
+After a behavior or policy change, compare the implemented behavior and CLI help
+with every affected knowledge owner and presentation: local/project and global
+leaves, public example, README, repository AGENTS instructions, installer-generated
+bootstrap, and installed copies when those surfaces apply. Read the relevant
+passages and compare meaning, not just matching strings. Refresh generated and
+installed guidance, run relevant tests and proof checks, and check instruction
+sync. Do not report completion while a known contradiction or stale instruction
+remains. This is an affected-scope change gate, not a startup inventory of every
+accessible root.
 
 ## Establish and orient active roots
 
@@ -133,8 +155,9 @@ Ingest redundant documents section by section under
 after verified answer coverage and authorization. Broad enumeration is a last-resort
 retrieval diagnostic, or a bounded authorized migration audit, not routine orientation.
 
-Before finishing, check that reusable discoveries were captured, relevant predicates
-passed, every encountered `kt` miss was classified as existing or absent knowledge,
+Before finishing, complete the current-truth consistency gate for affected
+behavior and guidance. Check that reusable discoveries were captured, relevant
+predicates passed, every encountered `kt` miss was classified as existing or absent knowledge,
 and missing leaves were added (or left with truthful unresolved records/scoped handoffs).
 Also check that scope and provenance are truthful, roots are canonical, payloads are leaves,
 and a representative sentence-derived route works. Do not turn gardening judgments,

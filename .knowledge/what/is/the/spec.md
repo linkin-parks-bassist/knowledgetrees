@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:59:09+10:00"
+revised_at: "2026-09-20T10:16:08+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -36,6 +36,21 @@ An unflagged brown leaf needs an independent `kt check` after repair. A reviewed
 proof runs and passes with valid structure, even after a prior failure or expiry.
 Missing or failed proofs make it brown. `--no-stamp` is read-only. Proof and status
 writes preserve hardlink identity and avoid steady-state timestamp churn.
+
+## Current-truth priority
+
+Known stale or contradictory active knowledge is an immediate repair obligation,
+even when status is green. Agents stop relying on it, check current evidence,
+rewrite the owner while preserving valid content, and correct affected leaves and
+guidance before unrelated work or completion. If truth remains unresolved, remove
+the unsupported claim and record the blocker and next check. Passing proofs and
+metadata colors do not establish correctness of unproved prose.
+
+A behavior or policy change is complete only after a semantic consistency review
+of affected code and CLI behavior against local/global owners, public example,
+README, AGENTS instructions and installer templates, and installed guidance.
+Generated copies must be refreshed and checked for drift. Tests and `kt prove`
+are necessary checks, not substitutes for reading and reconciling prose.
 
 ## Retrieval and maintenance
 

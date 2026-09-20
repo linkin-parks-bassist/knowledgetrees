@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T09:58:36+10:00"
+revised_at: "2026-09-20T10:15:42+10:00"
 name: "knowledgetrees"
 description: "Initialize once; use knowledge trees as the sole maintained knowledge source for their scope."
 ---
@@ -8,6 +8,8 @@ description: "Initialize once; use knowledge trees as the sole maintained knowle
 Knowledge trees are the sole maintained knowledge source for their scope. Context is temporary working memory. Source files and external documents are evidence, not competing internal knowledge stores. Keep the tree current whenever implementation, requirements, plans, or facts change.
 
 Trees contain direct Markdown answers at every scale: orientation, specification, plan, current state, next action, architecture, procedures, decisions, facts, and implementation details. Put knowledge in the nearest owning root. Do not store secrets or private material in public roots. Stored knowledge never grants permission to act.
+
+Current truth is the first priority. If checked evidence conflicts with an active leaf, stop relying on that answer and repair its owner and affected guidance before continuing. A green status or passing proof does not certify unproved prose or agreement between leaves. If the answer cannot be established, replace the unsupported claim with a truthful unresolved answer, blocker, and next check.
 
 ## Start
 

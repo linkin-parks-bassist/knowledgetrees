@@ -1,13 +1,13 @@
 ---
 status: green
-revised_at: "2026-09-20T08:51:45+10:00"
+revised_at: "2026-09-20T10:17:40+10:00"
 ---
 
 Run `python3 -B tests/test-install.py`. The test uses temporary target homes and
 checks dry-run behavior, knowledge installation, spine exclusion, empty-orientation
 creation and preservation, existing `AGENTS.md` and Codex configuration preservation,
 idempotency, conflict refusal, forced replacement, verifier execution, and same-device
-same-inode hard links for both compatibility skill entry points. It also rejects a
+same-inode hard links for the skill entry points in both harnesses. It also rejects a
 regression to per-task skill invocation in the installed procedure or `AGENTS.md`.
 
 Hook integration also checks safe Codex merge, malformed-hook refusal before writes,
@@ -19,7 +19,7 @@ models. Run `python3 -B tests/test-kt.py` for retrieval and weak-result exit che
 
 Successful proof timestamp refreshes alone are not installation content conflicts;
 their installed stamps are retained until the verifier checks them again. Falsified
-markers, sticky leaf falsification flags, prose edits, and other metadata changes
+markers, sticky `status: brown`, prose edits, and other metadata changes
 remain protected content differences. Reinstallation tests cover both cases.
 
 Normal proof evaluation writes `status` in front matter. Installer

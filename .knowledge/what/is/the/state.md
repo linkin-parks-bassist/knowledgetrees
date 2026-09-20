@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:12:11+10:00"
+revised_at: "2026-09-20T10:20:33+10:00"
 ---
 
 The repository's operational knowledge root is `.knowledge/`; `example/` is the
@@ -76,3 +76,15 @@ and the home bootstrap now agree with the CLI. The installer integration test,
 local/example/global proof sweeps, instruction sync, and Git whitespace check
 pass. The documentation correction was committed and pushed to `origin/main` as
 `cffbc36`.
+
+The current-truth audit found and repaired green but stale project leaves about
+publication, installed guidance drift, and installer behavior. Canonical and
+public maintenance guidance, README, repository and generated AGENTS bootstrap,
+and the installer now make known stale or contradictory active knowledge an
+immediate repair priority. The hooks guide no longer names a removed metadata
+flag. Installer integration, local/example/global proof sweeps, instruction
+sync, installed CLI byte comparison, and Git whitespace checks pass. The
+updated guidance is installed with hooks left untouched; two pre-existing
+user hook edits remain in the worktree. This audit covered the project leaves
+and affected public/installed guidance; proof colors alone do not certify
+semantic correctness in unrelated trees.

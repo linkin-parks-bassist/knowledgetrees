@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-12T12:34:09+00:00"
+revised_at: "2026-09-20T10:19:40+10:00"
 ---
 
 Install failure-triggered lookup/capture reminders and one-shot task-end capture
@@ -16,7 +16,7 @@ managed adapter files require explicit replacement permission via `--force`.
 
 Successful proof timestamp refreshes alone do not conflict on reinstall; their
 installed stamps are preserved until rechecked. Edited content, falsified markers,
-and sticky leaf falsification flags remain protected differences.
+and sticky `status: brown` remain protected differences.
 
 The shared installed handler is executable at `~/.knowledge/.tools/kt-hooks`.
 
@@ -106,10 +106,10 @@ is throwing an error. It does not document a model-context return field for this
 before event. Queuing context through the existing system transform reaches a
 later model request and cannot guarantee review before the pending command.
 A guaranteed before-command review needs call rejection and an agent retry after
-review. No boundary-blocking mechanism is installed in this update.
+review. The installer does not install a boundary-blocking mechanism.
 These are API capabilities and timing limits, not demonstrated model compliance.
 Sources: [Codex hooks](https://learn.chatgpt.com/docs/hooks#pretooluse) and
-[OpenCode plugins](https://opencode.ai/docs/plugins/), checked in this session.
+[OpenCode plugins](https://opencode.ai/docs/plugins/).
 
 Restart an OpenCode backend after updating its startup plugin/handler so newly
 resumed sessions receive the compact initialization instruction.
