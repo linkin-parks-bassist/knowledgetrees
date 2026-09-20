@@ -494,6 +494,8 @@ without loading a tree listing. Pass root labels or configured canonical root pa
 to restrict the dictionary, for example `kt dict local global`. `kt info` prints it
 once after the procedure and orientation and before the final local proof result.
 
+`kt grep PATTERN` is the exact-text counterpart to `kt find`: a literal (or, with `-E`, regular-expression) search of leaf text across the roots you may read, printing `ADDRESS:LINE: text`. Use it to find every place that states a fact before changing it. `kt status` lists yellow and brown leaves with the reason and never runs proofs or writes, which makes gardening practical.
+
 Question prefixes make the directories active search boundaries:
 `kt where is vivado` walks `where/is/` and returns the exact leaf if present.
 Otherwise, it walks matching directory words until the first mismatch and ranks
@@ -725,6 +727,7 @@ Run the checks with:
 python3 -B tests/test-install.py   # installer
 python3 -B tests/test-hooks.py     # shared hook handler
 python3 -B tests/test-mcp.py       # MCP server
+python3 -B tests/test-grep-status.py # kt grep, kt status, access-grant function
 node tests/test-opencode-hooks.mjs # OpenCode plugin
 ```
 

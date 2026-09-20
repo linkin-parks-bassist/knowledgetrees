@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T15:15:54+10:00"
+revised_at: "2026-09-20T15:43:06+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -60,7 +60,7 @@ are necessary checks, not substitutes for reading and reconciling prose.
 ## Retrieval and maintenance
 
 The CLI supports sentence-prefix questions, root-qualified `kt open`, ranked
-`kt find`, `kt dict`, `kt add`, `kt rewrite`, `kt check`, `kt rm`, `kt mv`,
+`kt find`, `kt grep` (literal or regex text search that respects access), `kt dict`, `kt add`, `kt rewrite`, `kt check`, `kt status` (read-only listing of non-green leaves with reasons), `kt rm`, `kt mv`,
 `kt combine`, root registration/access, and `kt prove`. Exact reads print verbatim
 content on stdout and its SHA-256 revision on stderr. `kt rewrite ADDRESS HASH
 BODY` requires the full-read revision, rejects stale writes, preserves

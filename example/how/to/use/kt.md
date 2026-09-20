@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T15:15:54+10:00"
+revised_at: "2026-09-20T15:43:06+10:00"
 ---
 
 ## Success output policy
@@ -36,6 +36,8 @@ Accuracy/preservation reminders belong in the one-shot review hook.
 - Lookup: `kt how to rewrite a knowledge leaf` or `kt find "rewrite knowledge leaf"`.
   Both search permitted active roots; neither accepts `--root`. Use `--limit 5`
   to bound search output without piping away the command exit status.
+- Exact text: `kt grep PATTERN` is a literal, case-sensitive text search over every permitted root, front matter included, printing `ADDRESS:LINE: text` (exit 1 on no match). `-E`/`--regex` uses a Python regular expression, `-i` ignores case, `-l` lists only addresses, `-C N` adds context, and `--limit N` caps output. Use `--` before a pattern that starts with `-`. It respects root access like `kt find` and is not semantic; use it to find every place that states a fact.
+- Non-green leaves: `kt status [--local|--global|--root ROOT]` lists yellow and brown leaves (brown first) with the reason (malformed, falsified, expired, or created/rewritten since last proved) and green/yellow/brown counts, without running proofs or writing anything. Empty placeholder leaves are skipped.
 - Read: copy a returned address exactly into `kt open ADDRESS`. `local:PATH`
   selects only the current project; `global:PATH` selects only global knowledge.
   A qualified read never falls back to another root. General kt procedures normally

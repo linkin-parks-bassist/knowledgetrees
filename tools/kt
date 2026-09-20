@@ -5,7 +5,7 @@ import argparse
 import difflib
 import errno
 import fcntl
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 import json
 import hashlib
@@ -248,18 +248,58 @@ def register_root(root, name=None):
     return name
 
 
-def access_command(args):
-    config = access_config()
+def resolve_access_root(config, value):
+    """Resolve a root label or absolute path to (root, label, available aliases)."""
     available = list(root_aliases(config).items())
-    root = dict(available).get(args.root)
-    label = args.root
+    root = dict(available).get(value)
+    label = value
     if root is None:
-        if not Path(args.root).expanduser().is_absolute():
+        if not Path(value).expanduser().is_absolute():
             raise ValueError("select a discovered root label or an absolute knowledge-root path")
-        root = Path(args.root).expanduser().resolve()
+        root = Path(value).expanduser().resolve()
         if not root.is_dir():
             raise ValueError("knowledge root does not exist")
         label = next((name for name, path in available if path == root), "root-" + hashlib.sha256(str(root).encode()).hexdigest()[:12])
+    return root, label, available
+
+
+def apply_access_decision(config, root, label, available, decision, scope, project, subdirectories=False, session=None):
+    """Persist an already-confirmed decision. Confirmation belongs to the caller: the
+    CLI requires the user's own terminal; the MCP server requires the user's answer to a
+    harness elicitation. Nothing here prompts."""
+    if scope == "session":
+        with sqlite3.connect(access_database()) as connection:
+            connection.execute("CREATE TABLE IF NOT EXISTS grants (session TEXT, project TEXT, root TEXT, access TEXT, touched REAL, PRIMARY KEY(session,project,root))")
+            connection.execute("DELETE FROM grants WHERE touched<?", (time.time()-7*86400,))
+            key = hashlib.sha256(session.encode()).hexdigest()
+            if decision == "reset":
+                connection.execute("DELETE FROM grants WHERE session=? AND project=? AND root=?", (key, project, str(root)))
+            else:
+                connection.execute("INSERT OR REPLACE INTO grants VALUES (?,?,?,?,?)", (key, project, str(root), decision, time.time()))
+        return
+    if scope == "all":
+        matching = [name for name, spec in config["roots"].items()
+                    if configured_root(name, spec) == root]
+        if decision == "reset":
+            for name in matching:
+                del config["roots"][name]
+        else:
+            for name in matching or [label]:
+                config["roots"][name] = {"path": str(root), "access": decision}
+    else:
+        grants = config["projects"].setdefault(project, {})
+        if decision == "reset":
+            grants.pop(str(root), None)
+        else:
+            grants[str(root)] = {"access": decision, "subdirectories": True} if subdirectories else decision
+            if label not in dict(available):
+                config["roots"][label] = {"path": str(root), "access": "ask"}
+    save_access_config(config)
+
+
+def access_command(args):
+    config = access_config()
+    root, label, available = resolve_access_root(config, args.root)
     current = root_access(root, label, config=config)
     label = root_identity(root)
     if args.decision is None:
@@ -284,34 +324,7 @@ def access_command(args):
     if input(f"Save {args.decision!r} decision? [y/N] ").strip().lower() not in ("y", "yes"):
         print("No access decision saved.")
         return 1
-    if args.scope == "session":
-        with sqlite3.connect(access_database()) as connection:
-            connection.execute("CREATE TABLE IF NOT EXISTS grants (session TEXT, project TEXT, root TEXT, access TEXT, touched REAL, PRIMARY KEY(session,project,root))")
-            connection.execute("DELETE FROM grants WHERE touched<?", (time.time()-7*86400,))
-            key = hashlib.sha256(session.encode()).hexdigest()
-            if args.decision == "reset":
-                connection.execute("DELETE FROM grants WHERE session=? AND project=? AND root=?", (key, project, str(root)))
-            else:
-                connection.execute("INSERT OR REPLACE INTO grants VALUES (?,?,?,?,?)", (key, project, str(root), args.decision, time.time()))
-    else:
-        if args.scope == "all":
-            matching = [name for name, spec in config["roots"].items()
-                        if configured_root(name, spec) == root]
-            if args.decision == "reset":
-                for name in matching:
-                    del config["roots"][name]
-            else:
-                for name in matching or [label]:
-                    config["roots"][name] = {"path": str(root), "access": args.decision}
-        else:
-            grants = config["projects"].setdefault(project, {})
-            if args.decision == "reset":
-                grants.pop(str(root), None)
-            else:
-                grants[str(root)] = {"access": args.decision, "subdirectories": True} if subdirectories else args.decision
-                if label not in dict(available):
-                    config["roots"][label] = {"path": str(root), "access": "ask"}
-        save_access_config(config)
+    apply_access_decision(config, root, label, available, args.decision, args.scope, project, subdirectories, session)
     return 0
 
 
@@ -632,6 +645,112 @@ def find(args, branches=None, browse=False, context=None):
     if not adequate:
         print("Check alternate terms and scoped paths; if no leaf exists, investigate and capture the answer.")
     return 0 if adequate else 1
+
+
+def grep_command(args):
+    """Search leaf text (front matter included) in every permitted root; policy is enforced by leaves()."""
+    flags = re.IGNORECASE if args.ignore_case else 0
+    try:
+        pattern = re.compile(args.pattern if args.regex else re.escape(args.pattern), flags)
+    except re.error as error:
+        raise ValueError(f"invalid regular expression: {error}")
+    context = LookupContext()
+    allowed = context.access.allowed_roots()
+    if not allowed:
+        raise AccessRequired("kt: no accessible knowledge roots; review kt access policies")
+    printed = found = 0
+    for label, root in allowed:
+        for path in leaves(root, context.access):
+            try:
+                lines = context.read(path)[0].splitlines()
+            except (OSError, UnicodeError):
+                continue
+            hits = [n for n, line in enumerate(lines) if pattern.search(line[:4000])]
+            if not hits:
+                continue
+            address = f"{label}:{path.relative_to(root).as_posix()}"
+            if args.files_with_matches:
+                found += 1
+                if printed < args.limit:
+                    print(address)
+                    printed += 1
+                continue
+            emitted = set()
+            for n in hits:
+                found += 1
+                if printed >= args.limit:
+                    continue
+                printed += 1
+                for m in range(max(0, n - args.context), min(len(lines), n + args.context + 1)):
+                    if m not in emitted:
+                        emitted.add(m)
+                        text = textwrap.shorten(lines[m], width=240, placeholder=" …") if lines[m].strip() else ""
+                        print(f"{address}:{m + 1}{':' if m == n else '-'} {text}".rstrip())
+    if not found:
+        print("no_matches; grep is literal or regex text search, not semantic; private roots excluded")
+        return 1
+    if found > printed:
+        print(f"(showing {printed} of {found}; raise --limit or narrow the pattern)")
+    return 0
+
+
+def status_command(args):
+    """List leaves that are not green, with the reason, without running proofs."""
+    selected = [flag for flag in (args.local, args.global_root, args.root is not None) if flag]
+    if len(selected) > 1:
+        raise ValueError("select only one of --local, --global, or --root")
+    context = LookupContext()
+    if args.local:
+        root = local_root()
+        if not root.is_dir():
+            raise AccessRequired("kt: no local knowledge root in the current directory")
+        require_root(root, "local")
+        roots_to_scan = [("local", root)]
+    elif args.global_root:
+        root = global_knowledge_root()
+        require_root(root, "global")
+        roots_to_scan = [("global", root)]
+    elif args.root is not None:
+        root = Path(args.root).expanduser().resolve()
+        require_root(root)
+        roots_to_scan = [(root_identity(root), root)]
+    else:
+        roots_to_scan = context.access.allowed_roots()
+        if not roots_to_scan:
+            raise AccessRequired("kt: no accessible knowledge roots; review kt access policies")
+    now = datetime.now(timezone.utc)
+    counts = {state: 0 for state in LEAF_STATES}
+    rows = []
+    for label, root in roots_to_scan:
+        for path in leaves(root, context.access):
+            try:
+                text, metadata, _ = context.read(path)
+            except (OSError, UnicodeError):
+                continue
+            if not text.strip():
+                continue  # empty orientation/spine leaves are placeholders, not knowledge
+            problems = metadata_errors(text)
+            state = "brown" if problems or metadata.get("status") == "brown" else lifecycle_state(text, now)[0]
+            stored = metadata.get("status", "green")
+            if state == "green" and stored == "yellow":
+                state = "yellow"
+            counts[state] += 1
+            if state == "green":
+                continue
+            if problems:
+                reason = "malformed metadata: " + "; ".join(problems)
+            elif state == "brown":
+                reason = "brown: a proof failed or the leaf was falsified; run kt prove on it, diagnose, repair, then re-check"
+            elif metadata.get("expires_at") or metadata.get("expires_every"):
+                reason = "expired or due for re-verification (" + ", ".join(
+                    f"{k}={metadata[k]}" for k in ("expires_at", "expires_every", "checked_at") if metadata.get(k)) + "); review the whole answer, then kt check"
+            else:
+                reason = "created or rewritten since it was last proved or checked; review it, then kt prove or kt check"
+            rows.append((state != "brown", f"{label}:{path.relative_to(root).as_posix()}", state, reason))
+    for _, address, state, reason in sorted(rows):
+        print(f"{state}\t{address}\t{reason}")
+    print(" ".join(f"{state}={counts[state]}" for state in LEAF_STATES))
+    return 0
 
 
 QUESTION_STARTS = {"how", "where", "when", "what", "why", "who", "which", "does", "is"}
@@ -1763,7 +1882,7 @@ def roots_command(args):
             else:
                 print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
         if not PRETTY:
-            print("commands: info | init | find | QUESTION | open | dict | add | rewrite | check | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
+            print("commands: info | init | find | grep | QUESTION | open | dict | add | rewrite | check | status | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
             return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
@@ -1837,6 +1956,19 @@ def command_parser():
     adding.add_argument("--blocker")
     adding.add_argument("--next-check")
     lifecycle_options(adding)
+    searching = commands.add_parser("grep", help="literal or regex text search across permitted roots (not semantic)", description="Search leaf text, front matter included, in every permitted active root. Fixed string by default; use --regex for a Python regular expression. Output: ADDRESS:LINE: text. Exit 1 when nothing matches.")
+    searching.set_defaults(handler=grep_command)
+    searching.add_argument("pattern", help="text to find; use -- before a pattern beginning with -")
+    searching.add_argument("-E", "--regex", action="store_true", help="treat the pattern as a Python regular expression")
+    searching.add_argument("-i", "--ignore-case", action="store_true")
+    searching.add_argument("-l", "--files-with-matches", action="store_true", help="print only leaf addresses")
+    searching.add_argument("-C", "--context", type=int, default=0, help="lines of context around each match")
+    searching.add_argument("--limit", type=int, default=50, help="maximum matches (or leaves with -l) to print")
+    statusing = commands.add_parser("status", help="list non-green leaves with reasons, without running proofs")
+    statusing.set_defaults(handler=status_command)
+    statusing.add_argument("--local", action="store_true")
+    statusing.add_argument("--global", dest="global_root", action="store_true")
+    statusing.add_argument("--root", help="one accessible knowledge-root directory")
     commands.add_parser("roots", help="show root policies without reading their contents")
     register = commands.add_parser("register", help="register an existing root as private (ask)")
     register.set_defaults(handler=register_command)
@@ -1874,6 +2006,8 @@ def main():
         code = permissions_command(argparse.Namespace(dangerously_skip_permissions=True, reset=False))
         if code or args.command is None:
             return code
+    if args.command == "grep" and (args.limit < 1 or args.context < 0):
+        parser.error("--limit must be positive and --context non-negative")
     if args.command == "find":
         if args.limit < 1:
             parser.error("--limit must be positive")
