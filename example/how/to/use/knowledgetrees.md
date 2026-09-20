@@ -15,7 +15,7 @@ Current truth is the first priority. If checked evidence conflicts with an activ
 
 `kt init [ORIENTATION]` creates a new `.knowledge/` tree in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches and empty spec, plan, state, and next leaves. Its optional argument becomes the literal contents of `where/am/i.md`. It refuses an existing tree.
 
-The startup hook runs `kt boot` and injects its complete output at startup and lifecycle refreshes. Consume it through the final proof summary. If the hook is unavailable, run `kt boot` directly and consume its entire output without truncation. A failed boot requires diagnosis before relying on the tree. It prints this procedure, the exact local orientation, the accessible path dictionary, and the local proof result. Brown means stop and repair. Retrieve spec, plan, state, next, and other leaves only when the task needs them.
+The startup hook runs `kt boot` and injects its complete output at startup and lifecycle refreshes. Consume it through the final proof summary. If the hook is unavailable, run `kt boot` directly and consume its entire output without truncation. A failed boot requires diagnosis before relying on the tree. It prints this procedure, the exact local orientation, the accessible path dictionary, and the local proof result. With no `./.knowledge` or no local `where/am/i.md`, it says so, prints the global orientation instead (when accessible), and proves the global root; it does not fail merely because a local tree is absent. Brown means stop and repair. Retrieve spec, plan, state, next, and other leaves only when the task needs them.
 
 ## Retrieve and maintain
 
@@ -32,7 +32,7 @@ After substantive repository work, update `what/is/the/state.md` and `what/is/ne
 ## Commands
 
 - `kt init [ORIENTATION]` — create the local tree and empty spine; optionally write orientation contents.
-- `kt boot` — print all startup knowledge, dictionary, then local proof result; never truncate or filter it.
+- `kt boot` — print all startup knowledge, dictionary, then local (or, without a local tree, global) proof result; never truncate or filter it.
 - `kt QUESTION` — retrieve by natural question path; `kt how to _` lists a branch.
 - `kt find WORDS` — broad lexical search across accessible roots.
 - `kt open ADDRESS` — print a leaf verbatim and emit its revision hash.

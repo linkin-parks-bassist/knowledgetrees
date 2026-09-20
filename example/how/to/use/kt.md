@@ -20,8 +20,9 @@ Accuracy/preservation reminders belong in the one-shot review hook.
 
 - Initialize: `kt boot` prints the canonical global procedure and exact local
   orientation, then the accessible dictionary, then the
-  `kt prove --local` result. It fails for a missing or incomplete exact local root,
-  or when the final proof check is brown. Run it directly and consume all output;
+  `kt prove --local` result. With no `./.knowledge` or no local `where/am/i.md` it
+  falls back to the global orientation and `kt prove --global`. It fails only when the global
+  procedure is unreachable, access needs approval, or the final proof check is brown. Run it directly and consume all output;
   never pipe it through `head`, `tail`, a pager, a filter, or any command that
   truncates or partially captures it. Initialization is incomplete unless the final
   proof summary is displayed.

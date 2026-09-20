@@ -91,7 +91,8 @@ unrelated host permissions survive installation.
 
 `kt init [ORIENTATION]` creates an empty local tree and spine without overwriting
 one. `kt boot` prints the canonical global procedure, exact local orientation,
-accessible dictionary, and local proof result in that order. Startup hooks inject
+accessible dictionary, and local proof result in that order; without a local
+tree or local orientation it falls back to the global orientation and proof. Startup hooks inject
 its complete output through the final proof summary. The bootstrap is once per
 fresh session, then kt-first retrieval and miss resolution apply throughout the
 session. The example and global instructions include lookup, capture, maintenance,

@@ -318,8 +318,11 @@ prose.
 
 `kt boot` performs fresh-session initialization in output-first order: it prints
 the canonical global procedure and exact local orientation,
-then the accessible dictionary, then the `kt prove --local` result. It fails for
-a missing or incomplete exact local root or a brown final proof check. Run it
+then the accessible dictionary, then the `kt prove --local` result. With no
+`./.knowledge`, or one lacking `where/am/i.md`, it prints a one-line note, uses the
+global root's orientation instead, and proves the global root (or the partial local
+root). It still fails when the global procedure is unreachable, access policy needs
+approval, or the final proof check is brown. Run it
 directly and consume its complete output. Never pipe it through `head`, `tail`, a
 pager, a filter, or any other truncating or partial-capture command; initialization
 is incomplete unless its final proof summary is displayed.

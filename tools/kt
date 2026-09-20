@@ -1681,35 +1681,44 @@ def open_command(args):
     return open_leaf(args.path)
 
 
-STARTUP_LEAVES = (
-    "where/am/i.md",
-)
-
-
 def initialize_session(args):
+    """Print startup knowledge; without a usable local root, fall back to the global root."""
     root = local_root()
-    if not root.is_dir():
-        raise AccessRequired("kt: no local knowledge root in the current directory")
-    require_root(root, "local")
-    missing = [relative for relative in STARTUP_LEAVES if not (root / relative).is_file()]
-    if missing:
-        raise ValueError("local knowledge root is missing startup leaves: " + ", ".join(missing))
+    has_root = root.is_dir()
+    if has_root:
+        require_root(root, "local")
+    has_orientation = has_root and (root / "where/am/i.md").is_file()
     procedure = resolve_leaf("global:how/to/use/knowledgetrees.md")
     print("=== global:how/to/use/knowledgetrees.md ===")
     contents = procedure.read_text()
     sys.stdout.write(contents)
     if contents and not contents.endswith("\n"):
         print()
-    for relative in STARTUP_LEAVES:
-        print(f"=== local:{relative} ===")
-        contents = (root / relative).read_text()
+    if has_orientation:
+        print("=== local:where/am/i.md ===")
+        contents = (root / "where/am/i.md").read_text()
         sys.stdout.write(contents)
         if contents and not contents.endswith("\n"):
             print()
+    else:
+        reason = ("local knowledge root has no where/am/i.md (add one to orient this project)" if has_root
+                  else "no ./.knowledge in the current directory (kt init creates one)")
+        print(f"=== kt note: {reason}; using the global root only ===")
+        try:
+            orientation = resolve_leaf("global:where/am/i.md")
+        except (ValueError, AccessRequired) as error:
+            print(f"=== global orientation unavailable: {error} ===")
+        else:
+            print("=== global:where/am/i.md ===")
+            contents = orientation.read_text()
+            sys.stdout.write(contents)
+            if contents and not contents.endswith("\n"):
+                print()
     print("=== kt dict ===")
     dictionary(argparse.Namespace(roots=[]))
-    print("=== kt prove --local ===")
-    return prove(["--local"])
+    scope = "--local" if has_root else "--global"
+    print(f"=== kt prove {scope} ===")
+    return prove([scope])
 
 
 def initialize_tree(args):

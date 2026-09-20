@@ -43,7 +43,14 @@ def main():
                     assert "Canonical procedure fixture." in context
                     assert "Project orientation fixture." in context
                     assert context.rstrip().endswith("brown=0")
-            failed_boot, _ = handle("codex", "start", {"source": "startup", "cwd": str(root)})
+            # Without a local root, boot falls back to the global root instead of failing.
+            fallback, _ = handle("claude", "start", {"source": "startup", "cwd": str(root)})
+            context = fallback["hookSpecificOutput"]["additionalContext"]
+            assert "Boot failed" not in context and "Canonical procedure fixture." in context
+            assert "no ./.knowledge" in context and context.rstrip().endswith("brown=0")
+            # A genuinely unusable boot (no global procedure) is still reported, not hidden.
+            (global_root / "how/to/use/knowledgetrees.md").unlink()
+            failed_boot, _ = handle("codex", "start", {"source": "startup", "cwd": str(project)})
             assert "Boot failed" in failed_boot["hookSpecificOutput"]["additionalContext"]
     assert handle("codex", "start", {"source": "unexpected"}) == ({}, 0)
     assert handle("copilot", "start", {"source": "unexpected"}) == ({}, 0)

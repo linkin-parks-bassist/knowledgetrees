@@ -99,8 +99,8 @@ current Codex live stdout-only payload shape and the documented heuristic tradeo
 
 ## Startup initialization
 
-Codex SessionStart, OpenCode system-context startup, and Copilot CLI sessionStart run `kt boot` in the exact working directory and inject its complete output: canonical global procedure,
-exact local orientation, dictionary, and local proof result. A failed boot is reported in context. OpenCode and Copilot CLI require restart after installed hook changes. The handler protocol tests cover Copilot startup output; live Copilot model reception has not been observed. [GitHub Copilot hook reference](https://docs.github.com/en/copilot/reference/hooks-reference).
+Claude Code and Codex SessionStart, OpenCode system-context startup, and Copilot CLI sessionStart run `kt boot` in the exact working directory and inject its complete output: canonical global procedure,
+exact local orientation, dictionary, and local proof result. A missing local tree is not a failed boot: `kt boot` falls back to the global root. A genuinely failed boot (unreachable procedure, access needing approval, brown proofs) is reported in context, and the hook still injects it. OpenCode and Copilot CLI require restart after installed hook changes. The handler protocol tests cover Copilot startup output; live Copilot model reception has not been observed. [GitHub Copilot hook reference](https://docs.github.com/en/copilot/reference/hooks-reference).
 
 The harnesses share diagnostic failure detection and Stop/idle bookkeeping.
 Startup uses the exact current-directory local root for orientation and normal
