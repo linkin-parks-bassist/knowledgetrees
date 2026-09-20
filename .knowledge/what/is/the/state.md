@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:03:19+10:00"
+revised_at: "2026-09-20T10:05:01+10:00"
 ---
 
 The repository's operational knowledge root is `.knowledge/`; `example/` is the
@@ -66,4 +66,4 @@ and public guidance are now updated. Python and OpenCode suites pass. An install
 with `--no-hooks` deployed the CLI and guidance while leaving two pre-existing
 user hook edits untouched. Project, public example, and installed-global proofs
 are green; installed CLI bytes match source and instruction sync has zero drift.
-This change is pending publication.
+The validated change was committed and pushed to `origin/main` as `54c461a`.
