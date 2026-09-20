@@ -18,7 +18,7 @@ Accuracy/preservation reminders belong in the one-shot review hook.
 
 - Create: `kt init [ORIENTATION]` creates `.knowledge/` in the current directory with empty canonical branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. The argument, if given, is written literally. Existing trees are preserved.
 
-- Initialize: `kt boot` prints the canonical global procedure and exact local
+- Initialize: `kt info` prints the canonical global procedure and exact local
   orientation, then the accessible dictionary, then the
   `kt prove --local` result. With no `./.knowledge` or no local `where/am/i.md` it
   falls back to the global orientation and `kt prove --global`. It fails only when the global
@@ -138,7 +138,7 @@ The installer puts the script in the global `.tools/kt` and links `~/.local/bin/
 
 ## MCP tools
 
-When a harness has the knowledgetrees MCP server (installed by `./install`), the workflow is also available as tools with the same semantics: `kt_lookup` (`kt how to ...`), `kt_find`, `kt_read` (`kt open`, returning the revision), `kt_edit`, `kt_rewrite`, `kt_add`, `kt_dict`, `kt_roots`, and `kt_prove` (read-only unless `stamp` is set). Prefer `kt_edit` for small changes: it replaces exact text that must occur once in the answer body, against the revision from your read, and returns a diff. A miss or brown result comes back as data marked `(exit 1)`; only exit 2 or higher is a tool error. `boot`, `init`, `check`, `rm`, `mv`, `combine`, `register`, `access`, and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
+When a harness has the knowledgetrees MCP server (installed by `./install`), the workflow is also available as tools with the same semantics: `kt_lookup` (`kt how to ...`), `kt_find`, `kt_read` (`kt open`, returning the revision), `kt_edit`, `kt_rewrite`, `kt_add`, `kt_dict`, `kt_roots`, and `kt_prove` (read-only unless `stamp` is set). Prefer `kt_edit` for small changes: it replaces exact text that must occur once in the answer body, against the revision from your read, and returns a diff. A miss or brown result comes back as data marked `(exit 1)`; only exit 2 or higher is a tool error. `info`, `init`, `check`, `rm`, `mv`, `combine`, `register`, `access`, and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
 
 ## Persistent access settings
 

@@ -11,7 +11,7 @@ explains that current harness skills are hard-linked bootstraps into the canonic
 installed knowledge. A deliberately terse, metadata-complete leaf answers how many
 Dedekind-complete ordered fields there are.
 
-Startup hooks deliver the complete `kt boot` output once for a fresh agent session. The compatibility skill remains an available fallback if hook delivery is unavailable; it is not invoked for each task after the procedure is loaded.
+Startup hooks deliver the complete `kt info` output once for a fresh agent session. The compatibility skill remains an available fallback if hook delivery is unavailable; it is not invoked for each task after the procedure is loaded.
 
 The kt-first rule and mandatory miss resolution remain in the hook-delivered canonical procedure. Retrieval, capture,
 maintenance, and ingestion detail have direct semantic owners. Installation exposes

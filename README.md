@@ -317,7 +317,7 @@ prose.
 
 `kt init [ORIENTATION]` creates `.knowledge/` in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. The optional argument supplies the exact orientation file contents. It refuses to overwrite an existing tree.
 
-`kt boot` performs fresh-session initialization in output-first order: it prints
+`kt info` performs fresh-session initialization in output-first order: it prints
 the canonical global procedure and exact local orientation,
 then the accessible dictionary, then the `kt prove --local` result. With no
 `./.knowledge`, or one lacking `where/am/i.md`, it prints a one-line note, uses the
@@ -464,7 +464,7 @@ Run the installer from a clone:
 The installer is knowledge-first. It safely merges the reusable leaves from
 `example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
 kt CLI with built-in proof verification under `~/.knowledge/.tools/`, and installs
-startup hooks that inject `kt boot` for Claude Code, Codex, OpenCode, and Copilot CLI, plus a local MCP server registered with all four (`--no-mcp` skips it). It removes
+startup hooks that inject `kt info` for Claude Code, Codex, OpenCode, and Copilot CLI, plus a local MCP server registered with all four (`--no-mcp` skips it). It removes
 its old managed block from `~/AGENTS.md` and deletes that file if nothing else is
 in it. The loaded procedure remains
 active across messages and tasks; it is not reinvoked on every turn. The installer
@@ -491,7 +491,7 @@ characters, purely numeric segments, and a broad dictionary-only stop list of
 grammatical, relational, generic action/state, and knowledge-tree container words
 are omitted, so an agent can see terms such as `obtain` and `sudo-authorization`
 without loading a tree listing. Pass root labels or configured canonical root paths
-to restrict the dictionary, for example `kt dict local global`. `kt boot` prints it
+to restrict the dictionary, for example `kt dict local global`. `kt info` prints it
 once after the procedure and orientation and before the final local proof result.
 
 Question prefixes make the directories active search boundaries:
@@ -558,20 +558,20 @@ tool calls are not replayed. If you attach to a separate OpenCode server, restar
 that backend too. See the [OpenCode plugin](https://opencode.ai/docs/plugins/) and
 [CLI](https://opencode.ai/docs/cli/) documentation. Start a new Copilot CLI session.
 
-OpenCode's plugin runs `kt boot` when loading and supplies its complete output in system context. Compaction preserves the checked state.
+OpenCode's plugin runs `kt info` when loading and supplies its complete output in system context. Compaction preserves the checked state.
 Focused lookup, capture, maintenance, and ingestion skills remain available as needed.
 The hook-run command loads the procedure from its canonical global owner and startup
 leaves from the exact local root; parent directories are not searched. Restart OpenCode after changing its
 plugin. The startup procedure and exact local orientation are injected by the hook.
 
-Claude Code's and Codex's native `SessionStart` hooks deliver the same `kt boot` output
+Claude Code's and Codex's native `SessionStart` hooks deliver the same `kt info` output
 on startup, resume, clear, and after compaction—not on every user prompt. Claude Code drops
 hook context past roughly 10,000 characters, so when the output is larger than 9,500 bytes its hook
-sends only an instruction to run `kt boot` directly and read its complete output. This is the expected case in
+sends only an instruction to run `kt info` directly and read its complete output. This is the expected case in
 most trees; `KT_HOOK_CONTEXT_LIMIT` overrides the threshold.
 Copilot CLI's [`sessionStart` hook](https://docs.github.com/en/copilot/reference/hooks-reference) supplies the same output through `additionalContext`
 when a session starts or resumes.
-These lifecycle events refresh the injected boot output.
+These lifecycle events refresh the injected info output.
 Review/trust the new `SessionStart` definition in `/hooks`, then start a fresh
 session to test startup behavior. The hook includes the canonical procedure and exact local orientation. A disabled
 or untrusted hook cannot supply it.

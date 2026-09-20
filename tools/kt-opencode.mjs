@@ -27,7 +27,7 @@ export const KnowledgeTreesPlugin = async ({ client, directory }) => {
     child.stdin.on("error", () => {});
     child.stdin.end(JSON.stringify(payload));
   });
-  // Both harnesses receive the complete kt boot output from the shared handler.
+  // Both harnesses receive the complete kt info output from the shared handler.
   const startup = await run("start", { source: "startup", cwd: directory });
   const bootstrap = startup.additionalContext;
   const remember = (session, result) => {
@@ -63,7 +63,7 @@ export const KnowledgeTreesPlugin = async ({ client, directory }) => {
     },
     "experimental.session.compacting": async (_input, output) => {
       output.context.push("Preserve knowledge-tree initialization state: which roots were oriented, " +
-        "what evidence was checked, and outstanding misses/captures. The harness supplies the kt boot output " +
+        "what evidence was checked, and outstanding misses/captures. The harness supplies the kt info output " +
         "in system context after compaction; do not rerun completed startup checks " +
         "merely because a summary was created. Restore genuinely lost context and check changed scope within permissions.");
     },

@@ -16,7 +16,7 @@ writes to `~/.knowledge/**`, and possible model-provider exposure are disclosed.
 Edits to `.agents/**` remain approval-gated. Declining or EOF cancels without changes.
 Read `how/to/allow/knowledge-tree/access/in/opencode.md` for permission semantics.
 
-Startup hooks inject the complete `kt boot` output once for a fresh session; Claude Code, which drops hook context past roughly 10,000 characters, instead receives an instruction to run `kt boot` directly when the output is larger. The loaded procedure remains active across messages, turns, and tasks; it is not reloaded for each task. Compatibility skills remain available if a hook is unavailable.
+Startup hooks inject the complete `kt info` output once for a fresh session; Claude Code, which drops hook context past roughly 10,000 characters, instead receives an instruction to run `kt info` directly when the output is larger. The loaded procedure remains active across messages, turns, and tasks; it is not reloaded for each task. Compatibility skills remain available if a hook is unavailable.
 
 The installer retains a skill-shaped entry point for compatibility and explicit fallback. It creates
 `~/.agents/skills/knowledgetrees/SKILL.md`,

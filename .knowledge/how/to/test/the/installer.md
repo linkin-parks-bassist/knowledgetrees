@@ -13,7 +13,7 @@ regression to per-task skill invocation in the installed procedure.
 Hook integration also checks safe Codex and Claude Code settings merges (unrelated keys, hooks, and file mode preserved), malformed-hook refusal before writes,
 dedicated Copilot startup and reminder event definitions, OpenCode adapter deployment, idempotent hook
 installation, and `--hooks-only` preservation of customized leaves, hardlinks, and
-permissions. Run `python3 -B tests/test-mcp.py` for the MCP server (protocol, exactly-one-match, stale revision, dry run, front-matter safety, inode preservation, lookup/find/add/dict/roots/prove behavior, option-injection guards, no-overwrite on add, misses reported as data) and see the installer checks for its four registrations, respect for existing entries, `--no-mcp`, and malformed-config refusal. Run `python3 -B tests/test-hooks.py` for shared protocol tests (including the Claude Code oversized-boot instruction and the global-root boot fallback) and
+permissions. Run `python3 -B tests/test-mcp.py` for the MCP server (protocol, exactly-one-match, stale revision, dry run, front-matter safety, inode preservation, lookup/find/add/dict/roots/prove behavior, option-injection guards, no-overwrite on add, misses reported as data) and see the installer checks for its four registrations, respect for existing entries, `--no-mcp`, and malformed-config refusal. Run `python3 -B tests/test-hooks.py` for shared protocol tests (including the Claude Code oversized-output instruction and the global-root fallback) and
 `node tests/test-opencode-hooks.mjs` for the mocked OpenCode adapter. Neither runs
 models. Run `python3 -B tests/test-kt.py` for retrieval and weak-result exit checks.
 

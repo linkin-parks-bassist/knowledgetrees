@@ -29,7 +29,7 @@ try {
   const startup = { system: ["existing harness instructions"] };
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);
   assert.equal(startup.system[0], "existing harness instructions");
-  assert.match(startup.system[1], /Knowledge-tree startup: `kt boot` output follows/);
+  assert.match(startup.system[1], /Knowledge-tree startup: `kt info` output follows/);
   assert.match(startup.system[1], /Project orientation fixture/);
   assert.match(startup.system[1], /final proof summary/);
   assert.match(startup.system[1], /global:how\/to\/use\/knowledgetrees.md/);

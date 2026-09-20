@@ -91,7 +91,7 @@ Agents do not approve access on the user's behalf. The root registry and
 unrelated host permissions survive installation.
 
 `kt init [ORIENTATION]` creates an empty local tree and spine without overwriting
-one. `kt boot` prints the canonical global procedure, exact local orientation,
+one. `kt info` prints the canonical global procedure, exact local orientation,
 accessible dictionary, and local proof result in that order; without a local
 tree or local orientation it falls back to the global orientation and proof. Startup hooks inject
 its complete output through the final proof summary. The bootstrap is once per
@@ -110,8 +110,8 @@ capture-review reminders without storing raw logs. Hook support must respect
 session boundaries and avoid self-triggering loops. The OpenCode backend must
 restart to load a changed plugin; Codex hook definitions require native trust; Claude Code definitions are reviewed with `/hooks`.
 Claude Code drops hook context past roughly 10,000 characters, so its startup
-hook sends an instruction to run `kt boot` directly when the output exceeds
-9,500 bytes, rather than a silently truncated boot.
+hook sends an instruction to run `kt info` directly when the output exceeds
+9,500 bytes, rather than a silently truncated startup output.
 
 The MCP tools (`kt_lookup`, `kt_find`, `kt_read`, `kt_edit`, `kt_rewrite`, `kt_add`,
 `kt_dict`, `kt_roots`, `kt_prove`) delegate every operation to the CLI so revision,

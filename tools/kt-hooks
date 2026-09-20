@@ -36,7 +36,7 @@ REVIEW = (
 
 
 # Claude Code replaces hook context past ~10,000 characters with a file pointer and a short
-# preview (observed live with a 10,034-byte boot), so oversized boot output is never sent.
+# preview (observed live with a 10,034-byte `kt info` output), so oversized info output is never sent.
 CLAUDE_CONTEXT_LIMIT = 9500
 
 
@@ -102,24 +102,24 @@ def state_database():
     return database
 
 
-def bootstrap_context(payload, limit=None):
+def startup_context(payload, limit=None):
     source = payload.get("source")
     if source not in ("startup", "resume", "new", "clear", "compact"):
         return {}, 0
-    cli = Path(os.environ.get("KT_BOOT_CLI", str(Path(__file__).resolve().with_name("kt"))))
+    cli = Path(os.environ.get("KT_INFO_CLI", str(Path(__file__).resolve().with_name("kt"))))
     cwd = payload.get("cwd") or os.getcwd()
-    boot = subprocess.run([sys.executable, str(cli), "boot"], cwd=cwd,
+    info = subprocess.run([sys.executable, str(cli), "info"], cwd=cwd,
                           text=True, capture_output=True)
-    context = "Knowledge-tree startup: `kt boot` output follows. Consume it through the final proof summary.\n"
-    if boot.returncode:
-        context += f"Boot failed (exit {boot.returncode}); diagnose before relying on this tree.\n"
-    output = boot.stdout + boot.stderr
+    context = "Knowledge-tree startup: `kt info` output follows. Consume it through the final proof summary.\n"
+    if info.returncode:
+        context += f"kt info failed (exit {info.returncode}); diagnose before relying on this tree.\n"
+    output = info.stdout + info.stderr
     if limit is not None and len((context + output).encode()) > limit:
-        context = (f"Knowledge-tree startup: `kt boot` produced {len(output.encode())} bytes, more than this "
+        context = (f"Knowledge-tree startup: `kt info` produced {len(output.encode())} bytes, more than this "
                    f"harness will inject from a hook (about {limit}).")
-        if boot.returncode:
-            context += f" It exited {boot.returncode}."
-        context += (" Run `kt boot` directly now, unfiltered and untruncated, and consume its complete "
+        if info.returncode:
+            context += f" It exited {info.returncode}."
+        context += (" Run `kt info` directly now, unfiltered and untruncated, and consume its complete "
                     "output through the final proof summary before other work.")
         return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
     context += output
@@ -129,7 +129,7 @@ def bootstrap_context(payload, limit=None):
 def handle(harness, event, payload):
     if event == "start":
         limit = int(os.environ.get("KT_HOOK_CONTEXT_LIMIT", CLAUDE_CONTEXT_LIMIT)) if harness == "claude" else None
-        result, code = bootstrap_context(payload, limit)
+        result, code = startup_context(payload, limit)
         if harness in ("opencode", "copilot") and result:
             return {"additionalContext": result["hookSpecificOutput"]["additionalContext"]}, code
         return result, code

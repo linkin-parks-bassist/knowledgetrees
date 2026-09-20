@@ -166,7 +166,7 @@ def main():
         procedure = global_root / "how/to/use/knowledgetrees.md"
         procedure.parent.mkdir(parents=True, exist_ok=True)
         procedure.write_text("Test canonical procedure.\n")
-        initialized = run("boot")
+        initialized = run("info")
         labels = ["=== global:how/to/use/knowledgetrees.md ===",
                   "=== local:where/am/i.md ===",
                   "=== kt dict ===", "=== kt prove --local ==="]
@@ -176,13 +176,13 @@ def main():
         assert initialized.index("Test canonical procedure.") < initialized.index("Test orientation.")
         assert "Test specification." not in initialized
         assert initialized.rstrip().endswith("brown=0")
-        fallback = run("boot", cwd=base, expected=1)  # the fixture's global root holds one brown leaf
+        fallback = run("info", cwd=base, expected=1)  # the fixture's global root holds one brown leaf
         assert "=== kt note: no ./.knowledge" in fallback and "=== local:where/am/i.md ===" not in fallback
         assert "Test canonical procedure." in fallback and "=== kt prove --global ===" in fallback
         assert fallback.rstrip().endswith("brown=1")
         bare = base / "bare-root"
         (bare / ".knowledge").mkdir(parents=True)
-        partial = run("boot", cwd=bare)
+        partial = run("info", cwd=bare)
         assert "has no where/am/i.md" in partial and "=== kt prove --local ===" in partial
         assert partial.rstrip().endswith("brown=0")
         fresh = base / "fresh"

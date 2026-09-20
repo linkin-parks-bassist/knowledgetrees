@@ -9,6 +9,6 @@ Dictionary filtering is intentionally stronger than lookup filtering. It omits s
 
 With no arguments, `kt dict` includes every currently accessible root. Root labels or configured canonical paths restrict it, for example `kt dict local global`. Normal access and force-private rules apply, including registered restricted subtrees.
 
-`kt boot` prints the dictionary after the canonical procedure and exact local orientation. Membership only signals that a potentially informative segment occurs somewhere; it does not reveal a path, prove a leaf exists, or replace lookup, full reads, evidence review, and proof checks.
+`kt info` prints the dictionary after the canonical procedure and exact local orientation. Membership only signals that a potentially informative segment occurs somewhere; it does not reveal a path, prove a leaf exists, or replace lookup, full reads, evidence review, and proof checks.
 
 On the accessible roots measured when the stronger filter was added, output fell from 281 to 185 segments and from 2,811 to 1,991 bytes, a 34.2% segment reduction. Corpus-dependent counts can change as roots and leaf paths change.

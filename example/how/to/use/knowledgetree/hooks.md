@@ -59,24 +59,24 @@ handler performs no model calls and never runs or writes leaf bodies.
 To establish a harness's real hook payloads, do not rely on a summarized docs fetch: on 2026-09-20 one gave wrong Claude Code field names (`session_start_reason`, `user_prompt`, a `permissionDecision` Stop output) and a second fetch was truncated. Instead run the harness non-interactively with a throwaway settings file whose hooks append their stdin to a scratch log (for Claude Code: `claude -p PROMPT --settings FILE --allowedTools Read`, with one tool call that fails and one that succeeds), then read the captured JSON. Use `--allowedTools`, redirect stdin from `/dev/null`, and set a timeout.
 
 Claude Code's `SessionStart` hook (matcher `startup|resume|clear|compact`) returns the same
-boot output as `hookSpecificOutput.additionalContext`. Claude payloads carry `source`, `prompt`,
+info output as `hookSpecificOutput.additionalContext`. Claude payloads carry `source`, `prompt`,
 `session_id`, and `stop_hook_active`. Tool failures arrive as a separate `PostToolUseFailure`
 event (with `error` and `is_interrupt`); `PostToolUse` fires only on success and carries no exit
 status, so the adapter applies no text heuristics there. Interrupted calls do not count as
 failures. `Stop` continues via top-level `decision: block` and `reason`. Review new definitions
 with `/hooks` and restart Claude Code to test. Verified against live sessions: a fresh session listed all five skills and
-received the complete boot output while it was 9.8 KB. Claude Code caps injected hook context near 10,000 characters: on 2026-09-20 a
-10,034-byte boot was replaced by a `<persisted-output>` file pointer with a short preview, so the model never saw the full startup text.
-The handler therefore compares the boot output with `CLAUDE_CONTEXT_LIMIT` (9,500 bytes; override with
-`KT_HOOK_CONTEXT_LIMIT`) and, when it is larger, injects only a short instruction to run `kt boot` directly and consume its
+received the complete info output while it was 9.8 KB. Claude Code caps injected hook context near 10,000 characters: on 2026-09-20 a
+10,034-byte `kt info` output was replaced by a `<persisted-output>` file pointer with a short preview, so the model never saw the full startup text.
+The handler therefore compares the info output with `CLAUDE_CONTEXT_LIMIT` (9,500 bytes; override with
+`KT_HOOK_CONTEXT_LIMIT`) and, when it is larger, injects only a short instruction to run `kt info` directly and consume its
 complete output. A live session followed that instruction and obtained the full output. Other harnesses keep the full injection.
 The procedure alone is about 6 KB and the dictionary grows with the tree, so in most trees expect Claude Code to receive the
 instruction rather than the full text.
 
-Codex's native `SessionStart` hook runs `kt boot` and injects its complete output,
+Codex's native `SessionStart` hook runs `kt info` and injects its complete output,
 including the canonical procedure, exact local orientation, dictionary, and final
 local proof summary. It matches startup, resume, clear, and compact, not ordinary
-user prompts. A failed boot is shown as a diagnostic and must be repaired before
+user prompts. A failed `kt info` is shown as a diagnostic and must be repaired before
 relying on the tree. Review/trust the new definition in `/hooks` and start a fresh
 session to test it. Protocol tests cover all four lifecycle sources.
 
@@ -93,7 +93,7 @@ this is not guaranteed pre-display gating. Use `/hooks` to review and trust new
 definitions: installation does not bypass that requirement.
 [Official Codex hooks](https://learn.chatgpt.com/docs/hooks).
 
-OpenCode's plugin supplies the same complete `kt boot` output in assembled model
+OpenCode's plugin supplies the same complete `kt info` output in assembled model
 system context. It remains available after compaction; the compaction hook asks the
 summary to preserve checked evidence and open captures. Focused skills still apply
 when triggered. Restart after editing the adapter. Adapter tests cover injection,
@@ -104,8 +104,8 @@ current Codex live stdout-only payload shape and the documented heuristic tradeo
 
 ## Startup initialization
 
-Claude Code and Codex SessionStart, OpenCode system-context startup, and Copilot CLI sessionStart run `kt boot` in the exact working directory and inject its complete output (Claude Code substitutes a run-it-directly instruction when the output exceeds its hook-context limit): canonical global procedure,
-exact local orientation, dictionary, and local proof result. A missing local tree is not a failed boot: `kt boot` falls back to the global root. A genuinely failed boot (unreachable procedure, access needing approval, brown proofs) is reported in context, and the hook still injects it. OpenCode and Copilot CLI require restart after installed hook changes. The handler protocol tests cover Copilot startup output; live Copilot model reception has not been observed. [GitHub Copilot hook reference](https://docs.github.com/en/copilot/reference/hooks-reference).
+Claude Code and Codex SessionStart, OpenCode system-context startup, and Copilot CLI sessionStart run `kt info` in the exact working directory and inject its complete output (Claude Code substitutes a run-it-directly instruction when the output exceeds its hook-context limit): canonical global procedure,
+exact local orientation, dictionary, and local proof result. A missing local tree is not a failed `kt info`: it falls back to the global root. A genuinely failed `kt info` (unreachable procedure, access needing approval, brown proofs) is reported in context, and the hook still injects it. OpenCode and Copilot CLI require restart after installed hook changes. The handler protocol tests cover Copilot startup output; live Copilot model reception has not been observed. [GitHub Copilot hook reference](https://docs.github.com/en/copilot/reference/hooks-reference).
 
 Codex, OpenCode, and Copilot CLI share diagnostic failure detection; Claude Code relies on its native failure event. All four share Stop/idle bookkeeping.
 Startup uses the exact current-directory local root for orientation and normal

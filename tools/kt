@@ -1681,7 +1681,7 @@ def open_command(args):
     return open_leaf(args.path)
 
 
-def initialize_session(args):
+def print_info(args):
     """Print startup knowledge; without a usable local root, fall back to the global root."""
     root = local_root()
     has_root = root.is_dir()
@@ -1763,7 +1763,7 @@ def roots_command(args):
             else:
                 print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
         if not PRETTY:
-            print("commands: boot | init | find | QUESTION | open | dict | add | rewrite | check | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
+            print("commands: info | init | find | QUESTION | open | dict | add | rewrite | check | rm | mv | combine | prove | roots | register | access | permissions; --help; --pretty")
             return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
@@ -1781,8 +1781,8 @@ def command_parser():
     parser.add_argument("--pretty", action="store_true", help="human-oriented layout and terminal colors (default: compact plain text)")
     parser.add_argument("--dangerously-skip-permissions", action="store_true", help="persistently bypass ask/deny after user confirmation; force-private remains enforced")
     commands = parser.add_subparsers(dest="command")
-    booting = commands.add_parser("boot", help="prove and load the local startup knowledge")
-    booting.set_defaults(handler=initialize_session)
+    showing_info = commands.add_parser("info", help="prove and load the local startup knowledge")
+    showing_info.set_defaults(handler=print_info)
     initializing = commands.add_parser("init", help="create an empty local knowledge tree")
     initializing.add_argument("orientation", nargs="?", help="optional literal contents of where/am/i.md")
     initializing.set_defaults(handler=initialize_tree)
