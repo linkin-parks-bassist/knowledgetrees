@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T16:23:47+10:00"
+revised_at: "2026-09-21T09:03:52+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -14,8 +14,8 @@ remains connected to its intended GitHub remote; publication follows the owner's
 ## Leaf format and lifecycle
 
 Nonempty leaves use flat Markdown front matter. Automated fields are
-`status: green|yellow|brown` and timezone-aware `revised_at`. `kt check ADDRESS
-HASH` alone records the manual whole-leaf `checked_at`. Optional `expires_at`
+`status: green|yellow|brown` and timezone-aware `revised_at`. `kt renew ADDRESS
+HASH` alone records the manual whole-leaf `checked_at` (then it re-runs that leaf's own proofs and leaves the leaf green or brown). Optional `expires_at`
 and `expires_every` describe time-based freshness; `verifiable: true` is a reviewed
 assertion that eligible proofs cover every factual claim. Skill entry leaves may
 also need `name` and `description` for harness discovery. Blockers, next checks,
@@ -24,14 +24,13 @@ path supply scope. All stored timestamps are ISO 8601 with a timezone. Unsupport
 or malformed front matter is rejected by write commands and brown in proof checks.
 Empty orientation and spine leaves created by `kt init` remain empty until filled.
 
-`kt add` and `kt rewrite` accept answer bodies and generate front matter. Options `--expires-at TIMESTAMP` and `--expires-every DURATION` set freshness; `--verifiable` asserts complete proof coverage. Rewrite preserves omitted optional fields; `--no-expiry` and `--no-verifiable` clear them. `kt add`, `kt rewrite`, and `kt combine` set `revised_at` for changes. New
-and revised answers start yellow; a brown leaf stays brown through a rewrite until
-an independent whole-leaf check. `kt prove` writes the evaluated color. Elapsed
+`kt add` and `kt rewrite` accept answer bodies and generate front matter. Options `--expires-at TIMESTAMP` and `--expires-every DURATION` set freshness; `--verifiable` asserts complete proof coverage. Rewrite preserves omitted optional fields; `--no-expiry` and `--no-verifiable` clear them. `kt add`, `kt rewrite`, and `kt combine` set `revised_at` for changes. A new leaf starts green (with `checked_at` too when `--expires-every` is given), and a rewrite keeps the status and `checked_at`, so a brown leaf stays brown through a rewrite until
+an independent whole-leaf check. `kt combine` yields the worst status of its sources. `kt prove` writes the evaluated color and only ever lowers it; the sole leaf it raises is a `verifiable: true` one whose proofs all pass. Elapsed
 expiry makes an otherwise passing leaf yellow; it reports yellow counts without
 listing their paths. Brown is sticky after proof failure or malformed structure,
 prints the affected path, and causes a nonzero exit. Proof verification timestamps
 belong to individual `Proof:` markers and never advance manual `checked_at`.
-An unflagged brown leaf needs an independent `kt check` after repair. A reviewed
+An unflagged brown leaf needs an independent `kt renew` after repair. A reviewed
 `verifiable: true` leaf requires at least one proof and becomes green when every
 proof runs and passes with valid structure, even after a prior failure or expiry.
 Missing or failed proofs make it brown. `--no-stamp` is read-only. Proof and status
@@ -60,7 +59,7 @@ are necessary checks, not substitutes for reading and reconciling prose.
 ## Retrieval and maintenance
 
 The CLI supports sentence-prefix questions, root-qualified `kt open`, ranked
-`kt find`, `kt grep` (literal or regex text search that respects access), `kt dict`, `kt add`, `kt rewrite`, `kt check`, `kt status` (read-only listing of non-green leaves with reasons), `kt rm`, `kt mv`,
+`kt find`, `kt grep` (literal or regex text search that respects access), `kt dict`, `kt add`, `kt rewrite`, `kt renew`, `kt status` (read-only listing of non-green leaves with reasons), `kt rm`, `kt mv`,
 `kt combine`, root registration/access, and `kt prove`. Exact reads print verbatim
 content on stdout and its SHA-256 revision on stderr. `kt rewrite ADDRESS HASH
 BODY` requires the full-read revision, rejects stale writes, preserves
@@ -110,14 +109,14 @@ capture-review reminders without storing raw logs. Hook support must respect
 session boundaries and avoid self-triggering loops. The OpenCode backend must
 restart to load a changed plugin; Codex hook definitions require native trust; Claude Code definitions are reviewed with `/hooks`.
 Claude Code drops hook context past roughly 10,000 characters, so its startup
-hook sends an instruction to run `kt info` directly when the output exceeds
+hook sends an instruction to call the `kt_info` tool (or run `kt info`) when the output exceeds
 9,500 bytes, rather than a silently truncated startup output.
 
 The 16 MCP tools (`kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_edit`,
-`kt_rewrite`, `kt_undo`, `kt_add`, `kt_dict`, `kt_roots`, `kt_prove`, `kt_status`,
+`kt_undo`, `kt_add`, `kt_renew`, `kt_dict`, `kt_roots`, `kt_prove`, `kt_status`,
 `kt_access_status`, `kt_access_request`, `kt_access_revoke`) delegate every operation to the CLI so
 revision, access, locking, and proof semantics are unchanged, and carry read-only and
-destructive annotations. Destructive, initialization, and access-policy commands stay
+destructive annotations. Their output is lean (answer bodies without metadata or revision hashes, a live notice on non-green leaves). Leaves are atomic: read whole, changed only by exact-match `kt_edit` (there is no whole-answer replacement tool), and edits and renewal are refused unless this session read the leaf and its answer is unchanged since. Agent guidance names the tools first with the shell only as the fallback. Destructive, initialization, and access-policy commands stay
 CLI-only, and no input may inject a CLI option. The one exception is access approval:
 `kt_access_request` asks the user through MCP elicitation and persists an accepted
 `allow` with the CLI's own `apply_access_decision`. Only the user's answer grants;

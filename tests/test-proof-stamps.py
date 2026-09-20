@@ -53,7 +53,7 @@ with tempfile.TemporaryDirectory(prefix="proof-stamp-test-") as temporary:
     assert "status: brown" in leaf.read_text(), "passing proofs cannot validate an unflagged leaf"
     run(root, "--no-stamp", expected=1)
     import hashlib
-    reviewed = subprocess.run([str(TOOLS / "kt"), "check", str(leaf),
+    reviewed = subprocess.run([str(TOOLS / "kt"), "renew", str(leaf),
                               hashlib.sha256(leaf.read_bytes()).hexdigest()],
                              capture_output=True, text=True, cwd=root.parent)
     assert reviewed.returncode == 0, reviewed.stderr
@@ -147,7 +147,7 @@ with tempfile.TemporaryDirectory(prefix="leaf-state-test-") as temporary:
     import hashlib
     expired = root / "expired.md"
     digest = hashlib.sha256(expired.read_bytes()).hexdigest()
-    reviewed = subprocess.run([str(TOOLS / "kt"), "check", str(expired), digest],
+    reviewed = subprocess.run([str(TOOLS / "kt"), "renew", str(expired), digest],
                               capture_output=True, text=True, cwd=root.parent)
     assert reviewed.returncode == 0, reviewed.stderr
     run(root)
@@ -158,7 +158,7 @@ with tempfile.TemporaryDirectory(prefix="leaf-state-test-") as temporary:
     result = run(root)
     assert "yellow=2" in result.stdout and "yellow local:" not in result.stderr
     digest = hashlib.sha256(fixed.read_bytes()).hexdigest()
-    reviewed = subprocess.run([str(TOOLS / "kt"), "check", str(fixed), digest],
+    reviewed = subprocess.run([str(TOOLS / "kt"), "renew", str(fixed), digest],
                               capture_output=True, text=True, cwd=root.parent)
     assert reviewed.returncode == 0, reviewed.stderr
     run(root)

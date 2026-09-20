@@ -48,7 +48,7 @@ def main():
             with patch.dict(os.environ, {"KT_HOOK_CONTEXT_LIMIT": "200"}):
                 big, _ = handle("claude", "start", {"source": "startup", "cwd": str(project)})
                 text = big["hookSpecificOutput"]["additionalContext"]
-                assert "Run `kt info` directly" in text and "Canonical procedure fixture." not in text
+                assert "Call the kt_info tool" in text and "Canonical procedure fixture." not in text
                 assert len(text) < 700
                 whole, _ = handle("codex", "start", {"source": "startup", "cwd": str(project)})
                 assert "Canonical procedure fixture." in whole["hookSpecificOutput"]["additionalContext"]
@@ -103,7 +103,7 @@ def main():
             assert event("stop") == {}
             response = event("after", tool_use_id="failed-shell", tool_response={"exit_code": 4})
             message = response.get("additionalContext", response.get("hookSpecificOutput", {}).get("additionalContext"))
-            assert "check kt" in message and "kt add" in message
+            assert "check kt" in message and "kt_add" in message
             assert event("after", tool_use_id="failed-shell", tool_response={"exit_code": 4}) == {}
             review = event("stop")
             assert review["decision"] == "block" and "capture review" in review["reason"]

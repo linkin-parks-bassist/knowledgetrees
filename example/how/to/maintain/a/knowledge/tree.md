@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:52:38+10:00"
+revised_at: "2026-09-21T09:02:51+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
 ---
@@ -72,7 +72,7 @@ infrastructure directory `.tools/`; scripts otherwise belong outside the tree.
 
 ## Proof checks and falsification
 
-Call `kt prove`, which runs the proof engine built into the installed kt CLI.
+Call `kt_prove` (shell fallback: `kt prove`), which runs the proof engine built into the installed kt CLI.
 Prefer `kt prove --root ROOT TOKEN`
 for scoped checks, or `kt prove --root ROOT --no-stamp` for a read-only sweep.
 Use `--root ROOT` for an explicit root. ROOT is the exact allowed knowledge-tree directory shown by `kt roots` (normally PROJECT/.knowledge), not the containing repository directory. If a mistaken repository path returns access-required, correct it to the already allowed tree root; do not grant access to a new root merely to repair that argument. Check the current local root during bootstrap
@@ -91,24 +91,24 @@ preserve hardlink identity; `--no-stamp` makes checks read-only.
 
 `kt prove` always reports green, yellow, and brown totals and prints brown
 root-qualified leaf paths. Leaves are green by default, including non-verifiable
-specifications, plans, procedures, and opinions. A newly changed leaf initially
-shows yellow. Proof evaluation recalculates non-expiring leaves as green when no
-proof has failed; elapsed expiry remains yellow pending manual review, except
-when all declared proofs pass on a `verifiable: true` leaf. The coverage
+specifications, plans, procedures, and opinions, and adding or editing a leaf keeps
+its status. Proof evaluation only lowers a status: elapsed expiry makes a leaf yellow
+pending manual review, and it stays yellow until `kt_renew`, except when all declared
+proofs pass on a `verifiable: true` leaf. The coverage
 claim and predicates still require agent judgment. Do not rely on a
 currently yellow leaf until re-verification.
 Brown is falsified, malformed, or proof-failing and makes `kt prove` fail because
 the tree is busted.
 Normal evaluation persists `status: green|yellow|brown` in front matter.
-`kt check ADDRESS HASH` records `checked_at` only after manual review.
-`--no-stamp` is read-only. Content rewrites initially set `status: yellow`
-and refresh `revised_at`; `kt prove` then recalculates status. Manual review is
-needed to renew expiry or clear unflagged sticky brown status.
+`kt_renew` (shell: `kt renew ADDRESS HASH`) records `checked_at` only after manual review and re-evaluates the leaf.
+`--no-stamp` is read-only. Content rewrites refresh `revised_at` and keep the
+status. Manual review (`kt_renew`) is needed to renew expiry, clear a yellow mark,
+or clear unflagged sticky brown status.
 
 Stop relying on falsified knowledge. An agent encountering a brown leaf must inspect
 evidence and repair or remove false,
 malformed, or unsafe claims and predicates only within authorized scope. Review the
-whole leaf independently and use `kt check ADDRESS HASH` to clear brown status; rerun until
+whole leaf independently and use `kt_renew` to clear brown status; rerun until
 checks pass. Passing every proof is necessary but not sufficient for an unflagged
 leaf. A reviewed `verifiable: true` leaf is the narrow exception: complete passing
 proofs clear falsification automatically. The verifier
@@ -142,7 +142,7 @@ Agents should add expiry metadata when a factual answer is liable to change. Do 
 add expiry merely because content cannot be mechanically or independently verified.
 
 Have the original contents in context before editing a leaf. Full reads supply
-the revision hash automatically; use kt rewrite ADDRESS HASH BODY. Supply the
+the revision hash automatically (`kt_edit` needs a read of the leaf and fails if it changed since); in the shell use kt rewrite ADDRESS HASH BODY. Supply the
 answer body only. Use `--expires-at`, `--expires-every`, or `--verifiable` to set
 optional metadata; `--no-expiry` or `--no-verifiable` to clear it. The required
 hash rejects changed contents; reread and merge on conflict. Preserve still-valid
@@ -167,7 +167,7 @@ atomicity, cohesion, or leaf length into automatic rewrite rules.
 
 ## Remove, move, and coalesce leaves
 
-Read a source revision with `kt open local:what/is/old.md`.
+Read a source revision with `kt open local:what/is/old.md`. These maintenance commands are shell only: `kt rm`, `kt mv`, and `kt combine` have no tool.
 Use the hash printed on stderr for destructive single-leaf changes:
 
 ```sh

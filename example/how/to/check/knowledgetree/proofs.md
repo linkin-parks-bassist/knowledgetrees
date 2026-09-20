@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:28:41+10:00"
+revised_at: "2026-09-21T09:02:51+10:00"
 ---
 
 Use `kt prove` to check marked proofs. Verification is built into kt; it does
@@ -35,8 +35,8 @@ Yellow is a warning and does not by itself change the zero exit status. Brown
 means the tree is busted: the command returns 1. Use `-v`
 or `--verbose` when diagnostic output is needed; verbose mode additionally lists
 every selected leaf, proof result, error, and summary in the former detailed format.
-Normal evaluation writes `status: green|yellow|brown` in front matter. `kt check`
-records `checked_at` after manual review; `revised_at` records the last content edit.
+Normal evaluation writes `status: green|yellow|brown` in front matter. `kt_renew`
+(`kt renew`) records `checked_at` after manual review and re-runs the leaf's own proofs; `revised_at` records the last content edit. Evaluation only lowers a status; a `verifiable: true` leaf whose proofs all pass is the one automatic way up.
 The verifier runs only scripts explicitly introduced by
 `Proof:`, checks that tree payload files are Markdown leaves, and treats discovery,
 structure, timeout, or proof failures as failure. A semantic filter matching no
@@ -72,7 +72,7 @@ Add expiry metadata to facts liable to change; do not
 penalize inherently non-verifiable knowledge for lacking whole-leaf verification.
 
 For an unflagged leaf, falsification is sticky and makes checks fail until an agent
-independently reviews and repairs it, then uses `kt check ADDRESS HASH` to clear
+independently reviews and repairs it, then uses `kt_renew` to clear
 brown status. For an unflagged leaf, passing every proof is necessary but does not establish
 whole-leaf correctness. The verifier never repairs its knowledge automatically.
 Such falsified, malformed, or proof-failing leaves are brown. An agent encountering

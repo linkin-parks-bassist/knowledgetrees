@@ -1,13 +1,13 @@
 ---
 status: green
-revised_at: "2026-09-20T15:08:02+10:00"
+revised_at: "2026-09-21T09:02:51+10:00"
 name: "knowledgetrees-capture"
 description: "Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs."
 ---
 
 Capture an established reusable answer before the next unrelated tool call or
 completion; necessary verification and capture calls are part of resolving it.
-Use `kt find` and `kt open` to check for an existing owner before writing.
+Use `kt_find` and `kt_read` (shell: `kt find`, `kt open`) to check for an existing owner before writing.
 Prefer a question-prefix query when the answer category is known: `where is`
 for locations, `how to` for procedures, `when to` for triggers, `what is` for
 definitions/state, and `why does` or `why is` for rationale. Place the full
@@ -16,7 +16,7 @@ If `kt` fails to find information, determine whether the leaf exists through
 alternate keywords and scoped semantic inspection. If it exists, use or rewrite it;
 if it does not, add it at the correct scope. A lexical miss never establishes absence.
 A checked hit needs no duplicate capture. If unresolved, record the blocker and
-next check in the answer; the new leaf starts `status: yellow`.
+next check in the answer.
 Do not resume surrounding work with an outstanding capture obligation. The agent's
 own uncertainty remains an additional capture signal, not the only trigger.
 
@@ -42,10 +42,11 @@ Put host/personal tooling in `~/.knowledge` and project/subsystem facts in the
 nearest applicable local root. Never promote professional, customer, partner, or
 restricted material into the global tree; sanitize anything intended for publication.
 Keep an existing owner in context before editing. Full reads supply the revision
-hash automatically; pass it positionally to kt rewrite ADDRESS HASH BODY.
-Preserve still-valid knowledge and reread/merge if the hash conflicts.
-Use `kt open ROOT:PATH` for that read and `kt prove --root ROOT TOKEN` after
-changing eligible proofs. Create a new leaf in one call:
+hash automatically; `kt_edit` needs a read of the leaf and fails if it changed since, and
+in the shell the hash is passed positionally to kt rewrite ADDRESS HASH BODY.
+Preserve still-valid knowledge and reread/merge if the leaf changed.
+Use `kt_read` (shell: `kt open ROOT:PATH`) for that read and `kt_prove` (shell: `kt prove --root ROOT TOKEN`) after
+changing eligible proofs. Create a new leaf in one call with `kt_add`; the shell equivalent is:
 
 ```sh
 kt add "how to prepare the demo" "Run the project's documented demo command."
@@ -59,7 +60,7 @@ If the question or answer might begin with `-` (for example `-foo`; a Markdown l
 
 The command preserves repeated words and hyphenated components, creates metadata,
 and refuses existing owners rather than overwriting them. It records new answers
-with `status: yellow`, never invents a manual check or proof, and never executes
+with `status: green` (starting the `checked_at` clock only when `--expires-every` is given), never invents a proof, and never executes
 the supplied body. Pass only answer Markdown; `kt` generates the front matter.
 Use `--expires-at TIMESTAMP` or `--expires-every DURATION` when a fact has a real
 time-based freshness boundary. Use `--verifiable` only after checking that every
@@ -91,8 +92,8 @@ Splitting and consolidation both require judgment, not mechanical optimization.
 Orientation and repository spine leaves deliberately aggregate coordinated truths;
 do not thin them into catalogs or inflate them with unrelated archive material.
 
-A new leaf gets `status: yellow` and `revised_at` automatically. `kt prove` records
-the evaluated status; `kt check ADDRESS HASH` records `checked_at` after manual review. Put substantive evidence and origin in the
+A new leaf gets `status: green` and `revised_at` automatically. `kt prove` records
+the evaluated status and only lowers it; `kt_renew` (shell: `kt renew ADDRESS HASH`) records `checked_at` after manual review and is the way back up. Put substantive evidence and origin in the
 answer body when they help establish the claim; the path supplies scope and a full
 read supplies the revision hash. See `what/is/knowledge/leaf/metadata.md`.
 Manual `checked_at` requires independent review of everything in the leaf.
@@ -146,7 +147,7 @@ refreshes only its `Proof: (verified at …)` marker. A failing run changes it t
 decide semantic eligibility, faithful coverage, or whether all prose is proved;
 the agent remains responsible. Read maintenance before repairing a falsified leaf.
 
-For an existing owner, use kt rewrite ADDRESS HASH BODY as
+For an existing owner, use `kt_edit` (shell: kt rewrite ADDRESS HASH BODY) as
 described in
 `how/to/rewrite/a/knowledge/leaf.md`; creation still refuses overwriting existing leaves.
 

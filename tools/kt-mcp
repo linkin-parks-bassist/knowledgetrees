@@ -25,11 +25,17 @@ MAX_TEXT = 1048576
 UNDO_DEPTH = 20
 
 INSTRUCTIONS = (
-    "Knowledge trees: look up before you search elsewhere (kt_lookup with how to/where is/what is/..., "
-    "kt_find, kt_grep for exact text). Read with kt_read, then change leaves with kt_edit against the revision "
-    "you read. A miss is not proof of absence. If a root needs approval, call kt_access_request: it asks "
-    "the user through the harness. Release access you no longer need with kt_access_revoke. Never ask the "
-    "user to type kt access unless a tool says the client cannot prompt, and never work around a refusal."
+    "Knowledge trees: these tools are the way in. Use them instead of the kt shell command or cat/grep/find on "
+    ".knowledge files; the shell is only a fallback when these tools are unavailable. Look up before you search "
+    "elsewhere (kt_lookup with how to/where is/what is/..., kt_find, kt_grep for exact text). A leaf is read whole "
+    "and comes back as its answer only; a notice leads it only when it is yellow or brown. A yellow leaf is "
+    "unverified: check its claims against current evidence, then call kt_renew to confirm the whole leaf is accurate "
+    "(your attestation, so renew only what you verified) or fix it with kt_edit. Never rely on a brown leaf; repair "
+    "it. Change a leaf with kt_edit after reading it: each old_text must match exactly once, and the edit fails if the "
+    "leaf changed since you read it. A miss is not proof of absence. If a root needs approval, call "
+    "kt_access_request: it asks the user through the harness. Release access you no longer need with "
+    "kt_access_revoke. Never ask the user to type kt access unless a tool says the client cannot prompt, and never "
+    "work around a refusal."
 )
 
 
@@ -47,17 +53,18 @@ def tool(name, title, description, properties=None, required=(), *, read_only=Fa
 STR = {"type": "string"}
 BOOL = {"type": "boolean"}
 ADDRESS = {"type": "string", "description": "Root-qualified leaf address returned by kt, e.g. local:what/is/next.md"}
-REVISION = {"type": "string", "description": "Revision from the read this change is based on"}
 DRY_RUN = {"type": "boolean", "description": "Show the diff without writing"}
 SCOPE = {"type": "string", "enum": ["local", "global"]}
 
 TOOLS = [
     tool("kt_info", "Startup info",
-         "Print the startup knowledge (procedure, orientation, dictionary, proof summary) like `kt info`. Falls back to the "
-         "global root when there is no local tree. Refreshes leaf status stamps.", idempotent=True),
+         "Print the startup knowledge (procedure, orientation, dictionary, proof summary), like `kt info` but through this "
+         "tool rather than the shell. Falls back to the global root when there is no local tree. Refreshes leaf status stamps.",
+         idempotent=True),
     tool("kt_lookup", "Look up by question",
-         "Generic kt retrieval by natural question, like `kt how to ...`. Start with where is, how to, when to, what is, "
-         "why is/does, does, or is. `how to _` lists a branch. A miss is not proof of absence; retry other terms.",
+         "Look something up by natural question (instead of `kt how to ...` in the shell). Start with where is, how to, "
+         "when to, what is, why is/does, does, or is. An exact hit returns the leaf itself; otherwise ranked matches. "
+         "`how to _` lists a branch. A miss is not proof of absence; retry other terms.",
          {"question": {"type": "string", "description": "e.g. how to expose structured knowledge-tree edits"}},
          ["question"], read_only=True),
     tool("kt_find", "Broad search",
@@ -73,26 +80,27 @@ TOOLS = [
           "context": {"type": "integer", "minimum": 0, "maximum": 10},
           "limit": {"type": "integer", "minimum": 1, "maximum": 500}}, ["pattern"], read_only=True),
     tool("kt_read", "Read a leaf",
-         "Read a knowledge-tree leaf. Returns its revision and text; pass that revision to kt_edit or kt_rewrite. "
-         "body_only drops front matter; offset and limit (characters) page long leaves.",
-         {"address": ADDRESS, "body_only": BOOL, "offset": {"type": "integer", "minimum": 0},
-          "limit": {"type": "integer", "minimum": 1}}, ["address"], read_only=True),
+         "Read a whole leaf's answer (instead of cat or `kt open`). A notice leads it only when it is yellow or brown. "
+         "Reading is what entitles you to kt_edit and kt_renew it.",
+         {"address": ADDRESS}, ["address"], read_only=True),
     tool("kt_edit", "Edit exact text",
-         "Replace exact text in a leaf's answer body. Each old_text must occur exactly once. Give old_text/new_text for one "
-         "change, or edits for several applied atomically. Fails on a stale revision, restricted access, or an ambiguous or "
-         "missing match; nothing is written on failure. Returns a diff and the new revision.",
-         {"address": ADDRESS, "revision": REVISION, "old_text": STR, "new_text": STR,
+         "Replace exact text in a leaf's answer. Each old_text must occur exactly once. Give old_text/new_text for one "
+         "change, or edits for several applied atomically in order. Read the leaf first; the edit fails if the leaf has "
+         "changed since you read it, on restricted access, or on an ambiguous or missing match, and nothing is written on "
+         "failure. Returns a diff of the answer.",
+         {"address": ADDRESS, "old_text": STR, "new_text": STR,
           "edits": {"type": "array", "minItems": 1, "maxItems": 50,
                     "items": {"type": "object", "additionalProperties": False, "required": ["old_text", "new_text"],
                               "properties": {"old_text": STR, "new_text": STR}}},
-          "dry_run": DRY_RUN}, ["address", "revision"], destructive=True),
-    tool("kt_rewrite", "Rewrite a leaf body",
-         "Replace a leaf's whole answer body (no front matter). Prefer kt_edit for small changes so still-valid "
-         "knowledge is not lost.",
-         {"address": ADDRESS, "revision": REVISION, "body": STR, "dry_run": DRY_RUN},
-         ["address", "revision", "body"], destructive=True),
+          "dry_run": DRY_RUN}, ["address"], destructive=True),
+    tool("kt_renew", "Confirm a leaf is accurate",
+         "Announce that you have verified the WHOLE leaf against current evidence and it is accurate: records the check "
+         "time and re-evaluates its status (proofs included) so it turns green. Use it on a yellow leaf after "
+         "checking its claims; repair the leaf with kt_edit instead if anything is wrong. Requires that you read the leaf "
+         "(kt_read or kt_lookup) in this session and that it has not changed since. Renew only what you verified.",
+         {"address": ADDRESS}, ["address"], idempotent=True),
     tool("kt_undo", "Undo the last edit",
-         "Restore the answer body from before this session's most recent kt_edit/kt_rewrite of a leaf, but only if the "
+         "Restore the answer from before this session's most recent kt_edit of a leaf, but only if the "
          "leaf has not changed since. History is kept in memory (last 20 edits) and is lost when the server restarts.",
          {"address": ADDRESS, "dry_run": DRY_RUN}, ["address"], destructive=True),
     tool("kt_add", "Create a leaf",
@@ -144,6 +152,7 @@ ACCESS_CHOICES = {
 CLIENT = {"elicitation": False}
 PENDING = collections.deque()
 HISTORY = collections.deque(maxlen=UNDO_DEPTH)
+READS = {}  # leaf address -> answer text as this session last saw it
 DECLINED = set()
 ELICITATIONS = [0]
 CURRENT = []
@@ -207,6 +216,14 @@ def read_leaf(address):
     return completed.stdout, found.group(1)
 
 
+def leaf_key(address):
+    return address[:-3] if address.endswith(".md") else address
+
+
+def note_read(address, body):
+    READS[leaf_key(address)] = body
+
+
 def body_of(text):
     return kt_namespace()["leaf_parts"](text)[1]
 
@@ -255,41 +272,46 @@ def scope_flag(arguments):
     return [f"--{scope}"] if scope else []
 
 
-def rewrite(address, revision, body, dry_run):
+def rewrite(address, revision, body, dry_run=False):
+    """Ask the CLI to replace the answer; `revision` is the leaf's current file hash, fetched just now, so the
+    CLI's own locked check guards only against a write racing this one."""
     completed = run_kt("rewrite", *(["--dry-run"] if dry_run else []), address, revision, body)
     if completed.returncode:
         raise ToolError((completed.stderr or completed.stdout).strip() or f"kt rewrite failed ({completed.returncode})")
     return completed
 
 
-def finish(address, before, dry_run, completed, before_body, record=True):
-    if dry_run:
-        return (completed.stdout or "No change.\n") + completed.stderr
-    after, revision = read_leaf(address)
-    if record and after != before:
-        HISTORY.append({"address": address, "body": before_body, "revision": revision})
+def answer_diff(before, after):
     diff = "".join(difflib.unified_diff(before.splitlines(keepends=True), after.splitlines(keepends=True),
                                        fromfile="before", tofile="after"))
-    return f"Revision: {revision}\n{diff or 'No change.'}"
+    return diff or "No change."
 
 
-def checked_read(arguments):
-    address = text_arg(arguments, "address")
-    revision = text_arg(arguments, "revision")
-    text, current = read_leaf(address)
-    if current != revision:
-        raise ToolError("leaf changed since your read; call kt_read again and merge before editing")
-    return address, text, current
+def seen_answer(address):
+    """The leaf as it stands now, provided this session read it and its answer has not changed since."""
+    before = READS.get(leaf_key(address))
+    if before is None:
+        raise ToolError("read this leaf first (kt_read or kt_lookup); you can only change or renew what you have read")
+    text, revision = read_leaf(address)
+    if body_of(text) != before:
+        raise ToolError("the leaf changed since you read it; kt_read it again and merge before continuing")
+    return text, revision
 
 
 # ---- tools ---------------------------------------------------------------------------------------
 
 def tool_info(arguments):
-    return report(run_kt("info", timeout=120), "kt info")
+    return report(run_kt("--lean", "info", timeout=120), "kt info")
 
 
 def tool_lookup(arguments):
-    return report(run_kt(*words(arguments, "question")), "kt lookup")
+    completed = run_kt("--lean", *words(arguments, "question"))
+    exact = re.search(r"^kt: exact (\S+)$", completed.stderr, re.M)
+    if completed.returncode == 0 and exact:
+        text, _revision = read_leaf(exact[1])
+        note_read(exact[1], body_of(text))
+        return f"[{exact[1]}]\n{completed.stdout}"
+    return report(completed, "kt lookup")
 
 
 def parse_find(output):
@@ -308,13 +330,14 @@ def parse_find(output):
                 item["status"] = part
             else:
                 item["excerpt"] = part
+        item.setdefault("status", "green")  # lean output names only non-green leaves
         results.append(item)
     return {"summary": lines[0] if lines else "", "results": results}
 
 
 def tool_find(arguments):
     limit = int_arg(arguments, "limit", minimum=1, maximum=100)
-    completed = run_kt("find", *(["--limit", str(limit)] if limit else []), "--", *words(arguments, "terms"))
+    completed = run_kt("--lean", "find", *(["--limit", str(limit)] if limit else []), "--", *words(arguments, "terms"))
     text = report(completed, "kt find")
     if arguments.get("json") is True:
         structured = {**parse_find(completed.stdout), "exit": completed.returncode}
@@ -338,19 +361,27 @@ def tool_grep(arguments):
 
 
 def tool_read(arguments):
-    text, revision = read_leaf(text_arg(arguments, "address"))
-    shown = body_of(text) if arguments.get("body_only") is True else text
-    offset = int_arg(arguments, "offset", 0, minimum=0)
-    limit = int_arg(arguments, "limit", minimum=1)
-    piece = shown[offset:offset + limit] if limit else shown[offset:]
-    note = ""
-    if offset or (limit and offset + limit < len(shown)):
-        note = f"\n(characters {offset}-{offset + len(piece)} of {len(shown)}; pass offset to continue)"
-    return f"Revision: {revision}\n---\n{piece}{note}"
+    address = text_arg(arguments, "address")
+    text, _revision = read_leaf(address)
+    note_read(address, body_of(text))
+    return kt_namespace()["lean_leaf"](text, address)
+
+
+def tool_renew(arguments):
+    address = text_arg(arguments, "address")
+    _text, revision = seen_answer(address)
+    completed = run_kt("renew", address, revision)
+    if completed.returncode == 4:
+        raise ToolError("the leaf changed since you read it; kt_read it again, verify it, then renew")
+    output = report(completed, "kt renew")
+    if not completed.returncode:
+        return "Renewed." + (f" {output.strip()}" if output.strip() else "")
+    return output
 
 
 def tool_edit(arguments):
     dry_run = arguments.get("dry_run") is True
+    address = text_arg(arguments, "address")
     edits = arguments.get("edits")
     if edits is None:
         edits = [{"old_text": text_arg(arguments, "old_text"), "new_text": text_arg(arguments, "new_text")}]
@@ -358,8 +389,9 @@ def tool_edit(arguments):
         raise ToolError("give either old_text/new_text or edits, not both")
     if not isinstance(edits, list) or not 1 <= len(edits) <= 50:
         raise ToolError("edits must be a list of 1 to 50 items")
-    address, text, current = checked_read(arguments)
-    body = before_body = body_of(text)
+    text, revision = seen_answer(address)
+    before = body_of(text)
+    body = before
     for number, edit in enumerate(edits, 1):
         label = f"edit {number}: " if len(edits) > 1 else ""
         if not isinstance(edit, dict):
@@ -369,17 +401,17 @@ def tool_edit(arguments):
             raise ToolError(f"{label}old_text must not be empty")
         matches = body.count(old)
         if matches != 1:
-            raise ToolError(f"{label}old_text must match exactly once in the answer body; found {matches} matches"
-                            + (" (front matter is not editable here)" if not matches and old in text else ""))
+            raise ToolError(f"{label}old_text must match exactly once in the answer; found {matches} matches")
         body = body.replace(old, new, 1)
-    return finish(address, text, dry_run, rewrite(address, current, body, dry_run), before_body)
-
-
-def tool_rewrite(arguments):
-    dry_run = arguments.get("dry_run") is True
-    address, text, current = checked_read(arguments)
-    completed = rewrite(address, current, text_arg(arguments, "body"), dry_run)
-    return finish(address, text, dry_run, completed, body_of(text))
+    if dry_run:
+        rewrite(address, revision, body, dry_run=True)  # validates the change without writing
+        return answer_diff(before.strip("\n") + "\n", body.strip("\n") + "\n")
+    rewrite(address, revision, body)
+    after = body_of(read_leaf(address)[0])
+    if after != before:
+        HISTORY.append({"address": address, "before": before, "after": after})
+    note_read(address, after)
+    return answer_diff(before, after)
 
 
 def tool_undo(arguments):
@@ -389,14 +421,17 @@ def tool_undo(arguments):
     if record is None:
         raise ToolError("nothing to undo for this leaf in this server session (history is in memory, last "
                         f"{UNDO_DEPTH} edits)")
-    text, current = read_leaf(address)
-    if current != record["revision"]:
+    text, revision = read_leaf(address)
+    if body_of(text) != record["after"]:
         raise ToolError("the leaf changed after the recorded edit, so undo is refused to protect later work; "
                         "kt_read it and merge by hand")
-    completed = rewrite(address, current, record["body"], dry_run)
-    if not dry_run:
-        HISTORY.remove(record)
-    return finish(address, text, dry_run, completed, None, record=False)
+    rewrite(address, revision, record["before"], dry_run)
+    if dry_run:
+        return answer_diff(record["after"], record["before"])
+    HISTORY.remove(record)
+    restored = body_of(read_leaf(address)[0])
+    note_read(address, restored)
+    return answer_diff(record["after"], restored)
 
 
 def tool_add(arguments):
@@ -571,7 +606,7 @@ def tool_access_revoke(arguments):
 
 
 HANDLERS = {"kt_info": tool_info, "kt_lookup": tool_lookup, "kt_find": tool_find, "kt_grep": tool_grep,
-            "kt_read": tool_read, "kt_edit": tool_edit, "kt_rewrite": tool_rewrite, "kt_undo": tool_undo,
+            "kt_read": tool_read, "kt_renew": tool_renew, "kt_edit": tool_edit, "kt_undo": tool_undo,
             "kt_add": tool_add, "kt_dict": tool_dict, "kt_roots": tool_roots, "kt_prove": tool_prove,
             "kt_status": tool_status, "kt_access_status": tool_access_status, "kt_access_request": tool_access_request,
             "kt_access_revoke": tool_access_revoke}
@@ -591,9 +626,9 @@ PROMPTS = {
     "capture_review": ("Review this work and capture reusable knowledge", [], lambda a: review_text()),
     "garden": ("List non-green leaves and work through them", [],
                lambda a: "Garden the knowledge tree: call kt_status, then for each yellow or brown leaf kt_read it, "
-                         "check its claims against current evidence, repair it with kt_edit (never delete still-valid "
-                         "knowledge), and run kt_prove with stamp to record the result. Report what you changed and "
-                         "anything you could not verify."),
+                         "check its claims against current evidence, repair what is stale with kt_edit (never delete "
+                         "still-valid knowledge), and only when the whole leaf is verified call kt_renew. Report what "
+                         "you changed and anything you could not verify."),
     "revoke_access": ("Review and give back access this project no longer needs", [],
                       lambda a: "Call kt_access_status to see which roots this project can read and why. For each restricted "
                                 "root you do not need for the current work, call kt_access_revoke (widening changes ask the "
@@ -601,7 +636,8 @@ PROMPTS = {
     "verify_leaf": ("Verify one leaf against current evidence", [{"name": "address", "description": "Leaf address", "required": True}],
                     lambda a: f"Verify the knowledge leaf {a['address']}: kt_read it, check each claim against the "
                               "source evidence, use kt_grep to find other leaves stating the same fact, fix what is "
-                              "stale with kt_edit, and report what remains unverified."),
+                              "stale with kt_edit, call kt_renew only if the whole leaf is verified, and report what "
+                              "remains unverified."),
 }
 
 

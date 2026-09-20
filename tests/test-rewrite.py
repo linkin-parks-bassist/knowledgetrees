@@ -92,7 +92,7 @@ true
         bare.write_text("Old body")
         token = run("open", "project:bare.md").stderr.strip().removeprefix("Revision: ")
         run("rewrite", "project:bare.md", token, "New body\n")
-        assert 'status: "yellow"' in bare.read_text()
+        assert 'status: "green"' in bare.read_text()
         assert "New body" in bare.read_text()
         fresh = hashlib.sha256(bare.read_bytes()).hexdigest()
         for invalid in ("", "---\nunclosed"):

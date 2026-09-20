@@ -1,9 +1,9 @@
 ---
 status: green
-revised_at: "2026-09-20T09:58:36+10:00"
+revised_at: "2026-09-21T09:03:53+10:00"
 ---
 
-Read a leaf normally with `kt open ROOT:PATH` or an exact sentence-prefix query.
+Agents change a leaf with the `kt_edit` tool (exact-match replacement after a whole read); the shell command below replaces a whole answer. Read a leaf normally with `kt open ROOT:PATH` or an exact sentence-prefix query.
 Every full leaf read supplies `Revision: HASH` on stderr for the same bytes returned
 verbatim on stdout. Ranked excerpts are not full reads and do not supply a
 revision for editing.
@@ -23,7 +23,7 @@ supply front matter; `kt` generates it. Omitted options preserve expiry,
 verifiability, and skill entry fields. Use `--expires-at TIMESTAMP` or
 `--expires-every DURATION` to set freshness, `--no-expiry` to clear it,
 `--verifiable` after reviewing full proof coverage, and `--no-verifiable` to
-clear that flag. `kt check` alone records manual `checked_at`. Put evidence
+clear that flag. `kt renew` alone records manual `checked_at`. Put evidence
 in the answer; --dry-run previews the diff without writing. Quote shell arguments
 correctly; operating-system argument size limits apply.
 
@@ -42,16 +42,16 @@ arbitrary direct file writes or power loss. In-place writes preserve hardlinks.
 Access policies apply to reading and rewriting; symlink aliases cannot be rewritten.
 
 An unchanged body with no metadata-option change is a no-op. Changed body or
-optional metadata clears manual check time, refreshes `revised_at`, and starts
-`status: yellow` unless brown was already sticky. An unchanged assertion-paragraph
+optional metadata refreshes `revised_at` and keeps the leaf's `status` and
+`checked_at` (`--expires-every` starts its clock at that moment). An unchanged assertion-paragraph
 plus fenced predicate retains its original proof marker. New or changed proofs
 are reset to `Proof: (verified at _)` and must be checked separately. Rewriting
 never executes proof bodies or claims independent whole-leaf verification.
-A brown leaf stays brown through a rewrite until an independent whole-leaf
-review is recorded with `kt check`, or complete eligible proofs pass on a
+A brown leaf stays brown, and a yellow leaf yellow, through a rewrite until an independent whole-leaf
+review is recorded with `kt renew`, or complete eligible proofs pass on a
 `verifiable: true` leaf.
 
 Evidence: the rewrite integration test uses a standalone non-Git tree and verifies conflict
-refusal, dry-run/no-op behavior, in-place hardlinks, review invalidation, unchanged
+refusal, dry-run/no-op behavior, in-place hardlinks, status and check-time preservation, unchanged
 and changed proof stamps, sticky falsification, body-only text, input validation,
 symlink refusal, and denied-root behavior. Existing lookup and access tests pass.

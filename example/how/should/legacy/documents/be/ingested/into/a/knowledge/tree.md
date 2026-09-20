@@ -1,8 +1,8 @@
 ---
 status: green
-revised_at: "2026-09-18T13:44:14+10:00"
-name: knowledgetrees-ingestion
-description: 'Use when ingesting legacy knowledge: find existing owners with kt, establish leaf existence on misses, capture absent answers, audit coverage, and retire redundant sources only when authorized.'
+revised_at: "2026-09-21T08:33:21+10:00"
+name: "knowledgetrees-ingestion"
+description: "Use when ingesting legacy knowledge: find existing owners with kt, establish leaf existence on misses, capture absent answers, audit coverage, and retire redundant sources only when authorized."
 ---
 
 Treat a legacy document as temporary ingestion material, not a parallel canonical
@@ -25,7 +25,7 @@ leave useful knowledge only as a source path. A provenance line may name the sou
 but the leaf body must directly contain the answer. Cross-link shared facts instead
 of duplicating them. A summary never establishes coverage of omitted details.
 
-Use `kt find` and `kt open` to find existing owners before adding answers.
+Use `kt_find` and `kt_read` (shell: `kt find`, `kt open`) to find existing owners before adding answers.
 If `kt` cannot find an answer, establish whether a leaf exists via alternate terms
 and scoped semantic inspection. Rewrite existing owners; if absent, add the leaf
 (or a truthful unresolved record). Preserve an established answer before the next

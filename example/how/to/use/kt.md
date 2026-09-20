@@ -1,7 +1,9 @@
 ---
 status: green
-revised_at: "2026-09-20T16:19:32+10:00"
+revised_at: "2026-09-21T09:02:51+10:00"
 ---
+
+This is the shell reference for `kt`. When you have the `kt_*` tools (the knowledgetrees MCP server), use them instead: each command below has a tool (`how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`) with lean output (answer body only, a notice on yellow or brown leaves) and no revision hashes to carry. The shell is the fallback when the tools are unavailable.
 
 ## Success output policy
 
@@ -22,7 +24,7 @@ Accuracy/preservation reminders belong in the one-shot review hook.
   orientation, then the accessible dictionary, then the
   `kt prove --local` result. With no `./.knowledge` or no local `where/am/i.md` it
   falls back to the global orientation and `kt prove --global`. It fails only when the global
-  procedure is unreachable, access needs approval, or the final proof check is brown. Run it directly and consume all output;
+  procedure is unreachable, access needs approval, or the final proof check is brown. Prefer the `kt_info` tool; from the shell, run it directly and consume all output;
   never pipe it through `head`, `tail`, a pager, a filter, or any command that
   truncates or partially captures it. Initialization is incomplete unless the final
   proof summary is displayed.
@@ -38,8 +40,8 @@ Accuracy/preservation reminders belong in the one-shot review hook.
   to bound search output without piping away the command exit status.
 - Exact text: `kt grep PATTERN` is a literal, case-sensitive text search over every permitted root, front matter included, printing `ADDRESS:LINE: text` (exit 1 on no match). `-E`/`--regex` uses a Python regular expression, `-i` ignores case, `-l` lists only addresses, `-C N` adds context, and `--limit N` caps output. Use `--` before a pattern that starts with `-`. It respects root access like `kt find` and is not semantic; use it to find every place that states a fact.
 - Access: `kt grants [ROOT]` lists each root's effective access and why (local tree, project grant, allowed everywhere, session grant, bypass, denied, or none), marking roots whose tree is gone. `kt access ROOT revoke [--scope project|all]` gives access back (user's terminal). Approvals whose tree no longer exists are dropped automatically.
-- Non-green leaves: `kt status [--local|--global|--root ROOT]` lists yellow and brown leaves (brown first) with the reason (malformed, falsified, expired, or created/rewritten since last proved) and green/yellow/brown counts, without running proofs or writing anything. Empty placeholder leaves are skipped.
-- Read: copy a returned address exactly into `kt open ADDRESS`. `local:PATH`
+- Non-green leaves: `kt status [--local|--global|--root ROOT]` lists yellow and brown leaves (brown first) with the reason (malformed, falsified, expired, or marked yellow) and green/yellow/brown counts, without running proofs or writing anything. Empty placeholder leaves are skipped.
+- Read: copy a returned address exactly into `kt open ADDRESS` (add `--lean`, as in `kt --lean open ADDRESS`, for the tools' output: answer body only, with a notice leading yellow or brown leaves; `--lean` also works on question lookups, `find`, and `info`). `local:PATH`
   selects only the current project; `global:PATH` selects only global knowledge.
   A qualified read never falls back to another root. General kt procedures normally
   live globally: `kt open global:how/to/rewrite/a/knowledge/leaf.md`.
@@ -51,25 +53,25 @@ Accuracy/preservation reminders belong in the one-shot review hook.
   means no selected leaf is brown; `--verbose` supplies diagnostics. Optional filters are separate
   semantic components, e.g. `kt prove --root .knowledge --no-stamp how to use`;
   every run reports green/yellow/brown totals and prints brown addresses only.
-  Normal evaluation writes `status` in front matter; `kt check` writes `checked_at`;
-  `--no-stamp` preserves bytes.
-  Non-expiring leaves evaluate green unless a proof fails or brown falsification
-  remains. Expired leaves evaluate yellow and need manual review; brown fails the
-  command and requires diagnosis and repair.
+  Normal evaluation writes `status` in front matter; `kt renew` writes `checked_at`;
+  `--no-stamp` preserves bytes. Evaluation only lowers a status: an expired leaf
+  becomes yellow and needs manual review (`kt renew`), a failed proof or remaining
+  falsification makes it brown, which fails the command and requires diagnosis and
+  repair. A `verifiable: true` leaf whose proofs all pass is green.
   slash-containing leaf paths are not filters. Multiple tokens are disjunctive.
 - Create: `kt add "what is the result" "Checked answer" --local`.
   Creation supports `--local`, `--global`, or `--root ROOT`; it refuses existing leaves.
   Add `--expires-at`, `--expires-every`, or `--verifiable` when justified.
 - Rewrite inline: `kt rewrite ADDRESS HASH "Complete answer body"`.
   Use `--expires-at`, `--expires-every`, `--no-expiry`, `--verifiable`, or
-  `--no-verifiable` to change optional metadata. Omitted options preserve it.
+  `--no-verifiable` to change optional metadata. Omitted options preserve it, and the leaf keeps its status and `checked_at`.
   HASH is a required positional revision supplied automatically on stderr by full
   leaf reads. No --expect option. --dry-run previews the diff. Successful writes
   produce no stdout or stderr (exit 0), without echoing either body. No-ops are
   also silent; dry-run shows the diff and failures report diagnostics. Accuracy and
   preservation reminders belong to the one-shot task-end capture-review hook.
-- Manual check: `kt check ADDRESS HASH` records `checked_at` for the complete
-  answer read at HASH. It does not run proofs; follow it with `kt prove`.
+- Renew: `kt renew ADDRESS HASH` (tool `kt_renew`) records `checked_at` for the complete
+  answer read at HASH, clears any brown, then re-runs that leaf's own proofs and leaves it green; exit 1 means a proof failed and it is brown. It is the only manual way to raise a status.
 - Help: `kt COMMAND --help` describes options for that command. Options do not
   automatically transfer between commands. `kt open` takes an address, not `--root`.
 
@@ -143,7 +145,7 @@ The installer puts the script in the global `.tools/kt` and links `~/.local/bin/
 
 ## MCP tools
 
-When a harness has the knowledgetrees MCP server (installed by `./install`), the workflow is also available as tools with the same semantics: `kt_info`, `kt_lookup` (`kt how to ...`), `kt_find` (optional `json`), `kt_grep`, `kt_read` (`kt open`, returning the revision; `body_only`, `offset`, `limit`), `kt_edit`, `kt_rewrite`, `kt_undo`, `kt_add`, `kt_dict`, `kt_roots`, `kt_prove` (does not stamp unless `stamp` is set), `kt_status`, `kt_access_status`, `kt_access_request`, and `kt_access_revoke`. Prefer `kt_edit` for changes: it replaces exact text that must occur once in the answer body, against the revision from your read (several edits apply atomically), and returns a diff; `kt_undo` reverses your latest edit of a leaf while it is unchanged. `kt_access_request` asks the user through the harness to approve a restricted root; the model cannot answer it, and a decline is final for the session. `kt_access_revoke` gives access back when you no longer need it, and `kt_access_status` (or `kt grants`) says why each root is readable. A miss or brown result comes back as data marked `(exit 1)`; only exit 2 or higher is a tool error. `check`, `init`, `rm`, `mv`, `combine`, `register`, `access`, and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
+When a harness has the knowledgetrees MCP server (installed by `./install`), use its tools in preference to this shell reference; they have the same semantics with lean output and no hashes: `kt_info`, `kt_lookup` (`kt how to ...`), `kt_find` (optional `json`), `kt_grep`, `kt_read` (`kt open`: the whole leaf's answer, with a notice only when the leaf is yellow or brown), `kt_edit`, `kt_undo`, `kt_add`, `kt_renew` (`kt renew`), `kt_dict`, `kt_roots`, `kt_prove` (does not stamp unless `stamp` is set), `kt_status`, `kt_access_status`, `kt_access_request`, and `kt_access_revoke`. Change a leaf with `kt_edit`: read it first, then it replaces exact text that must occur once in the answer (several edits apply atomically), fails if the leaf changed since you read it, and returns a diff of the answer; `kt_undo` reverses your latest edit of a leaf while its answer is unchanged. `kt_access_request` asks the user through the harness to approve a restricted root; the model cannot answer it, and a decline is final for the session. `kt_access_revoke` gives access back when you no longer need it, and `kt_access_status` (or `kt grants`) says why each root is readable. A miss or brown result comes back as data marked `(exit 1)`; only exit 2 or higher is a tool error. `init`, `rm`, `mv`, `combine`, `register`, `access`, and `permissions`, and whole-answer replacement (`kt rewrite`), remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
 
 ## Persistent access settings
 

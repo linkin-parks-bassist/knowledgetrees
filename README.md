@@ -32,19 +32,28 @@ This repository contains:
 
 Knowledge only compounds if using it is effortless, so `./install` gives Claude Code, Codex,
 OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 16 tools
-that mirror the `kt` workflow. Every one delegates to the CLI, so revision checks, access
-policy, and proofs behave identically.
+that mirror the `kt` workflow. Agents are told to use them instead of the `kt` shell command
+(the shell is the fallback when the tools are unavailable). Every tool delegates to the CLI, so
+access policy, locking, and proofs behave identically.
 
 | Job | Tools |
 | --- | --- |
 | Find | `kt_lookup` (`how to …` questions), `kt_find` (ranked, optional JSON), `kt_grep` (literal or regex exact text), `kt_dict`, `kt_roots` |
-| Read | `kt_read` (body-only, paged), `kt_info` (startup knowledge) |
-| Change | `kt_edit` (text must match once; several edits apply atomically), `kt_rewrite`, `kt_undo`, `kt_add` |
-| Check | `kt_prove`, `kt_status` (every non-green leaf, with why) |
+| Read | `kt_read` (a leaf's whole answer), `kt_info` (startup knowledge) |
+| Change | `kt_edit` (text must match once; several edits apply atomically), `kt_undo`, `kt_add` |
+| Check | `kt_renew` (confirm a yellow leaf you verified), `kt_prove`, `kt_status` (every non-green leaf, with why) |
 | Access | `kt_access_status` (what is readable and why), `kt_access_request`, `kt_access_revoke` |
 
-Writes are checked against the revision the agent read, so a stale edit fails instead of
-clobbering. Read tools are annotated read-only, so harnesses can skip their prompts and keep
+Tool output is lean: a leaf comes back as its answer body only, with no front matter, timestamps,
+or revision hashes, and a one-line notice leads it only when it is yellow or brown (computed live,
+so an expired leaf is flagged before any proof run). Leaves are atomic: they are read whole, and
+`kt_edit` replaces exact text that must match exactly once, so an agent can only change what it has
+read. The server refuses an edit when the leaf's answer has changed since that read (a status stamp
+or check time does not count), so a stale edit fails instead of clobbering. There is no
+whole-answer replacement tool. When an agent meets a yellow leaf it checks the claims against
+current evidence and calls `kt_renew`, which records that the whole leaf was verified and re-runs
+its proofs; that call is the agent's attestation, so it too is refused unless the agent read the
+leaf in this session. The same lean view is available in the shell as `kt --lean`. Read tools are annotated read-only, so harnesses can skip their prompts and keep
 them for writes. `rm`, `mv`, and policy commands are deliberately not exposed. Four prompts
 (`capture_review`, `garden`, `verify_leaf`, `revoke_access`) appear as slash commands where the
 client supports them.
@@ -319,16 +328,16 @@ from the checkout. Explicit roots require the same access approval as retrieval.
 Every proof run prints aggregate `green=N yellow=N brown=N` counts and the path
 of each brown leaf. Yellow paths are read from leaves when needed. Leaves are green by default, including specs,
 plans, procedures, opinions, and other content that is not mechanically verifiable.
-An unreviewed new or revised leaf starts `status: yellow`; elapsed `expires_at` or
-`expires_every` freshness also makes it yellow and unusable until re-verification. Brown means
+A new leaf starts green, and adding or editing a leaf keeps its status; elapsed `expires_at` or
+`expires_every` freshness makes a leaf yellow and unusable until re-verification. Brown means
 falsified, malformed, or proof-failing; it makes the tree busted and must be repaired.
-On a later proof run, a non-expiring leaf evaluates green if it has no failure;
-that color alone does not record a manual whole-leaf review.
+A proof run only ever lowers a status. Raising one takes a manual whole-leaf review
+(`kt renew`), except that a `verifiable: true` leaf whose proofs all pass is green.
 Agents should add expiry metadata to facts likely to change, while leaving durable
 or non-verifiable knowledge green unless there is a concrete reason for review.
 Normal proof evaluation writes `status: green|yellow|brown` in flat front matter.
-`revised_at` records the last content change; `kt check ADDRESS HASH` records
-`checked_at` after manual review. Optional `expires_at` and `expires_every` set
+`revised_at` records the last content change; `kt renew ADDRESS HASH`
+(tool `kt_renew`) records `checked_at` after manual review. Optional `expires_at` and `expires_every` set
 freshness limits, and `verifiable: true` asserts complete proof coverage.
 Timestamps use ISO 8601 with a timezone. Unsupported front matter makes a leaf
 brown; `--no-stamp` writes nothing.
@@ -351,7 +360,7 @@ blockers, and next checks in the answer, not in front matter.
 `--expires-at TIMESTAMP` or `--expires-every DURATION` to set freshness, and
 `--verifiable` after reviewing complete proof coverage. On rewrite, omitted
 options preserve existing expiry and verifiability; `--no-expiry` and
-`--no-verifiable` clear them. Use `kt check ADDRESS HASH` for manual review time.
+`--no-verifiable` clear them. Use `kt renew ADDRESS HASH` for manual review time.
 
 A leaf containing only concrete facts whose every claim is covered by eligible proofs
 should declare `verifiable: true` after that coverage has been reviewed.
@@ -392,7 +401,7 @@ Unflagged leaves require independent review to clear falsification:
 even if every proof later passes, the leaf remains falsified. Passing every proof is
 necessary but not sufficient for an unflagged leaf. A reviewed `verifiable: true`
 declaration asserts complete coverage; only then may all passing proofs clear
-falsification. Manual whole-leaf review is recorded by `kt check ADDRESS HASH`
+falsification. Manual whole-leaf review is recorded by `kt renew ADDRESS HASH`
 as `checked_at`; only that time anchors recurring expiry. The verifier cannot independently
 infer whether every statement is covered. Use `--no-stamp` for a read-only check.
 
@@ -570,8 +579,8 @@ Capture defaults to the session directory’s project tree, otherwise global; se
 `--dry-run` to preview, or `-` as the answer to read multiline Markdown from stdin.
 Existing leaves are protected: read their owner and carry its hash into rewrite,
 preserving still-valid knowledge.
-New leaves receive `revised_at` and `status: yellow`, not an invented
-verification claim. Capture neither executes nor manufactures proofs. Independently
+New leaves receive `revised_at` and `status: green` (plus `checked_at` when `--expires-every` is given), not an invented
+proof. Capture neither executes nor manufactures proofs. Independently
 review the whole answer and check eligible proofs before relying on it.
 For unresolved answers, add `--unresolved --blocker "missing evidence" --next-check
 "specific next investigation"`. The blocker remains in the answer until it is
@@ -593,11 +602,11 @@ The installer adds reminders for **Claude Code, Codex, OpenCode, and GitHub Copi
 - At task end, a failure or 10 completed tool calls requests one capture-review follow-up:
   check existing owners, record missing discoveries, or report that there is nothing new.
 
-The same hooks run `kt info` at session start, resume, clear, and compaction and inject its
-complete output: the procedure, orientation, dictionary, and proof summary. With no local tree
+The same hooks run `kt --lean info` at session start, resume, clear, and compaction and inject its
+complete output (leaf metadata omitted, a notice on any non-green leaf): the procedure, orientation, dictionary, and proof summary. With no local tree
 it falls back to the global root. Claude Code drops hook context past roughly 10,000
-characters, so above 9,500 bytes its hook sends an instruction to run `kt info` (or call the
-`kt_info` tool) instead, which is the usual case; `KT_HOOK_CONTEXT_LIMIT` tunes the threshold.
+characters, so above 9,500 bytes its hook sends an instruction to call the `kt_info` tool (or run
+`kt info` if there are no kt tools) instead; `KT_HOOK_CONTEXT_LIMIT` tunes the threshold.
 
 Claude Code uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, `PostToolUseFailure`, and
 `Stop` (merged into `~/.claude/settings.json`); Codex uses `SessionStart`, `UserPromptSubmit`,
@@ -846,7 +855,7 @@ There is no rewrite --expect option. If the leaf changed since the read, rewrite
 exits 4 without writing; reread and merge. A matching hash confirms unchanged
 contents, rather than measuring read recency. Keep the original in context and
 preserve still-valid knowledge. Supply only the answer body; kt retains the
-existing optional metadata unless a flag changes it, and generates status and
+existing optional metadata and status unless a flag changes it, and advances the
 revision time. Contents may include literal newlines. Put evidence
 in the answer; --dry-run previews the diff. Quote shell arguments correctly;
 operating-system argument size limits apply.
@@ -858,12 +867,13 @@ The one-shot task-end capture-review hook carries the accuracy and preservation
 reminder once per work cycle. Mandatory proof checks remain intact.
 
 After manually reviewing the complete answer from a full read, record that review
-with `kt check ADDRESS HASH`. This sets `checked_at` and leaves status yellow until
-`kt prove` evaluates current proofs. Proof runs never advance manual check time.
+with `kt renew ADDRESS HASH` (tool `kt_renew`). This sets `checked_at`, clears any brown, then
+re-runs that leaf's own proofs and leaves it green, or brown if one fails. Proof runs never
+advance manual check time or raise a status.
 
 Empty orientation leaves remain empty.
 
-Rewrite preserves hardlinks, invalidates whole-leaf review, and resets new or
+Rewrite preserves hardlinks, keeps the leaf's status and check time, and resets new or
 changed proof stamps. It does not execute proofs or clear sticky falsification.
 Git is optional history, not a requirement. See
 `how/to/rewrite/a/knowledge/leaf.md` for the canonical procedure.

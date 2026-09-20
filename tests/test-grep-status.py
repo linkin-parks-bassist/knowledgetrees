@@ -75,6 +75,8 @@ def main():
         kt("prove", "--global")
         assert kt("status").strip().splitlines()[-1].endswith("yellow=0 brown=0"), kt("status")
         kt("add", "what is fresh", "Brand new answer.\n")
+        marked = project / ".knowledge/what/is/marked.md"
+        marked.write_text("---\nstatus: yellow\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nAwaiting review.\n")
         kt("add", "what is stale", "Old answer.\n", "--expires-at", "2000-01-01T00:00:00+00:00")
         bad = project / ".knowledge/what/is/broken.md"
         bad.parent.mkdir(parents=True, exist_ok=True)
@@ -82,7 +84,8 @@ def main():
         report = kt("status", "--local").splitlines()
         assert report[0].startswith("brown\tlocal:what/is/broken.md\t"), "brown sorts first"
         rows = {line.split("\t")[1]: line.split("\t") for line in report if "\t" in line}
-        assert rows["local:what/is/fresh.md"][0] == "yellow" and "created or rewritten" in rows["local:what/is/fresh.md"][2]
+        assert "local:what/is/fresh.md" not in rows, "a new leaf starts green"
+        assert rows["local:what/is/marked.md"][0] == "yellow" and "marked yellow for re-verification" in rows["local:what/is/marked.md"][2]
         assert rows["local:what/is/stale.md"][0] == "yellow" and "expires_at=2000-01-01" in rows["local:what/is/stale.md"][2]
         assert report[-1].endswith("brown=1") and "yellow=2" in report[-1]
         assert "local:" not in kt("status", "--global")

@@ -24,6 +24,7 @@ import textwrap
 
 ACCESS_VALUES = {"allow", "ask", "deny", "force-private"}
 PRETTY = False
+LEAN = False
 
 
 class AccessRequired(ValueError):
@@ -721,6 +722,8 @@ def find(args, branches=None, browse=False, context=None):
                 print(f"kt: skipped {path}: {error}", file=sys.stderr)
                 continue
             relative = path.relative_to(root).as_posix()
+            if LEAN and text.strip():
+                metadata = {**metadata, "status": leaf_health(text, datetime.now(timezone.utc))[0]}
             route = relative.removesuffix(".md").casefold()
             lower = body.casefold()
             head = "\n".join(body.splitlines()[:20]).casefold()
@@ -755,7 +758,8 @@ def find(args, branches=None, browse=False, context=None):
             fields = [f"{label}:{relative}"]
             if terms:
                 fields.append(f"coverage={matched:.0%}" + (" weak" if matched < args.min_coverage else ""))
-            fields.append(status)
+            if status != "green" or not LEAN:
+                fields.append(status)
             if excerpt:
                 fields.append(textwrap.shorten(excerpt, width=160, placeholder=" …"))
             print("\t".join(fields))
@@ -830,6 +834,49 @@ def grep_command(args):
     return 0
 
 
+def leaf_health(text, now):
+    """Return (state, kind, detail) for a leaf's live lifecycle state.
+
+    kind is None when green, else malformed, falsified, due, or marked; detail explains malformed and due."""
+    metadata, _ = leaf_parts(text)
+    problems = metadata_errors(text)
+    state = "brown" if problems or metadata.get("status") == "brown" else lifecycle_state(text, now)[0]
+    if state == "green" and metadata.get("status", "green") == "yellow":
+        state = "yellow"
+    if state == "green":
+        return state, None, ""
+    if problems:
+        return state, "malformed", "; ".join(f"line {number}: {message}" for number, message in problems)
+    if state == "brown":
+        return state, "falsified", ""
+    if metadata.get("expires_at") or metadata.get("expires_every"):
+        return state, "due", ", ".join(
+            f"{k}={metadata[k]}" for k in ("expires_at", "expires_every", "checked_at") if metadata.get(k))
+    return state, "marked", ""
+
+
+def lean_leaf(text, address):
+    """Leaf body without bookkeeping metadata; a one-line notice leads it only when the leaf is not green."""
+    if not text.strip():
+        return text
+    state, kind, detail = leaf_health(text, datetime.now(timezone.utc))
+    notice = ""
+    if kind == "malformed":
+        notice = f"kt: BROWN leaf {address} has malformed metadata ({detail}). Do not rely on it; repair it (kt_edit), then kt_prove."
+    elif kind == "falsified":
+        notice = f"kt: BROWN leaf {address}: a proof failed or it was falsified. Do not rely on it; repair it (kt_edit), then kt_prove."
+    elif kind:
+        why = f"is due for re-verification ({detail})" if kind == "due" else "is marked for re-verification"
+        notice = (f"kt: yellow leaf {address} {why}. Verify every claim against current evidence before relying on it, "
+                  "then confirm with kt_renew (kt renew ADDRESS HASH) or repair it with kt_edit.")
+    body = leaf_parts(text)[1].lstrip("\n")
+    return (notice + "\n\n" if notice else "") + body
+
+
+def show_leaf(text, address):
+    sys.stdout.write(lean_leaf(text, address) if LEAN else text)
+
+
 def status_command(args):
     """List leaves that are not green, with the reason, without running proofs."""
     selected = [flag for flag in (args.local, args.global_root, args.root is not None) if flag]
@@ -865,23 +912,18 @@ def status_command(args):
                 continue
             if not text.strip():
                 continue  # empty orientation/spine leaves are placeholders, not knowledge
-            problems = metadata_errors(text)
-            state = "brown" if problems or metadata.get("status") == "brown" else lifecycle_state(text, now)[0]
-            stored = metadata.get("status", "green")
-            if state == "green" and stored == "yellow":
-                state = "yellow"
+            state, kind, detail = leaf_health(text, now)
             counts[state] += 1
             if state == "green":
                 continue
-            if problems:
-                reason = "malformed metadata: " + "; ".join(problems)
-            elif state == "brown":
+            if kind == "malformed":
+                reason = "malformed metadata: " + detail
+            elif kind == "falsified":
                 reason = "brown: a proof failed or the leaf was falsified; run kt prove on it, diagnose, repair, then re-check"
-            elif metadata.get("expires_at") or metadata.get("expires_every"):
-                reason = "expired or due for re-verification (" + ", ".join(
-                    f"{k}={metadata[k]}" for k in ("expires_at", "expires_every", "checked_at") if metadata.get(k)) + "); review the whole answer, then kt check"
+            elif kind == "due":
+                reason = f"expired or due for re-verification ({detail}); review the whole answer, then kt renew"
             else:
-                reason = "created or rewritten since it was last proved or checked; review it, then kt prove or kt check"
+                reason = "marked yellow for re-verification; review the whole answer, then kt renew"
             rows.append((state != "brown", f"{label}:{path.relative_to(root).as_posix()}", state, reason))
     for _, address, state, reason in sorted(rows):
         print(f"{state}\t{address}\t{reason}")
@@ -918,10 +960,11 @@ def question(arguments):
         for label, root in available:
             candidate = root.joinpath(*components).with_suffix(".md")
             if candidate.is_file() and not candidate.is_symlink() and candidate.resolve().is_relative_to(root) and context.access.allows(candidate):
-                print(f"kt: exact {label}:{candidate.relative_to(root)}; check relevant proofs before reliance", file=sys.stderr)
+                address = f"{label}:{candidate.relative_to(root)}"
+                print(f"kt: exact {address}" + ("" if LEAN else "; check relevant proofs before reliance"), file=sys.stderr)
                 data = candidate.read_bytes()
                 print(f"Revision: {revision(data)}", file=sys.stderr)
-                sys.stdout.write(data.decode("utf-8"))
+                show_leaf(data.decode("utf-8"), address)
                 return 0
     # Consume directories word by word. Stop at the first unmatched component.
     walked = []
@@ -1026,9 +1069,10 @@ def resolve_leaf(value, writable=False):
 
 
 def open_leaf(value):
-    data = resolve_leaf(value).read_bytes()
+    path = resolve_leaf(value)
+    data = path.read_bytes()
     print(f"Revision: {revision(data)}", file=sys.stderr)
-    sys.stdout.write(data.decode("utf-8"))
+    show_leaf(data.decode("utf-8"), leaf_address(path))
     return 0
 
 
@@ -1106,10 +1150,15 @@ def require_verifiable_proof(body, fields):
         raise ValueError("--verifiable requires at least one eligible proof in the answer body")
 
 
-def invalidate_review(body, original, args):
+def revised_leaf(body, original, args):
+    """Rebuild front matter for new content: revision time advances; status and check time carry over."""
     previous, _ = leaf_parts(original)
-    fields = {"status": "brown" if previous.get("status") == "brown" else "yellow",
-              "revised_at": datetime.now().astimezone().isoformat(timespec="seconds")}
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    fields = {"status": previous.get("status", "green"), "revised_at": now}
+    if "checked_at" in previous:
+        fields["checked_at"] = previous["checked_at"]
+    if getattr(args, "expires_every", None) is not None:
+        fields["checked_at"] = now
     fields.update(requested_lifecycle(args, previous))
     header = "".join(f"{key}: {json.dumps(value, ensure_ascii=False)}\n"
                      for key, value in fields.items())
@@ -1142,8 +1191,9 @@ def rewrite_leaf(args):
         existing = {key: prior_metadata[key] for key in
                     ("expires_at", "expires_every", "verifiable", "name", "description")
                     if key in prior_metadata}
+        inherited = getattr(args, "inherited_status", None)
         if (not getattr(args, "reset_proofs", False) and
-                not getattr(args, "inherited_brown", False) and
+                not inherited and
                 replacement.strip("\r\n") == prior_body.strip("\r\n") and
                 requested == existing):
             return 0
@@ -1159,12 +1209,12 @@ def rewrite_leaf(args):
             new_lines[index] = (saved or "Proof: (verified at _)") + ending
             if saved is None:
                 invalidated += 1
-        updated = invalidate_review("".join(new_lines), original, args)
-        if getattr(args, "inherited_brown", False):
-            updated = set_lifecycle_status(updated, "brown")
+        updated = revised_leaf("".join(new_lines), original, args)
+        if inherited and STATE_RANK[inherited] > STATE_RANK[leaf_parts(updated)[0]["status"]]:
+            updated = set_lifecycle_status(updated, inherited)
         if args.dry_run:
             sys.stdout.writelines(difflib.unified_diff(original.splitlines(keepends=True), updated.splitlines(keepends=True), fromfile=str(path), tofile=str(path) + " (rewritten)"))
-            print(f"Whole-leaf review invalidated; {invalidated} new/changed proofs need checking.", file=sys.stderr)
+            print(f"{invalidated} new or changed proofs need checking.", file=sys.stderr)
             return 0
         # Never replace the inode: installer-created SKILL.md hardlinks stay intact.
         # Recheck after preparing output to detect ordinary non-locking intervening edits.
@@ -1253,7 +1303,7 @@ def combine_leaves(args):
     destination = destination_leaf(args.output)
     sources = [resolve_leaf(value, writable=True) for value in args.paths]
     bodies = []
-    brown = False
+    inherited = "green"
     snapshots = {}
     for source in sources:
         snapshot = read_leaf_snapshot(source)
@@ -1269,13 +1319,13 @@ def combine_leaves(args):
             lines[index] = "Proof: (verified at _)" + ("\n" if lines[index].endswith("\n") else "")
         body = "".join(lines)
         bodies.append(body.strip("\r\n"))
-        brown = brown or metadata.get("status") == "brown"
+        inherited = worse(inherited, metadata.get("status", "green"))
     # Abort before saving if any input changed while preparing the answer.
     for source, snapshot in snapshots.items():
         check_leaf_snapshot(source, snapshot,
                             message="kt: combine input changed; no output saved; reread inputs")
     now = datetime.now().astimezone().isoformat(timespec="seconds")
-    metadata = {"status": "brown" if brown else "yellow", "revised_at": now}
+    metadata = {"status": inherited, "revised_at": now}
     content = "---\n" + "".join(f"{key}: {json.dumps(value, ensure_ascii=False)}\n" for key, value in metadata.items())
     body = "\n\n".join(bodies) + "\n"
     content += "---\n\n" + body
@@ -1284,7 +1334,7 @@ def combine_leaves(args):
             raise ValueError("existing destination requires --expect from a full leaf read")
         rewrite_leaf(argparse.Namespace(path=str(destination), hash=args.expect,
             contents=body, dry_run=args.dry_run, no_expiry=True,
-            verifiable=False, reset_proofs=True, inherited_brown=brown))
+            verifiable=False, reset_proofs=True, inherited_status=inherited))
         if args.dry_run:
             print("Would remove source leaves except the destination.", file=sys.stderr)
             return 0
@@ -1370,7 +1420,9 @@ def capture(args):
     if not args.unresolved and (args.blocker or args.next_check):
         raise ValueError("--blocker and --next-check require --unresolved")
     now = datetime.now().astimezone().isoformat(timespec="seconds")
-    metadata = {"status": "yellow", "revised_at": now}
+    metadata = {"status": "green", "revised_at": now}
+    if args.expires_every is not None:
+        metadata["checked_at"] = now  # a recurring window needs its clock started
     metadata.update(requested_lifecycle(args))
     require_verifiable_proof(answer, metadata)
     if args.unresolved:
@@ -1399,6 +1451,11 @@ PROOF_FENCES = {
 OUTPUT_LIMIT = 4096
 PROOF_MARKER = re.compile(r"^Proof: \((verified|falsified) at ([^)]+)\)$")
 LEAF_STATES = ("green", "yellow", "brown")
+STATE_RANK = {state: rank for rank, state in enumerate(LEAF_STATES)}
+
+
+def worse(first, second):
+    return first if STATE_RANK[first] >= STATE_RANK[second] else second
 NUMBER_WORDS = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
     "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
@@ -1560,8 +1617,8 @@ def stamp_checked_at(text, timestamp):
     return "---\n" + header + text[finish:]
 
 
-def check_leaf(args):
-    """Record an explicit human/agent review of the complete answer."""
+def renew_leaf(args):
+    """Record an explicit review of the complete answer, then re-evaluate this leaf's own proofs and status."""
     path = resolve_leaf(args.path, writable=True)
     if not re.fullmatch(r"[a-f0-9]{64}", args.hash):
         raise ValueError("revision must be the SHA-256 hash supplied by a leaf read")
@@ -1581,6 +1638,11 @@ def check_leaf(args):
         stream.seek(0)
         stream.write(updated)
         stream.truncate()
+    _, root = require_leaf_root(path)
+    _, states, _ = verify_proofs(["--root", str(root)], emit=False, only=path.resolve().relative_to(root), raise_ok=True)
+    if states["brown"]:
+        print("kt: leaf is still brown after renewal: a proof failed; repair the leaf or its proof", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -1734,7 +1796,9 @@ def proof_parser_for_cli():
     return parser
 
 
-def verify_proofs(arguments=None, emit=True):
+def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
+    """Evaluate proofs. Status only ever moves down here (expiry, failed proofs) unless the leaf is
+    verifiable and every proof passes; raise_ok is for kt renew, whose manual review may raise it."""
     parser = proof_parser_for_cli()
     args = parser.parse_args(arguments)
     tokens = validate_tokens(args.tokens, parser)
@@ -1760,9 +1824,9 @@ def verify_proofs(arguments=None, emit=True):
         raise AccessRequired("kt: requested proof scope is unavailable")
     leaves, other_files = tree_files(root)
     selected = [(relative, path) for relative, path in leaves
-                if path_matches(relative, tokens)]
+                if path_matches(relative, tokens) and only in (None, relative)]
     selected_other = [relative for relative in other_files
-                      if path_matches(relative, tokens)]
+                      if path_matches(relative, tokens) and only is None]
     failed = 0
     failed_paths = set()
     states = {state: 0 for state in LEAF_STATES}
@@ -1837,6 +1901,8 @@ def verify_proofs(arguments=None, emit=True):
             state = "green"
         elif leaf_falsified or any(not passed for _, passed in results) or state == "brown":
             state = "brown"
+        elif not raise_ok:
+            state = worse(state, metadata.get("status", "green"))
         if not args.no_stamp:
             try:
                 stamp_proofs(path, original, [] if errors else results,
@@ -1946,13 +2012,13 @@ def print_info(args):
     procedure = resolve_leaf("global:how/to/use/knowledgetrees.md")
     print("=== global:how/to/use/knowledgetrees.md ===")
     contents = procedure.read_text()
-    sys.stdout.write(contents)
+    show_leaf(contents, "global:how/to/use/knowledgetrees.md")
     if contents and not contents.endswith("\n"):
         print()
     if has_orientation:
         print("=== local:where/am/i.md ===")
         contents = (root / "where/am/i.md").read_text()
-        sys.stdout.write(contents)
+        show_leaf(contents, "local:where/am/i.md")
         if contents and not contents.endswith("\n"):
             print()
     else:
@@ -1966,7 +2032,7 @@ def print_info(args):
         else:
             print("=== global:where/am/i.md ===")
             contents = orientation.read_text()
-            sys.stdout.write(contents)
+            show_leaf(contents, "global:where/am/i.md")
             if contents and not contents.endswith("\n"):
                 print()
     print("=== kt dict ===")
@@ -2034,6 +2100,7 @@ def command_parser():
     parser = argparse.ArgumentParser(description=__doc__, epilog="Questions: kt where is vivado; kt how to _ (list a branch). Interface guide: kt open global:how/to/use/kt.md. --root is command-specific, not a global option.")
     parser.set_defaults(handler=roots_command)
     parser.add_argument("--pretty", action="store_true", help="human-oriented layout and terminal colors (default: compact plain text)")
+    parser.add_argument("--lean", action="store_true", help="show leaf bodies without metadata; a notice leads only non-green leaves (used by agent tools)")
     parser.add_argument("--dangerously-skip-permissions", action="store_true", help="persistently bypass ask/deny after user confirmation; force-private remains enforced")
     commands = parser.add_subparsers(dest="command")
     showing_info = commands.add_parser("info", help="prove and load the local startup knowledge")
@@ -2060,8 +2127,8 @@ def command_parser():
     replacing.add_argument("contents", help="complete answer body; use -- before positional arguments beginning with -")
     replacing.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
     lifecycle_options(replacing, clear=True)
-    checking = commands.add_parser("check", help="record a manual review of the complete leaf")
-    checking.set_defaults(handler=check_leaf)
+    checking = commands.add_parser("renew", help="confirm the complete leaf is accurate: records checked_at and re-evaluates its status")
+    checking.set_defaults(handler=renew_leaf)
     checking.add_argument("path", help="existing leaf address")
     checking.add_argument("hash", help="required SHA-256 revision supplied by the full read")
     checking.add_argument("--dry-run", action="store_true")
@@ -2129,12 +2196,13 @@ def command_parser():
 
 
 def main():
-    global PRETTY
+    global PRETTY, LEAN
     arguments = sys.argv[1:]
     # Allow --pretty before the command or among its options, respecting --.
     boundary = arguments.index("--") if "--" in arguments else len(arguments)
     PRETTY = "--pretty" in arguments[:boundary]
-    arguments = [arg for arg in arguments[:boundary] if arg != "--pretty"] + arguments[boundary:]
+    LEAN = "--lean" in arguments[:boundary]
+    arguments = [arg for arg in arguments[:boundary] if arg not in ("--pretty", "--lean")] + arguments[boundary:]
     if not (arguments and arguments[0] in ("-h", "--help")):
         try:
             prune_stale_grants()

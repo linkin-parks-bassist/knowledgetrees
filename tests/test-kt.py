@@ -58,7 +58,7 @@ def main():
         captured = local / "how/to/do/the/thing.md"
         assert result == "" and captured.is_file()
         saved = captured.read_text()
-        assert 'status: \"yellow\"' in saved and 'revised_at:' in saved
+        assert 'status: \"green\"' in saved and 'revised_at:' in saved
         assert "Proof:" not in saved
         assert run("how to do the thing") == saved
         run("add", "how to do the thing", "overwrite", expected=2)
@@ -69,12 +69,12 @@ def main():
         explicit = (global_root / "where/is/multi-word/tooling.md").read_text()
         assert 'revised_at:' in explicit and str(base) not in explicit
         preview = run("add", "when to preview", "Preview first.", "--dry-run")
-        assert 'status: \"yellow\"' in preview and not (local / "when").exists()
+        assert 'status: \"green\"' in preview and not (local / "when").exists()
         run("add", "where is mystery", "Not established.", "--unresolved", expected=2)
         run("add", "where is mystery", "Not established.", "--unresolved",
             "--blocker", "missing evidence", "--next-check", "inspect configuration")
         unresolved = (local / "where/is/mystery.md").read_text()
-        assert 'status: \"yellow\"' in unresolved and 'Blocker: missing evidence' in unresolved and 'Next check: inspect configuration' in unresolved
+        assert 'status: \"green\"' in unresolved and 'Blocker: missing evidence' in unresolved and 'Next check: inspect configuration' in unresolved
         for unsafe in ("../escape", "where/is/escape", "where_is_escape", "---", "bad\nquestion"):
             run("add", unsafe, "No.", expected=2)
         run("add", "what is empty", "   ", expected=2)

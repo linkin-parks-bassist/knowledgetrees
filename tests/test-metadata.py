@@ -31,10 +31,10 @@ with tempfile.TemporaryDirectory() as directory:
     revision = hashlib.sha256(leaf.read_bytes()).hexdigest()
     run(project, "rewrite", "local:answer.md", revision,
         "Revised answer.\n\nProof: (verified at _)\n\n```bash\ntrue\n```\n")
-    assert 'status: "yellow"' in leaf.read_text()
+    assert 'revised_at: "20' in leaf.read_text() and 'status: "yellow"' in leaf.read_text(), "a rewrite keeps the status it had (unanchored expiry made this yellow)"
     assert "checked_at:" not in leaf.read_text()
     revision = hashlib.sha256(leaf.read_bytes()).hexdigest()
-    run(project, "check", "local:answer.md", revision)
+    run(project, "renew", "local:answer.md", revision)
     checked_line = next(line for line in leaf.read_text().splitlines()
                         if line.startswith("checked_at:"))
     run(project, "prove", "--local")
@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory() as directory:
     run(project, "rewrite", "local:answer.md", revision,
         "Revised answer.\n\nProof: (verified at _)\n\n```bash\ntrue\n```\n",
         "--expires-every", "3 weeks")
-    assert "checked_at:" not in leaf.read_text()
+    assert "checked_at:" in leaf.read_text(), "setting a freshness window starts its clock"
     assert 'expires_every: "3 weeks"' in leaf.read_text()
 
     flagged = tree / "flagged.md"
@@ -102,3 +102,89 @@ with tempfile.TemporaryDirectory() as directory:
     assert "brown=1" in result.stdout
 
 print("metadata checks passed")
+
+# Lean output hides bookkeeping and flags only non-green leaves; renew confirms and re-greens at once.
+with tempfile.TemporaryDirectory() as directory:
+    project = Path(directory)
+    tree = project / ".knowledge/what/is"
+    tree.mkdir(parents=True)
+    stale = tree / "stale.md"
+    stale.write_text("---\nstatus: green\nrevised_at: '2026-01-01T00:00:00+00:00'\n"
+                     "expires_at: '2026-02-01T00:00:00+00:00'\n---\n\nA fact.\n")
+    (tree / "fresh.md").write_text("A fresh fact.\n")
+    lean = run(project, "--lean", "open", "local:what/is/stale.md")
+    assert lean.stdout.startswith("kt: yellow leaf local:what/is/stale.md is due for re-verification")
+    assert "kt_renew" in lean.stdout and lean.stdout.endswith("\n\nA fact.\n") and "revised_at" not in lean.stdout
+    assert run(project, "--lean", "open", "local:what/is/fresh.md").stdout == "A fresh fact.\n"
+    assert run(project, "open", "local:what/is/stale.md").stdout.startswith("---\nstatus: green")
+    exact = run(project, "--lean", "what", "is", "fresh")
+    assert exact.stdout == "A fresh fact.\n" and "kt: exact local:what/is/fresh.md\n" in exact.stderr
+    assert "check relevant proofs" not in exact.stderr
+    found = run(project, "--lean", "find", "fact").stdout
+    assert "local:what/is/stale.md\tcoverage=" in found and "\tyellow\t" in found and "green" not in found
+    revision = hashlib.sha256(stale.read_bytes()).hexdigest()
+    run(project, "renew", "local:what/is/stale.md", "0" * 64, expected=4)
+    run(project, "renew", "local:what/is/stale.md", revision)
+    assert "checked_at:" in stale.read_text() and "status: green" in stale.read_text()
+    assert run(project, "--lean", "open", "local:what/is/stale.md").stdout == "A fact.\n"
+    assert "yellow=0" in run(project, "status").stdout
+
+    broken = tree / "broken.md"
+    broken.write_text("Claim.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
+    revision = hashlib.sha256(broken.read_bytes()).hexdigest()
+    result = run(project, "renew", "local:what/is/broken.md", revision, expected=1)
+    assert "still brown" in result.stderr and "status: brown" in broken.read_text()
+    assert run(project, "--lean", "open", "local:what/is/broken.md").stdout.startswith("kt: BROWN leaf")
+
+print("lean output and renew checks passed")
+
+# Status moves down by itself (expiry, failed proofs) and up only by hand, except for verifiable leaves.
+with tempfile.TemporaryDirectory() as directory:
+    project = Path(directory)
+    tree = project / ".knowledge/what/is"
+    tree.mkdir(parents=True)
+    run(project, "add", "what is new", "A new answer.", "--local")
+    new = tree / "new.md"
+    assert 'status: "green"' in new.read_text() and "checked_at" not in new.read_text(), "a new leaf starts green"
+    run(project, "add", "what is timed", "A timed answer.", "--local", "--expires-every", "2 weeks")
+    timed = tree / "timed.md"
+    assert 'status: "green"' in timed.read_text() and "checked_at:" in timed.read_text(), "a recurring window starts its clock"
+
+    revision = hashlib.sha256(new.read_bytes()).hexdigest()
+    run(project, "rewrite", "local:what/is/new.md", revision, "A revised answer.")
+    assert 'status: "green"' in new.read_text() and "A revised answer." in new.read_text(), "an edit keeps the status"
+
+    marked = tree / "marked.md"
+    marked.write_text("---\nstatus: yellow\nrevised_at: '2026-09-01T00:00:00+00:00'\n---\n\nAwaiting review.\n")
+    run(project, "prove", "--local")
+    assert "status: yellow" in marked.read_text(), "prove never raises a status"
+    revision = hashlib.sha256(marked.read_bytes()).hexdigest()
+    run(project, "rewrite", "local:what/is/marked.md", revision, "Still awaiting review.")
+    assert 'status: "yellow"' in marked.read_text(), "an edit does not clear a yellow mark either"
+    run(project, "prove", "--local")
+    assert "status: yellow" in marked.read_text()
+    revision = hashlib.sha256(marked.read_bytes()).hexdigest()
+    run(project, "renew", "local:what/is/marked.md", revision)
+    assert "status: green" in marked.read_text() and "checked_at:" in marked.read_text(), "renew is the manual way up"
+
+    brown = tree / "brown.md"
+    brown.write_text("---\nstatus: brown\nrevised_at: '2026-09-01T00:00:00+00:00'\n---\n\nFalsified.\n")
+    revision = hashlib.sha256(brown.read_bytes()).hexdigest()
+    run(project, "rewrite", "local:what/is/brown.md", revision, "Repaired but unreviewed.")
+    run(project, "prove", "--local", expected=1)
+    assert 'status: "brown"' in brown.read_text() or "status: brown" in brown.read_text(), "only review clears brown"
+
+    proved = tree / "proved.md"
+    proved.write_text("---\nstatus: yellow\nrevised_at: '2026-09-01T00:00:00+00:00'\nverifiable: true\n---\n\n"
+                      "A proved claim.\n\nProof: (verified at _)\n\n```bash\ntrue\n```\n")
+    run(project, "prove", "--local", expected=1)  # brown.md is still brown
+    assert "status: green" in proved.read_text(), "a verifiable leaf whose proofs all pass is raised by prove"
+
+    first = tree / "first.md"
+    second = tree / "second.md"
+    first.write_text("---\nstatus: green\nrevised_at: '2026-09-01T00:00:00+00:00'\n---\n\nOne.\n")
+    second.write_text("---\nstatus: yellow\nrevised_at: '2026-09-01T00:00:00+00:00'\n---\n\nTwo.\n")
+    run(project, "combine", "local:what/is/first.md", "local:what/is/second.md", "-o", "local:what/is/both.md")
+    assert 'status: "yellow"' in (tree / "both.md").read_text(), "a combined leaf is as unverified as its worst source"
+
+print("lifecycle checks passed")

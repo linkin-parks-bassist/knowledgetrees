@@ -60,8 +60,8 @@ def main():
         assert rpc("notifications/initialized", notify=True) is None
         assert rpc("ping")["result"] == {}
         names = {t["name"] for t in rpc("tools/list")["result"]["tools"]}
-        assert names == {"kt_info", "kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_edit", "kt_rewrite", "kt_undo",
-                         "kt_add", "kt_dict", "kt_roots", "kt_prove", "kt_status", "kt_access_status", "kt_access_request",
+        assert names == {"kt_info", "kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_edit", "kt_undo",
+                         "kt_add", "kt_renew", "kt_dict", "kt_roots", "kt_prove", "kt_status", "kt_access_status", "kt_access_request",
                          "kt_access_revoke"}
         listed = {t["name"]: t for t in rpc("tools/list")["result"]["tools"]}
         for name, definition in listed.items():
@@ -69,57 +69,66 @@ def main():
             assert set(hints) >= {"readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"} and not hints["openWorldHint"], name
         for name in ("kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_dict", "kt_roots", "kt_status", "kt_access_status"):
             assert listed[name]["annotations"]["readOnlyHint"] and not listed[name]["annotations"]["destructiveHint"], name
-        for name in ("kt_edit", "kt_rewrite", "kt_undo"):
+        for name in ("kt_edit", "kt_undo"):
             assert not listed[name]["annotations"]["readOnlyHint"] and listed[name]["annotations"]["destructiveHint"], name
+        assert not listed["kt_renew"]["annotations"]["destructiveHint"] and not listed["kt_renew"]["annotations"]["readOnlyHint"]
         assert not listed["kt_add"]["annotations"]["destructiveHint"] and not listed["kt_add"]["annotations"]["readOnlyHint"]
         assert "instructions" in initialized["result"] and "kt_access_request" in initialized["result"]["instructions"]
+        assert "kt_renew" in initialized["result"]["instructions"] and "shell" in initialized["result"]["instructions"]
         assert not [n for n, t in listed.items() if len(json.dumps(t)) > 1800], "tool schemas must stay compact"
         assert rpc("nope")["error"]["code"] == -32601
         server.stdin.write("{broken\n")
         server.stdin.flush()
         assert json.loads(server.stdout.readline())["error"]["code"] == -32700
 
+        error, text = tool("kt_edit", address=address, old_text="Alpha", new_text="x")
+        assert error and "read this leaf first" in text, "an edit needs a read in this session"
         error, text = tool("kt_read", address=address)
-        assert not error and "Alpha line." in text
-        revision = text.splitlines()[0].split()[1]
+        assert not error and "Alpha line." in text and "status:" not in text and "Revision" not in text and "revised_at" not in text
         leaf = project / ".knowledge/what/is/the/fixture.md"
         inode = leaf.stat().st_ino
 
-        error, text = tool("kt_edit", address=address, revision=revision, old_text="Beta line.", new_text="Gamma line.")
+        error, text = tool("kt_edit", address=address, old_text="Beta line.", new_text="Gamma line.")
         assert error and "2 matches" in text and "Gamma" not in leaf.read_text()
-        error, text = tool("kt_edit", address=address, revision=revision, old_text="missing", new_text="x")
+        error, text = tool("kt_edit", address=address, old_text="missing", new_text="x")
         assert error and "0 matches" in text
-        error, text = tool("kt_edit", address=address, revision=revision, old_text="status:", new_text="x")
-        assert error and "front matter" in text
-        error, text = tool("kt_edit", address=address, revision=revision, old_text="", new_text="x")
+        error, text = tool("kt_edit", address=address, old_text="status:", new_text="x")
+        assert error and "0 matches" in text, "front matter is not part of the answer"
+        error, text = tool("kt_edit", address=address, old_text="", new_text="x")
         assert error
-        error, text = tool("kt_edit", address=address, revision="0" * 64, old_text="Alpha", new_text="x")
-        assert error and "changed" in text
-        error, text = tool("kt_edit", address=address, revision=revision, old_text="Alpha line.", new_text="Omega line.",
-                           dry_run=True)
-        assert not error and "Omega" in text and "Omega" not in leaf.read_text()
+        error, text = tool("kt_edit", address=address, old_text="Alpha line.", new_text="Omega line.", dry_run=True)
+        assert not error and "+Omega line." in text and "Omega" not in leaf.read_text() and "revised_at" not in text
 
-        error, text = tool("kt_edit", address=address, revision=revision, old_text="Alpha line.", new_text="Omega line.")
-        assert not error and "+Omega line." in text
+        error, text = tool("kt_edit", address=address, old_text="Alpha line.", new_text="Omega line.")
+        assert not error and "+Omega line." in text and "revised_at" not in text
         assert "Omega line.\nBeta line." in leaf.read_text() and leaf.stat().st_ino == inode
-        new_revision = text.splitlines()[0].split()[1]
-        assert new_revision != revision
-        error, text = tool("kt_edit", address=address, revision=revision, old_text="Omega", new_text="Stale")
-        assert error and "changed" in text, "the pre-edit revision is stale"
-        assert "Stale" not in leaf.read_text()
+        assert 'status: "green"' in leaf.read_text(), "an edit keeps the leaf's status"
+        error, text = tool("kt_edit", address=address, old_text="Omega line.", new_text="Alpha again.")
+        assert not error, "an edit updates what this session has seen, so edits chain without a re-read"
 
-        error, text = tool("kt_rewrite", address=address, revision=new_revision, body="Whole new body.\n")
-        assert not error and "Whole new body." in leaf.read_text() and "Omega" not in leaf.read_text()
+        def external_edit(new_body):
+            """A change made outside this server (another agent, the shell)."""
+            digest = subprocess.run([sys.executable, str(KT), "open", address], cwd=project, env=env, capture_output=True,
+                                    text=True).stderr.split()[-1]
+            subprocess.run([sys.executable, str(KT), "rewrite", address, digest, new_body], cwd=project, env=env, check=True)
+        external_edit("External body.\nBeta line.\nBeta line.\n")
+        error, text = tool("kt_edit", address=address, old_text="Beta", new_text="x")
+        assert error and "changed since you read it" in text and "External body." in leaf.read_text()
+        error, text = tool("kt_read", address=address)
+        assert not error and "External body." in text
+
+        error, text = tool("kt_edit", address=address, edits=[
+            {"old_text": "External body.\nBeta line.\nBeta line.", "new_text": "Whole new body."}])
+        assert not error and "Whole new body." in leaf.read_text() and "External" not in leaf.read_text()
         assert leaf.read_text().startswith("---\n"), "front matter survives"
-        error, text = tool("kt_rewrite", address=address, revision=new_revision, body="stale rewrite\n")
-        assert error
         error, text = tool("kt_read", address="local:no/such/leaf.md")
         assert error
         assert rpc("tools/call", {"name": "kt_delete", "arguments": {}})["result"]["isError"]
 
         # Retrieval, creation, and inspection tools wrap the same CLI semantics.
         error, text = tool("kt_lookup", question="what is the fixture")
-        assert not error and "Whole new body." in text
+        assert not error and "Whole new body." in text and text.startswith(f"[{address}]") and "revised_at" not in text
+        assert "kt: exact" not in text and "Revision" not in text
         error, text = tool("kt_lookup", question="-h what is")
         assert error and "must not start" in text
         error, text = tool("kt_find", terms="Whole body", limit=2)
@@ -158,14 +167,41 @@ def main():
         assert error
 
         # ---- kt_info, kt_grep, kt_status, ranged reads, multi-edit, undo, JSON find, access status
+        bake = "local:how/to/bake/the/fixture.md"
+        error, text = tool("kt_read", address=bake)
+        assert not error and text.startswith("- Preheat."), "a new leaf reads without any notice"
         error, text = tool("kt_status", scope="local")
-        assert not error and "local:how/to/bake/the/fixture.md" in text and "created or rewritten" in text
+        assert not error and bake not in text
         error, text = tool("kt_status", scope="nowhere")
         assert error
+        stale = project / ".knowledge/what/is/stale.md"
+        stale.write_text("---\nstatus: green\nrevised_at: '2026-01-01T00:00:00+00:00'\n"
+                         "expires_at: '2026-02-01T00:00:00+00:00'\n---\n\nA dated claim.\n")
+        stale_address = "local:what/is/stale.md"
+        error, text = tool("kt_renew", address=stale_address)
+        assert error and "read this leaf first" in text, "renewing attests a read"
+        error, text = tool("kt_read", address=stale_address)
+        assert not error and text.startswith(f"kt: yellow leaf {stale_address}") and "kt_renew" in text and "A dated claim." in text
+        assert "status:" not in text and "revised_at" not in text
+        error, text = tool("kt_find", terms="dated claim")
+        assert not error and f"{stale_address}\t" in text and "\tyellow\t" in text, "find names only non-green statuses"
+        stale.write_text(stale.read_text() + "\nA hand tweak.\n")
+        error, text = tool("kt_renew", address=stale_address)
+        assert error and "changed since you read it" in text, "renewal is refused when the leaf changed after your read"
+        error, text = tool("kt_read", address=stale_address)
+        assert not error and "A hand tweak." in text
+        error, text = tool("kt_renew", address=stale_address)
+        assert not error and "Renewed" in text and "checked_at:" in stale.read_text()
+        error, text = tool("kt_read", address=stale_address)
+        assert not error and text.startswith("A dated claim."), "a renewed leaf reads without any notice"
+        error, text = tool("kt_status", scope="local")
+        assert stale_address not in text
+        error, text = tool("kt_find", terms="dated claim")
+        assert "yellow" not in text and "green" not in text
         error, text = tool("kt_info")
         assert not error and "Canonical procedure fixture." in text and "=== kt prove --local ===" in text
         error, text = tool("kt_status", scope="local")
-        assert "local:how/to/bake/the/fixture.md" not in text, "kt_info's proof pass stamped the leaves green"
+        assert "local:how/to/bake/the/fixture.md" not in text
         error, text = tool("kt_grep", pattern="Whole new body")
         assert not error and "local:what/is/the/fixture.md:" in text and "Whole new body." in text
         error, text = tool("kt_grep", pattern=r"Whole \w+ body", regex=True, files_only=True)
@@ -183,43 +219,37 @@ def main():
         error, text = tool("kt_grep", pattern="x", limit=0)
         assert error
 
-        error, text = tool("kt_read", address=address, body_only=True)
-        assert not error and "status:" not in text and "Whole new body." in text
-        error, text = tool("kt_read", address=address, offset=2, limit=5)
-        assert not error and "characters 2-7 of" in text
-        error, text = tool("kt_read", address=address, limit=0)
-        assert error
-        error, text = tool("kt_read", address=address, offset=True)
-        assert error, "booleans are not integers"
-
         error, text = tool("kt_read", address=address)
-        revision = text.splitlines()[0].split()[1]
-        error, text = tool("kt_rewrite", address=address, revision=revision, body="Line one.\nLine two.\nLine three.\n")
-        assert not error
-        revision = text.splitlines()[0].split()[1]
+        assert not error and "status:" not in text and "Whole new body." in text
+
+        external_edit("Line one.\nLine two.\nLine three.\n")
+        error, text = tool("kt_read", address=address)
         original = leaf.read_text()
-        error, text = tool("kt_edit", address=address, revision=revision, edits=[
+        error, text = tool("kt_edit", address=address, edits=[
             {"old_text": "Line one.", "new_text": "First."}, {"old_text": "Line missing.", "new_text": "x"}])
         assert error and "edit 2:" in text and "0 matches" in text and leaf.read_text() == original, "multi-edit is atomic"
-        error, text = tool("kt_edit", address=address, revision=revision, edits=[], old_text="a", new_text="b")
+        error, text = tool("kt_edit", address=address, edits=[], old_text="a", new_text="b")
         assert error
-        error, text = tool("kt_edit", address=address, revision=revision, old_text="Line one.", new_text="X", edits=[
+        error, text = tool("kt_edit", address=address, old_text="Line one.", new_text="X", edits=[
             {"old_text": "Line two.", "new_text": "Y"}])
         assert error and "either" in text
-        error, text = tool("kt_edit", address=address, revision=revision, edits=[
+        error, text = tool("kt_edit", address=address, edits=[
             {"old_text": "Line one.", "new_text": "First."}, {"old_text": "First.", "new_text": "Primary."},
             {"old_text": "Line three.", "new_text": "Third."}])
         assert not error, text
         assert "Primary.\nLine two.\nThird." in leaf.read_text(), "edits apply in order against the running body"
-        edited_revision = text.splitlines()[0].split()[1]
 
         error, text = tool("kt_undo", address=address, dry_run=True)
-        assert not error and "Line one." in text and "Primary." in leaf.read_text()
+        assert not error and "+Line one." in text and "Primary." in leaf.read_text()
         error, text = tool("kt_undo", address=address)
         assert not error and "Line one.\nLine two.\nLine three." in leaf.read_text() and "Primary." not in leaf.read_text()
-        error, text = tool("kt_read", address=address)
-        revision = text.splitlines()[0].split()[1]
-        error, text = tool("kt_edit", address=address, revision=revision, old_text="Line two.", new_text="Second.")
+        error, text = tool("kt_edit", address=address, old_text="Line two.", new_text="Second.")
+        assert not error
+        error, text = tool("kt_prove", scope="local", stamp=True)
+        assert not error
+        error, text = tool("kt_undo", address=address)
+        assert not error and "Line two." in leaf.read_text(), "a status stamp is not a change to the answer, so undo still works"
+        error, text = tool("kt_edit", address=address, old_text="Line two.", new_text="Second.")
         assert not error
         leaf.write_text(leaf.read_text() + "\nHand edit.\n")
         error, text = tool("kt_undo", address=address)

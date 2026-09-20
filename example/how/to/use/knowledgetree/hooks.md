@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T15:51:45+10:00"
+revised_at: "2026-09-21T08:33:21+10:00"
 ---
 
 Install failure-triggered lookup/capture reminders and one-shot task-end capture
@@ -68,7 +68,7 @@ with `/hooks` and restart Claude Code to test. Verified against live sessions: a
 received the complete info output while it was 9.8 KB. Claude Code caps injected hook context near 10,000 characters: on 2026-09-20 a
 10,034-byte `kt info` output was replaced by a `<persisted-output>` file pointer with a short preview, so the model never saw the full startup text.
 The handler therefore compares the info output with `CLAUDE_CONTEXT_LIMIT` (9,500 bytes; override with
-`KT_HOOK_CONTEXT_LIMIT`) and, when it is larger, injects only a short instruction to run `kt info` directly (or call the `kt_info` tool) and consume its
+`KT_HOOK_CONTEXT_LIMIT`) and, when it is larger, injects only a short instruction to call the `kt_info` tool (or run `kt info` in the shell if there are no kt tools) and consume its
 complete output. A live session followed that instruction and obtained the full output. Other harnesses keep the full injection.
 The procedure alone is about 6 KB and the dictionary grows with the tree, so in most trees expect Claude Code to receive the
 instruction rather than the full text.

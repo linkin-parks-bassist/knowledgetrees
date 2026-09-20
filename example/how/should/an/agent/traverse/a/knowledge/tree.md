@@ -1,15 +1,16 @@
 ---
 status: green
-revised_at: "2026-09-20T09:32:03+10:00"
-name: knowledgetrees-lookup
-description: 'Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and capture missing knowledge before continuing.'
+revised_at: "2026-09-21T09:02:51+10:00"
+name: "knowledgetrees-lookup"
+description: "Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and capture missing knowledge before continuing."
 ---
 
 For every new question, use `kt` before external search or host probes, unless the
-answer is already present in adequately checked loaded knowledge. A known path
-can be read directly with `kt open`; otherwise use a question-prefix call such
-as `kt where is vivado` or `kt how to make a plan`. Use `kt find` when a broad
-keyword search is intended. No need to reload the skill or orientation per query.
+answer is already present in adequately checked loaded knowledge. Use the `kt_*` tools;
+the shell `kt` command is only the fallback when they are unavailable. A known path
+can be read directly with `kt_read`; otherwise call `kt_lookup` with a question
+prefix such as `where is vivado` or `how to make a plan` (shell: `kt where is vivado`).
+Use `kt_find` when a broad keyword search is intended. No need to reload the skill or orientation per query.
 
 The kt-first rule applies at every scale, including code-comment-level questions:
 what a function does and why, what a file contains, where a typedef lives, include
@@ -26,26 +27,28 @@ architecture answer; smallness and source visibility are not exemptions.
    kt consumes matching directory words; at the first mismatch it searches only
    that branch using the remaining words. If best keyword coverage is below its
    threshold it climbs one parent and retries; it does not start with whole-tree search.
-   An exact leaf hit returns the full leaf, not a ranked excerpt. `kt how to _`
+   An exact leaf hit returns the full leaf, not a ranked excerpt. `how to _`
    lists the prefix branch. Matching is lexical/content-based, not a semantic model;
    scores and widening thresholds are heuristics, not evidence of correctness.
    Empty or weak-only keyword results exit 1 while showing suggestions. The default
    minimum is 60% coverage of non-grammatical query terms (`--min-coverage` tunes it).
    Exit 0 means retrieval met a heuristic, not semantic adequacy or verification.
-2. Read likely matches with `kt open local:PATH` or `kt open global:PATH`.
+2. Read likely matches with `kt_read local:PATH` or `kt_read global:PATH` (shell: `kt open`).
    Prefer project answers for project questions and global answers for host tooling.
    Results and orientation previews are not substitutes for the full answer.
-3. Check `status`, `revised_at`, `checked_at`, optional expiry metadata, proof markers, and evidence in the answer.
+3. Check the notice (a leaf with none is green), proof markers, and evidence in the answer; tool output omits
+   metadata.
    Freshness depends on volatility and evidence, not timestamp recency alone. Read
    the assertion and predicate behind every proof before relying on the claim.
-   Run `kt prove --root ROOT TOKEN`. Missing lifecycle state defaults to green;
+   Run `kt_prove` with tokens (shell: `kt prove --root ROOT TOKEN`). Missing lifecycle state defaults to green;
    specs, plans, procedures, opinions, and other non-verifiable content are not
    yellow merely because they lack manual `checked_at`. Green may be used. Yellow is a warning that
-   prohibits relying on the contents until re-verification. Brown means the tree
+   prohibits relying on the contents until re-verification; once you have verified the whole leaf,
+   `kt_renew` confirms it. Brown means the tree
    is busted; stop, diagnose the falsification or failed proof, and repair the leaf.
 4. If `kt` does not find the information, you MUST determine whether a leaf exists.
    Retry distinctive keywords and synonyms, then try plausible sentence paths
-   from known orientation routes with `kt open`. List only the nearest existing
+   from known orientation routes with `kt_read`. List only the nearest existing
    parent and descend or backtrack incrementally; a guessed path is not evidence.
    Start under `how/`, `what/`, `where/`, or `why/`; use `when/` when present.
    Only after this, use bounded listing/content search in the relevant branch. Recursive

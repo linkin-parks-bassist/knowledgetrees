@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T16:12:17+10:00"
+revised_at: "2026-09-21T08:33:21+10:00"
 ---
 
 Root discovery uses only the exact current-directory tree, the known global
@@ -15,8 +15,8 @@ Output and default capture scope use `local` for the exact cwd/.knowledge (or cw
 itself when named .knowledge), `global` for the user-global tree, and the full
 canonical root directory path for any other root. Local takes precedence when the
 global tree is also local. Canonical paths avoid folder-name collisions.
-Use `kt open local:PATH`, `kt open global:PATH`, or
-`kt open /full/root/directory:PATH`. Quote arguments containing spaces.
+Use `kt_read` (shell: `kt open`) with `local:PATH`, `global:PATH`, or
+`/full/root/directory:PATH`. Quote arguments containing spaces.
 `project:` and registered names remain input aliases. New captures use --local
 (--project is an alias), --global, or --root PATH. A supplied --scope overrides
 capture metadata. Existing leaves are not automatically relabeled.
