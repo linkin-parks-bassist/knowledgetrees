@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:11:06+10:00"
+revised_at: "2026-09-20T10:12:11+10:00"
 ---
 
 The repository's operational knowledge root is `.knowledge/`; `example/` is the
@@ -74,4 +74,5 @@ syntax, clarified how proof runs recolor new or unresolved leaves, and explained
 the verifiable expiry exception. README, public leaves, installed instructions,
 and the home bootstrap now agree with the CLI. The installer integration test,
 local/example/global proof sweeps, instruction sync, and Git whitespace check
-pass. The current documentation correction is pending publication.
+pass. The documentation correction was committed and pushed to `origin/main` as
+`cffbc36`.
