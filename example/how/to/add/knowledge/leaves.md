@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:09:06+10:00"
+revised_at: "2026-09-20T15:08:02+10:00"
 name: "knowledgetrees-capture"
 description: "Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs."
 ---
@@ -55,6 +55,8 @@ kt add "how to prepare the demo" "Run the project's documented demo command."
 back to global; choose `--global`, `--local` (`--project` is an alias), or `--root example` explicitly when
 scope matters. `--dry-run` previews without
 writing. Pass `-` as the answer to read multiline Markdown from stdin.
+If the question or answer might begin with `-` (for example `-foo`; a Markdown list item like `- step` is fine), put `--` before them, as in `kt add --local -- "how to x" "-foo"`, or the parser reports a missing answer. `-` alone as the answer reads stdin.
+
 The command preserves repeated words and hyphenated components, creates metadata,
 and refuses existing owners rather than overwriting them. It records new answers
 with `status: yellow`, never invents a manual check or proof, and never executes
