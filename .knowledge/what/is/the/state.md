@@ -1,90 +1,12 @@
 ---
 status: green
-revised_at: "2026-09-20T10:20:33+10:00"
+revised_at: "2026-09-20T10:30:50+10:00"
 ---
 
-The repository's operational knowledge root is `.knowledge/`; `example/` is the
-public distributable specimen. The example orientation is intentionally empty.
-The CLI, README, public guidance, and installed global guidance use flat leaf
-metadata. The installed executable matches repository source.
+The operational root is `.knowledge/`; `example/` is the public distributable specimen with an empty orientation. `tools/kt` is installed byte-for-byte from this repository. It supports body-only add/rewrite, flat lifecycle metadata, optional expiry and `verifiable`, access-controlled lookup, and proof checks. The installer preserves personal orientation and access policy, renders public guidance into the global root, and hardlinks compatibility skills.
 
-## Implementation
+Current guidance treats known stale or contradictory active knowledge as an immediate repair obligation. It now states the limit of `kt prove` precisely: zero exit means no brown-level failure was detected in selected leaves at that time; yellow may remain and green can include proof-free leaves. Coverage and predicate quality need agent review even with `verifiable: true`. The README, AGENTS source and generated bootstrap, public example, local project leaves, and installed global guidance have been reconciled. The installer integration test passes. Local, example, and global proof sweeps report zero yellow and brown; installed instruction sync reports zero drift; Git whitespace checks pass. These checks do not certify semantic truth in unrelated trees.
 
-`tools/kt` is the dependency-free Python CLI for lexical lookup, capture,
-revision-checked rewrite and maintenance, root access, and proof evaluation.
-Full reads return a SHA-256 revision for positional `kt rewrite ADDRESS HASH
-BODY`; successful mutations are normally silent. Add and rewrite accept answer
-bodies, generate status/revision time, and set expiry or complete proof coverage
-through CLI options. Rewrite preserves omitted optional metadata and offers flags
-to clear expiry or verifiability. Lookup caches only within
-an invocation and never indexes private roots. Force-private wins over grants
-and bypass. Registered nested roots remain distinct. `kt boot` prints the
-global procedure, exact local orientation, dictionary, and local proof summary;
-`kt init` creates an empty local tree and spine.
+A future, unapproved event-triggered expiry idea is recorded at `what/is/the/proposed/event/triggered/expiry/feature.md`; no hook or CLI behavior was changed for it. Two pre-existing user edits to the OpenCode hook and its test remain untouched in the worktree. The previous current-truth repair is committed locally as `74dd1f8`; publication requires owner authorization for this release.
 
-Leaf front matter has `status` and `revised_at`; optional fields are manual
-`checked_at`, `expires_at`, `expires_every`, and `verifiable`. Harness skill
-entry points may also have `name` and `description`. All timestamps need an
-ISO 8601 timezone. `kt check` records a manual whole-leaf review; `kt prove`
-updates status and individual proof markers without advancing that time.
-Ordinary expired leaves are yellow and appear only in the summary count;
-complete passing proofs auto-green a fully covered `verifiable: true` leaf. Brown is sticky
-until manual review or, for a fully proof-covered `verifiable: true` leaf,
-all proofs pass. The coverage flag requires author review; passing individual
-proofs otherwise do not check a whole leaf. Unsupported front matter is
-rejected by writes and reported brown by proof checks. Substantive evidence,
-origins, caveats, unresolved blockers, and next checks belong in the answer.
-
-Combine concatenates answer bodies in order, resets manual review time, and
-retains brown status from any brown source. Multi-file cleanup is not
-transactional; interrupted cleanup needs inspection. The installer merges
-curated public guidance while preserving personal orientation and access
-registry, and hardlinks skill entry points across supported harnesses. The
-local untracked `sync-kt-instructions.py` refreshes curated installed guidance.
-Codex/OpenCode share boot and capture-review hooks. Codex native hook trust
-and an OpenCode backend restart are needed to load hook changes. A nonblocking
-before-tool reminder cannot guarantee review before an already issued command;
-actual model compliance is less established than protocol tests.
-
-## Validation and on-disk state
-
-All 11 existing active, non-private registered roots were audited: 1,153
-nonempty leaves have flat allowed headers, valid timezone timestamps, and no
-bare proof markers. Each root's read-only proof sweep reports zero yellow and
-zero brown leaves. A one-time in-place cleanup affected 179 leaves; backup and
-post-change hashes, answer bodies, and inodes were audited. Seventeen answers
-gained their existing unresolved blocker/next-check text, and one date-only
-manual-check record became a factual answer note without inventing a time. The
-external backup manifest is at
-`/home/david/.local/share/knowledgetrees/metadata-backups/2026-09-20-hard-break/manifest.json`.
-A repeat cleanup preview found zero changes. Archived snapshots and force-private
-roots were outside the active-root audit. One registered agent-ecosystem root
-is absent on disk. The access registry was unchanged.
-
-The preceding metadata cleanup was published as `367d481` and `2b36a74`.
-The body-only add/rewrite interface, expiry/verifiability options, tests, README,
-and public guidance are now updated. Python and OpenCode suites pass. An install
-with `--no-hooks` deployed the CLI and guidance while leaving two pre-existing
-user hook edits untouched. Project, public example, and installed-global proofs
-are green; installed CLI bytes match source and instruction sync has zero drift.
-The validated change was committed and pushed to `origin/main` as `54c461a`.
-
-The documentation audit corrected the generated and repository AGENTS rewrite
-syntax, clarified how proof runs recolor new or unresolved leaves, and explained
-the verifiable expiry exception. README, public leaves, installed instructions,
-and the home bootstrap now agree with the CLI. The installer integration test,
-local/example/global proof sweeps, instruction sync, and Git whitespace check
-pass. The documentation correction was committed and pushed to `origin/main` as
-`cffbc36`.
-
-The current-truth audit found and repaired green but stale project leaves about
-publication, installed guidance drift, and installer behavior. Canonical and
-public maintenance guidance, README, repository and generated AGENTS bootstrap,
-and the installer now make known stale or contradictory active knowledge an
-immediate repair priority. The hooks guide no longer names a removed metadata
-flag. Installer integration, local/example/global proof sweeps, instruction
-sync, installed CLI byte comparison, and Git whitespace checks pass. The
-updated guidance is installed with hooks left untouched; two pre-existing
-user hook edits remain in the worktree. This audit covered the project leaves
-and affected public/installed guidance; proof colors alone do not certify
-semantic correctness in unrelated trees.
+The 2026-09-20 flat-metadata migration audited 11 then-existing active, non-private roots and changed 179 leaves while preserving answer bodies and inodes. Its backup and post-change manifest remains at `/home/david/.local/share/knowledgetrees/metadata-backups/2026-09-20-hard-break/manifest.json`. Archived snapshots and force-private roots were outside that audit; one registered agent-ecosystem root was absent. These are historical audit bounds, not a claim that all present prose is checked.

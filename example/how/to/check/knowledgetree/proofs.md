@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:11:17+10:00"
+revised_at: "2026-09-20T10:28:41+10:00"
 ---
 
 Use `kt prove` to check marked proofs. Verification is built into kt; it does
@@ -22,6 +22,12 @@ Each positional token must match an exact directory component or filename stem;
 multiple tokens select their disjunction. Use `--local` for the exact current-directory tree, `--global` for the global
 tree, or `-r PATH`/`--root PATH` for another exact accessible root; positional tokens following
 that option retain the same exact, disjunctive semantics.
+
+A zero-exit run means only that the selected leaves had no brown-level failure
+detected at that time. Yellow expiry warnings may remain, and a green leaf may
+have no proofs at all. The verifier cannot judge whether prose is true or current, whether
+leaves contradict each other, or whether a predicate faithfully tests its claim.
+Treat the result as a limited negative check, not a correctness certificate.
 
 Every run prints one aggregate `green=N yellow=N brown=N` line. Brown leaf
 paths are printed to standard error; yellow paths are shown on leaf read.

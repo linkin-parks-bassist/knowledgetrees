@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:15:42+10:00"
+revised_at: "2026-09-20T10:30:20+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
 ---
@@ -19,8 +19,10 @@ and rewrite it before unrelated work; preserve its still-valid claims. Correct
 other active leaves and guidance that repeat the same error. If evidence cannot
 settle the answer, remove the unsupported claim and record the blocker and next
 check in a truthful unresolved answer. Surface any remaining unsafe reliance.
-Proofs detect only the claims they actually cover; they cannot certify prose or
-consistency between leaves.
+A passing `kt prove` run means only that the selected checks found no detectable
+failure at that time. Green includes proof-free leaves and does not certify current
+prose, consistency between leaves, or proof coverage. Even `verifiable: true`
+relies on an author-reviewed coverage assertion and faithful predicates.
 
 After a behavior or policy change, compare the implemented behavior and CLI help
 with every affected knowledge owner and presentation: local/project and global
@@ -93,7 +95,8 @@ root-qualified leaf paths. Leaves are green by default, including non-verifiable
 specifications, plans, procedures, and opinions. A newly changed leaf initially
 shows yellow. Proof evaluation recalculates non-expiring leaves as green when no
 proof has failed; elapsed expiry remains yellow pending manual review, except
-when complete passing proofs verify a `verifiable: true` leaf. Do not rely on a
+when all declared proofs pass on a `verifiable: true` leaf. The coverage
+claim and predicates still require agent judgment. Do not rely on a
 currently yellow leaf until re-verification.
 Brown is falsified, malformed, or proof-failing and makes `kt prove` fail because
 the tree is busted.

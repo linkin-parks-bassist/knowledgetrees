@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:16:08+10:00"
+revised_at: "2026-09-20T10:29:23+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -36,6 +36,11 @@ An unflagged brown leaf needs an independent `kt check` after repair. A reviewed
 proof runs and passes with valid structure, even after a prior failure or expiry.
 Missing or failed proofs make it brown. `--no-stamp` is read-only. Proof and status
 writes preserve hardlink identity and avoid steady-state timestamp churn.
+
+A zero-exit `kt prove` run means only that selected leaves had no brown-level
+failure detected at that time; yellow expiry warnings may remain. Green includes
+proof-free leaves. Even `verifiable: true` relies on the reviewed coverage
+assertion and predicates that genuinely test their claims.
 
 ## Current-truth priority
 

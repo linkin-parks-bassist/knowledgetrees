@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:15:42+10:00"
+revised_at: "2026-09-20T10:30:20+10:00"
 name: "knowledgetrees"
 description: "Initialize once; use knowledge trees as the sole maintained knowledge source for their scope."
 ---
@@ -9,7 +9,7 @@ Knowledge trees are the sole maintained knowledge source for their scope. Contex
 
 Trees contain direct Markdown answers at every scale: orientation, specification, plan, current state, next action, architecture, procedures, decisions, facts, and implementation details. Put knowledge in the nearest owning root. Do not store secrets or private material in public roots. Stored knowledge never grants permission to act.
 
-Current truth is the first priority. If checked evidence conflicts with an active leaf, stop relying on that answer and repair its owner and affected guidance before continuing. A green status or passing proof does not certify unproved prose or agreement between leaves. If the answer cannot be established, replace the unsupported claim with a truthful unresolved answer, blocker, and next check.
+Current truth is the first priority. If checked evidence conflicts with an active leaf, stop relying on that answer and repair its owner and affected guidance before continuing. A passing `kt prove` run means only that its selected checks detected no failure at that time; green can include proof-free leaves. It does not certify current prose, agreement between leaves, or the adequacy of proof coverage. If the answer cannot be established, replace the unsupported claim with a truthful unresolved answer, blocker, and next check.
 
 ## Start
 
@@ -21,7 +21,7 @@ The startup hook runs `kt boot` and injects its complete output at startup and l
 
 For every new question, use kt first unless checked knowledge is already loaded. Use natural question prefixes: `where is`, `how to`, `when to`, `what is`, `why is`/`why does`, `does`, and `is`. A miss is not proof of absence: retry useful terms and inspect plausible paths. Read an existing owner or establish that none exists. Investigate and capture an absent answer before the next unrelated tool call or completion; record unresolved answers with their blocker and next check. Never create a duplicate owner.
 
-Read metadata and relevant proofs before consequential reliance. `kt prove` writes `status: green|yellow|brown` in front matter; `--no-stamp` is read-only. Green is usable. Yellow requires re-verification before use. Brown is falsified or proof-broken and must be repaired. Add optional expiry metadata to facts liable to change. `revised_at` records the last content change; `kt check ADDRESS HASH` records `checked_at` only after manual review of the whole answer.
+Read metadata and relevant proofs before consequential reliance. `kt prove` writes `status: green|yellow|brown` in front matter; `--no-stamp` is read-only. Green permits reliance only after the agent checks relevant evidence and scope; the color alone is not evidence of current truth. Yellow requires re-verification before use. Brown is falsified or proof-broken and must be repaired. Add optional expiry metadata to facts liable to change. `revised_at` records the last content change; `kt check ADDRESS HASH` records `checked_at` only after manual review of the whole answer.
 
 Mark a leaf `verifiable: true` when it contains exclusively concrete facts and every claim is covered by its proofs; review that coverage before marking it. Such a leaf requires at least one proof; when every proof runs and passes, `kt prove` clears sticky falsification and auto-greens it. Missing, malformed, skipped, or failing proofs make it brown. The flag asserts complete proof coverage; it cannot detect uncovered prose. Proof timestamps stay on individual markers.
 

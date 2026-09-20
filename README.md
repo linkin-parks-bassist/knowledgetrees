@@ -217,8 +217,10 @@ the work—not a documentation chore deferred until later.
 
 Correctness comes first. If current evidence contradicts an active leaf, repair its
 owning answer and affected guidance before relying on the tree or finishing the
-task. A green proof result checks the declared predicates and freshness; it cannot
-certify unproved prose or detect a contradiction between two leaves.
+task. A zero-exit `kt prove` run says only that its selected leaves had no
+brown-level failure detected at that time. Yellow expiry warnings may remain;
+green can include leaves with no proofs. The verifier cannot certify current
+prose, agreement between leaves, proof coverage, or a predicate's adequacy.
 
 ### Concrete facts can reconnect themselves to reality
 

@@ -12,7 +12,9 @@ permissions always govern.
 
 Known stale or contradictory active knowledge takes priority over ordinary work.
 Stop relying on it; repair the owning leaf and affected guidance before completion.
-A green status or passing proof does not certify unproved prose.
+A zero-exit `kt prove` run only means no brown-level failure was detected in
+the selected leaves at that time; yellow warnings may remain and green leaves
+may have no proofs. It does not certify current prose or consistency.
 
 Full leaf reads supply a revision hash; edit with `kt rewrite ADDRESS HASH BODY`
 and preserve still-valid knowledge already in context.

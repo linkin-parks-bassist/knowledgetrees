@@ -153,6 +153,7 @@ def main() -> None:
         assert "determine whether a leaf exists" in agents
         assert "kt rewrite ADDRESS HASH BODY" in agents
         assert "Known stale or contradictory active knowledge takes priority" in agents
+        assert "no brown-level failure was detected" in agents
         assert "first move of every task" not in agents
         config = codex_config.read_text()
         assert 'model = "example-model"' in config
