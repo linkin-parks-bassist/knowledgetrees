@@ -103,7 +103,7 @@ def state_database():
     return database
 
 
-def startup_context(payload, limit=None):
+def startup_context(payload, limit=None, harness=None):
     source = payload.get("source")
     if source not in ("startup", "resume", "new", "clear", "compact"):
         return {}, 0
@@ -111,7 +111,12 @@ def startup_context(payload, limit=None):
     cwd = payload.get("cwd") or os.getcwd()
     info = subprocess.run([sys.executable, str(cli), "--lean", "info"], cwd=cwd,
                           text=True, capture_output=True)
-    context = "Knowledge-tree startup: `kt info` output follows (leaf metadata omitted; a notice marks any non-green leaf). Consume it through the final proof summary.\n"
+    context = ("Knowledge-tree startup: `kt info` output follows (leaf metadata omitted; a notice marks any non-green leaf). "
+               "Consume it through the final proof summary.\n")
+    if harness == "codex":
+        context += ("Codex tool names may be prefixed `mcp__knowledgetrees__kt_` (for example "
+                    "`mcp__knowledgetrees__kt_lookup`); check the full tool registry before treating "
+                    "knowledge-tree MCP tools as unavailable or falling back to the `kt` shell.\n")
     if info.returncode:
         context += f"kt info failed (exit {info.returncode}); diagnose before relying on this tree.\n"
     output = info.stdout + info.stderr
@@ -120,7 +125,8 @@ def startup_context(payload, limit=None):
                    f"harness will inject from a hook (about {limit}).")
         if info.returncode:
             context += f" It exited {info.returncode}."
-        context += (" Call the kt_info tool now (or run `kt info` in the shell if you have no kt tools), unfiltered and "
+        tool_name = "mcp__knowledgetrees__kt_info" if harness == "codex" else "kt_info"
+        context += (f" Call the {tool_name} tool now (or run `kt info` in the shell if you have no kt tools), unfiltered and "
                     "untruncated, and consume its complete output through the final proof summary before other work.")
         return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
     context += output
@@ -130,7 +136,7 @@ def startup_context(payload, limit=None):
 def handle(harness, event, payload):
     if event == "start":
         limit = int(os.environ.get("KT_HOOK_CONTEXT_LIMIT", CLAUDE_CONTEXT_LIMIT)) if harness == "claude" else None
-        result, code = startup_context(payload, limit)
+        result, code = startup_context(payload, limit, harness)
         if harness in ("opencode", "copilot") and result:
             return {"additionalContext": result["hookSpecificOutput"]["additionalContext"]}, code
         return result, code
