@@ -1,12 +1,9 @@
 ---
 status: green
-revised_at: "2026-09-21T09:03:53+10:00"
+revised_at: "2026-09-21T14:45:59+10:00"
 ---
 
-Agents change a leaf with the `kt_edit` tool (exact-match replacement after a whole read); the shell command below replaces a whole answer. Read a leaf normally with `kt open ROOT:PATH` or an exact sentence-prefix query.
-Every full leaf read supplies `Revision: HASH` on stderr for the same bytes returned
-verbatim on stdout. Ranked excerpts are not full reads and do not supply a
-revision for editing.
+Agents use `kt_rewrite` as the standard editing tool: first use `kt_read` or an exact lookup, which returns the complete answer plus its `Revision: HASH` and no other metadata, then pass that hash with the complete replacement answer. Neither MCP nor kt has partial leaf reads. Ranked excerpts are selectors, not reads, and supply no hash. The locked CLI rejects stale hashes. Use `kt_edit` only for economy when making a tiny surgical exact-match change after a whole read; the shell command below has the same whole-answer contract.
 
 Use the canonical editing command:
 
@@ -30,9 +27,7 @@ correctly; operating-system argument size limits apply.
 Successful rewrites and identical no-ops produce no stdout or stderr. Exit 0
 signals success. Neither old nor new contents are echoed. --dry-run still shows
 the diff, and failures report diagnostics with a nonzero exit status. Preserve
-still-valid knowledge and check relevant proofs before reliance. The existing
-one-shot task-end capture-review hook carries the accuracy/preservation reminder
-once per work cycle, rather than repeating it after every rewrite.
+still-valid knowledge and check relevant proofs before reliance. Agent guidance carries the accuracy/preservation requirement. No task-end reminder hook is installed, and rewrites do not create an extra model turn.
 
 The command needs no Git repository and invokes no editor. Revision mismatch exits
 4 and leaves the file untouched; reread and merge concurrent changes. An advisory

@@ -1,6 +1,6 @@
 ---
-status: green
-revised_at: "2026-09-21T09:02:51+10:00"
+status: "green"
+revised_at: "2026-09-22T09:39:15+10:00"
 ---
 
 Use `kt prove` to check marked proofs. Verification is built into kt; it does
@@ -29,10 +29,18 @@ have no proofs at all. The verifier cannot judge whether prose is true or curren
 leaves contradict each other, or whether a predicate faithfully tests its claim.
 Treat the result as a limited negative check, not a correctness certificate.
 
-Every run prints one aggregate `green=N yellow=N brown=N` line. Brown leaf
-paths are printed to standard error; yellow paths are shown on leaf read.
-Yellow is a warning and does not by itself change the zero exit status. Brown
-means the tree is busted: the command returns 1. Use `-v`
+Every run prints two aligned summary lines, for example:
+
+```text
+Leaves: 28 total · 28 green · 0 yellow · 0 brown
+Proofs:  1 total ·  1 valid · 0 failed · SUCCESS
+```
+
+The proof result is `FAIL` when a leaf is brown or a proof fails. Counts are padded
+to the widest value in each corresponding column; the result starts under the
+brown count. Brown leaf paths are printed to standard error;
+yellow paths are shown on leaf read. Yellow is a warning and does not by itself
+change the zero exit status. Brown means the tree is busted: the command returns 1. Use `-v`
 or `--verbose` when diagnostic output is needed; verbose mode additionally lists
 every selected leaf, proof result, error, and summary in the former detailed format.
 Normal evaluation writes `status: green|yellow|brown` in front matter. `kt_renew`

@@ -20,17 +20,17 @@ Startup hooks inject the complete `kt info` output once for a fresh session; Cla
 
 The installer retains a skill-shaped entry point for compatibility and explicit fallback. It creates
 `~/.agents/skills/knowledgetrees/SKILL.md`,
-`~/.codex/skills/knowledgetrees/SKILL.md`, and
 `~/.claude/skills/knowledgetrees/SKILL.md` as hard links to the canonical installed
-leaf at `~/.knowledge/how/to/use/knowledgetrees.md`. It also enables the Codex entry
-in `~/.codex/config.toml`. The four paths share one inode, so editing the canonical
-leaf cannot leave a wrapper or copied skill body stale.
+leaf at `~/.knowledge/how/to/use/knowledgetrees.md`. Codex discovers the shared
+`.agents` catalog, so the installer removes redundant legacy `.codex/skills`
+copies and every matching explicit `skills.config` entry. The remaining paths
+share one inode, so editing the canonical leaf cannot leave a wrapper stale.
 
-Four procedure skills are also installed in each of those directories:
+Four procedure skills are also installed in both directories:
 `knowledgetrees-lookup`, `knowledgetrees-capture`, `knowledgetrees-maintenance`,
 and `knowledgetrees-ingestion`. Each hardlinks to the respective retrieval,
 capture, maintenance, or ingestion leaf, with discovery metadata in that canonical
-leaf. All five skills are enabled in Codex configuration and OpenCode permissions.
+leaf. The shared copies are discovered by Codex; all five names are enabled in OpenCode permissions.
 Quit and restart clients after installation or updates to refresh hooks and catalogs.
 
 The installer also deploys the MCP server `~/.knowledge/.tools/kt-mcp` and registers it: Codex in `~/.codex/config.toml`, OpenCode under `mcp` in `opencode.json`, Copilot CLI in `~/.copilot/mcp-config.json`, and Claude Code through `claude mcp add --scope user` (printed as a manual command when the `claude` CLI is absent). Existing `knowledgetrees` registrations and other servers are left alone. The OpenCode entry is added without a separate prompt, under the write access the `[n/Y]` consent already discloses. `--hooks-only` refreshes it too. See `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.

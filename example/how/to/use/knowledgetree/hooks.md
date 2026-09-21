@@ -1,132 +1,58 @@
 ---
 status: green
-revised_at: "2026-09-21T08:33:21+10:00"
+revised_at: "2026-09-21T14:30:56+10:00"
 ---
 
-Install failure-triggered lookup/capture reminders and one-shot task-end capture
-reviews with the knowledge-tree installer. For an existing root, use
-`./install --hooks-only --force` to update infrastructure while preserving leaves
-and hardlinked skills. Preview first with `--dry-run`. The same run also deploys and registers the MCP server (`~/.knowledge/.tools/kt-mcp`) unless `--no-mcp` is given; see `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
+Install startup-only knowledge-tree context with the knowledge-tree installer. For an
+existing root, use `./install --hooks-only --force` to update infrastructure while
+preserving leaves and hardlinked skills. Preview first with `--dry-run`. The same
+run deploys and registers the MCP server unless `--no-mcp` is given.
 
-The shared Python handler lives at `~/.knowledge/.tools/kt-hooks`. Claude Code definitions
-merge into `~/.claude/settings.json` (other settings and hooks are preserved, and the
-file's mode is kept); Codex definitions
-merge into `~/.codex/hooks.json`; OpenCode loads
-`~/.config/opencode/plugins/knowledgetrees.js`; Copilot CLI loads the dedicated
-`~/.copilot/hooks/knowledgetrees.json`. Unrelated hooks remain intact, and differing
-managed adapter files require explicit replacement permission via `--force`.
+The shared Python startup handler lives at `~/.knowledge/.tools/kt-hooks`. Claude
+Code definitions merge into `~/.claude/settings.json`; Codex definitions merge into
+`~/.codex/hooks.json`; OpenCode loads
+`~/.config/opencode/plugins/knowledgetrees.js`; Copilot CLI loads
+`~/.copilot/hooks/knowledgetrees.json`. Unrelated hooks remain intact. Reinstalling
+removes this project's formerly managed prompt, post-tool, failure, stop, and idle
+hooks while preserving unrelated definitions. The dedicated Copilot and OpenCode
+adapters are rewritten as startup-only adapters.
 
-Successful proof timestamp refreshes alone do not conflict on reinstall; their
-installed stamps are preserved until rechecked. Edited content, falsified markers,
-and sticky `status: brown` remain protected differences.
+The installed handler is executable.
 
-The shared installed handler is executable at `~/.knowledge/.tools/kt-hooks`.
-
-Proof: (verified at 2026-09-18T13:49:02+10:00)
+Proof: (verified at _)
 
 ```sh
 test -x "$HOME/.knowledge/.tools/kt-hooks"
 ```
 
-## When reminders run
+## Startup behavior
 
-Detected tool failure -> check `kt` for a known explanation/fix; inspect relevant
-knowledge and eligible proofs; diagnose within authority; then capture the reusable
-answer or rewrite its existing owner. Expected negative tests do not require invented
-discoveries. A search miss requires alternate terms and scoped inspection before
-declaring absence. Unresolved knowledge needs its blocker and next check.
+Claude Code and Codex `SessionStart`, OpenCode system-context initialization, and
+Copilot CLI `sessionStart` run `kt --lean info` in the exact working directory and
+inject its complete output: canonical procedure, exact local orientation,
+dictionary, and proof result. Resume, clear, and compact lifecycle sources count as
+startup refreshes where the harness supports them. A missing local tree falls back
+to the global root. A genuinely failed `kt info` is reported in context and must be
+diagnosed before the tree is trusted.
 
-Task end -> request a capture review after a failure or at least 10 completed tool
-calls in the work cycle. The review may capture missing answers, rewrite owners, or
-conclude that there is nothing new. It also reminds agents to ensure rewritten
-knowledge is accurate and no still-valid knowledge was lost. Rewrite success and no-ops
-are silent, so batching rewrites does not repeat that reminder.
-This does not certify that capture happened.
-One review is requested per cycle; review-generated prompts do not rearm it.
-The next ordinary user prompt starts a fresh activity cycle. Set
-`KT_HOOK_MIN_CALLS` to a positive integer in the harness environment to tune the
-activity threshold. Tool count approximates substantial work, not semantic value.
+Claude Code caps injected hook context near 10,000 characters. Above 9,500 bytes
+(configurable with `KT_HOOK_CONTEXT_LIMIT`), its startup hook tells the agent to
+call `kt_info` or run `kt info` without tools and consume the complete output. Other
+harnesses receive the full injection. Codex startup text also reminds agents that
+MCP tool names may be prefixed `mcp__knowledgetrees__kt_`.
 
-Counters and hashed receipts persist in an SQLite database under
-`${XDG_STATE_HOME:-~/.local/state}/knowledgetrees`, overridable with
-`KT_HOOK_STATE_DIR`. Harness/session keys isolate concurrent sessions; duplicate
-terminal event receipts do not increment counts again. Entries expire after seven
-days. Raw commands, inputs, outputs, errors, and knowledge are not stored. The
-handler performs no model calls and never runs or writes leaf bodies.
+Non-startup knowledge-tree hooks are deliberately disabled. No managed hook watches
+prompts or tool results, applies failure heuristics, counts calls, requests a capture
+review, blocks task completion, or creates an extra model turn. The MCP tools and
+normal agent instructions provide lookup and capture directly. The shared handler
+may retain dormant compatibility code, but the installed harness definitions and
+OpenCode adapter do not invoke it.
 
-## Harness contracts and activation
+Review Claude Code and Codex definitions with `/hooks`. Restart OpenCode and start a
+fresh Copilot CLI session after updating adapters. Startup always uses the exact
+current-directory root and normal access policy; it never searches parent
+directories or widens access.
 
-To establish a harness's real hook payloads, do not rely on a summarized docs fetch: on 2026-09-20 one gave wrong Claude Code field names (`session_start_reason`, `user_prompt`, a `permissionDecision` Stop output) and a second fetch was truncated. Instead run the harness non-interactively with a throwaway settings file whose hooks append their stdin to a scratch log (for Claude Code: `claude -p PROMPT --settings FILE --allowedTools Read`, with one tool call that fails and one that succeeds), then read the captured JSON. Use `--allowedTools`, redirect stdin from `/dev/null`, and set a timeout.
-
-Claude Code's `SessionStart` hook (matcher `startup|resume|clear|compact`) returns the same
-info output as `hookSpecificOutput.additionalContext`. Claude payloads carry `source`, `prompt`,
-`session_id`, and `stop_hook_active`. Tool failures arrive as a separate `PostToolUseFailure`
-event (with `error` and `is_interrupt`); `PostToolUse` fires only on success and carries no exit
-status, so the adapter applies no text heuristics there. Interrupted calls do not count as
-failures. `Stop` continues via top-level `decision: block` and `reason`. Review new definitions
-with `/hooks` and restart Claude Code to test. Verified against live sessions: a fresh session listed all five skills and
-received the complete info output while it was 9.8 KB. Claude Code caps injected hook context near 10,000 characters: on 2026-09-20 a
-10,034-byte `kt info` output was replaced by a `<persisted-output>` file pointer with a short preview, so the model never saw the full startup text.
-The handler therefore compares the info output with `CLAUDE_CONTEXT_LIMIT` (9,500 bytes; override with
-`KT_HOOK_CONTEXT_LIMIT`) and, when it is larger, injects only a short instruction to call the `kt_info` tool (or run `kt info` in the shell if there are no kt tools) and consume its
-complete output. A live session followed that instruction and obtained the full output. Other harnesses keep the full injection.
-The procedure alone is about 6 KB and the dictionary grows with the tree, so in most trees expect Claude Code to receive the
-instruction rather than the full text.
-
-Codex's native `SessionStart` hook runs `kt info` and injects its complete output,
-including the canonical procedure, exact local orientation, dictionary, and final
-local proof summary. It matches startup, resume, clear, and compact, not ordinary
-user prompts. A failed `kt info` is shown as a diagnostic and must be repaired before
-relying on the tree. Review/trust the new definition in `/hooks` and start a fresh
-session to test it. Protocol tests cover all four lifecycle sources.
-
-Codex Bash PostToolUse can supply stdout alone without an exit code. The adapter
-prefers structured failure statuses when available and otherwise uses diagnostic-line
-heuristics. Successful explicit exit status suppresses heuristic matches. It never
-rewrites commands or requests permission decisions. Silent nonzero exits can be
-missed; quoted diagnostic output can produce false positives. The installer retires
-its former managed PreToolUse bridge while preserving unrelated hooks.
-
-The handler adds `hookSpecificOutput.additionalContext` without suppressing the original
-result. `Stop` can request a continuation with `decision: block` and `reason`;
-this is not guaranteed pre-display gating. Use `/hooks` to review and trust new
-definitions: installation does not bypass that requirement.
-[Official Codex hooks](https://learn.chatgpt.com/docs/hooks).
-
-OpenCode's plugin supplies the same complete `kt info` output in assembled model
-system context. It remains available after compaction; the compaction hook asks the
-summary to preserve checked evidence and open captures. Focused skills still apply
-when triggered. Restart after editing the adapter. Adapter tests cover injection,
-duplicate prevention, request/session availability, and compaction context.
-
-Source: tools/kt-hooks, install, tests/test-hooks.py, tests/test-install.py;
-current Codex live stdout-only payload shape and the documented heuristic tradeoff.
-
-## Startup initialization
-
-Claude Code and Codex SessionStart, OpenCode system-context startup, and Copilot CLI sessionStart run `kt info` in the exact working directory and inject its complete output (Claude Code substitutes a run-it-directly instruction when the output exceeds its hook-context limit): canonical global procedure,
-exact local orientation, dictionary, and local proof result. A missing local tree is not a failed `kt info`: it falls back to the global root. A genuinely failed `kt info` (unreachable procedure, access needing approval, brown proofs) is reported in context, and the hook still injects it. OpenCode and Copilot CLI require restart after installed hook changes. The handler protocol tests cover Copilot startup output; live Copilot model reception has not been observed. [GitHub Copilot hook reference](https://docs.github.com/en/copilot/reference/hooks-reference).
-
-Codex, OpenCode, and Copilot CLI share diagnostic failure detection; Claude Code relies on its native failure event. All four share Stop/idle bookkeeping.
-Startup uses the exact current-directory local root for orientation and normal
-access policy for the dictionary; it never searches parent directories. The
-injected contents follow that same scope and access boundary.
-
-## Review before commit or push
-
-A tool-before event can detect a pending shell command, but detection does not
-establish that a model reviewed knowledge before the command executes.
-Codex PreToolUse exposes tool_input and supports additionalContext without
-blocking, or permissionDecision=deny to reject the call. OpenCode's
-tool.execute.before exposes input/output.args; its documented rejection mechanism
-is throwing an error. It does not document a model-context return field for this
-before event. Queuing context through the existing system transform reaches a
-later model request and cannot guarantee review before the pending command.
-A guaranteed before-command review needs call rejection and an agent retry after
-review. The installer does not install a boundary-blocking mechanism.
-These are API capabilities and timing limits, not demonstrated model compliance.
-Sources: [Codex hooks](https://learn.chatgpt.com/docs/hooks#pretooluse) and
-[OpenCode plugins](https://opencode.ai/docs/plugins/).
-
-Restart an OpenCode backend after updating its startup plugin/handler so newly
-resumed sessions receive the compact initialization instruction.
+Source: `tools/kt-hooks`, `tools/kt-opencode.mjs`, `install`,
+`tests/test-hooks.py`, `tests/test-install.py`, and
+`tests/test-opencode-hooks.mjs`.

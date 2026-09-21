@@ -1,37 +1,12 @@
 ---
 status: green
-revised_at: "2026-09-21T09:03:53+10:00"
+revised_at: "2026-09-21T15:00:32+10:00"
 ---
 
-Run `python3 -B tests/test-install.py`. The test uses temporary target homes and
-checks dry-run behavior, knowledge installation, spine exclusion, empty-orientation
-creation and preservation, removal of the legacy managed `AGENTS.md` block while preserving unrelated content, deletion of a block-only file, and Codex configuration preservation,
-idempotency, conflict refusal, forced replacement, verifier execution, and same-device
-same-inode hard links for the skill entry points in all three harness directories (`.agents`, `.codex`, `.claude`). It also rejects a
-regression to per-task skill invocation in the installed procedure.
+Run `python3 -B tests/test-install.py`. It uses temporary target homes and checks dry-run and consent behavior, knowledge installation, orientation preservation, legacy `AGENTS.md` cleanup, configuration merging, idempotency, conflict refusal, forced replacement, proof execution, and hardlink identity. Knowledge-tree skill entry points must exist in the shared `.agents` catalog and Claude Code's `.claude` catalog; Codex-local copies and their exact explicit registrations must be absent. The test also runs `sync-kt-instructions.py` against the temporary home to ensure instruction refresh cannot recreate retired Codex-local copies.
 
-Hook integration also checks safe Codex and Claude Code settings merges (unrelated keys, hooks, and file mode preserved), malformed-hook refusal before writes,
-dedicated Copilot startup and reminder event definitions, OpenCode adapter deployment, idempotent hook
-installation, and `--hooks-only` preservation of customized leaves, hardlinks, and
-permissions. Run `python3 -B tests/test-mcp.py` for the MCP server (protocol, annotations, exactly-one-match, atomic multi-edit, stale revision, undo and its refusal after a hand edit, dry run, front-matter safety, inode preservation, lookup/find/grep/status/info/add/dict/roots/prove behavior, JSON find, ranged reads, lean output and notices, read-before-edit, answer-based staleness (a status stamp never blocks an edit or undo), `kt_renew` (refused without a read or after the answer changed), the absence of any rewrite tool, prompts, option-injection guards, no-overwrite on add, misses reported as data, and the elicitation flow with a fake client: accept in three scopes, decline, cancel, invalid answer, no prompt for denied or force-private roots, no re-nagging, mid-prompt requests still served) and see the installer checks for its four registrations, respect for existing entries, `--no-mcp`, and malformed-config refusal. Run `python3 -B tests/test-hooks.py` for shared protocol tests (including the Claude Code oversized-output instruction and the global-root fallback) and
-`node tests/test-opencode-hooks.mjs` for the mocked OpenCode adapter. Neither runs
-models. Run `python3 -B tests/test-grants.py` for the access grant lifecycle (`kt grants` sources, revocation in every scope, refusals, and pruning of stale approvals including a recreated tree, with deny/ask/force-private registrations kept). Run `python3 -B tests/test-kt.py` for retrieval and weak-result exit checks and `python3 -B tests/test-grep-status.py` for `kt grep` (fixed string versus regex, case, files-only, context, limit, invalid pattern, restricted roots hidden), `kt status` (reasons, ordering, read-only, scoping), and the reusable `apply_access_decision` function.
+Hook integration verifies startup-only definitions for Claude Code, Codex, OpenCode, and Copilot CLI while preserving unrelated hooks, keys, and file modes and refusing malformed configuration before writes. It checks that reinstalling retires formerly managed non-startup hooks. `--hooks-only` preserves customized leaves, hardlinks, registrations, and permissions.
 
-Successful proof timestamp refreshes alone are not installation content conflicts;
-their installed stamps are retained until the verifier checks them again. Falsified
-markers, sticky `status: brown`, prose edits, and other metadata changes
-remain protected content differences. Reinstallation tests cover both cases.
+Run `python3 -B tests/test-mcp.py` for all exposed MCP tools, including whole reads with revision hashes, required read-before-rewrite behavior, stale-hash rejection, tiny exact edits, undo, renew, access elicitation, and `kt_rm`, `kt_mv`, and `kt_init`. Run `python3 -B tests/test-hooks.py` for shared startup protocol behavior, `node tests/test-opencode-hooks.mjs` for the OpenCode adapter, `python3 -B tests/test-grants.py` for access lifecycle, `python3 -B tests/test-kt.py` for retrieval, and `python3 -B tests/test-grep-status.py` for grep and status. These tests do not run models.
 
-Normal proof evaluation writes `status` in front matter. Installer
-idempotency compares answers while allowing successful check-time and green/yellow
-transitions. A preserved body-only orientation gains front matter without losing
-its text.
-
-
-Codex skill enablement must preserve the newline between an `enabled` setting and
-the following TOML table. Match horizontal trailing whitespace only; `\s*$` can
-consume the newline and produce invalid text such as `enabled = true[desktop]` or
-`enabled = true[[skills.config]]`. Parse the complete proposed configuration with
-Python tomllib before any installer write. The integration fixture places a desktop
-table immediately after an existing disabled skill and verifies the parsed table.
-Evidence: repaired ~/.codex/config.toml, install and tests/test-install.py, 2026-09-15.
+Installer comparisons tolerate refreshed successful proof timestamps and green/yellow status transitions while protecting falsified markers, sticky brown status, prose edits, and other meaningful metadata differences. Codex TOML changes are parsed before write, and skill-registration cleanup preserves unrelated tables and settings.

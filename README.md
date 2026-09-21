@@ -24,14 +24,14 @@ This repository contains:
 - a visible, self-describing public corpus in [`example/`](example/where/am/i.md);
 - the knowledge-first [`install`](install) script;
 - the proof engine built into [`kt`](tools/kt), accessed through `kt prove`;
-- startup/failure hooks for Claude Code, Codex, OpenCode, and Copilot CLI ([`kt-hooks`](tools/kt-hooks), [`kt-opencode.mjs`](tools/kt-opencode.mjs)) and a local MCP server ([`kt-mcp`](tools/kt-mcp)); and
+- startup hooks for Claude Code, Codex, OpenCode, and Copilot CLI ([`kt-hooks`](tools/kt-hooks), [`kt-opencode.mjs`](tools/kt-opencode.mjs)) and a local MCP server ([`kt-mcp`](tools/kt-mcp)); and
 - selected planning and specification practices distilled into semantic leaves,
   without inheriting an inflexible skill-driven workflow.
 
 ## Tools for agents
 
 Knowledge only compounds if using it is effortless, so `./install` gives Claude Code, Codex,
-OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 16 tools
+OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 20 tools
 that mirror the `kt` workflow. Agents are told to use them instead of the `kt` shell command
 (the shell is the fallback when the tools are unavailable). Every tool delegates to the CLI, so
 access policy, locking, and proofs behave identically.
@@ -40,17 +40,17 @@ access policy, locking, and proofs behave identically.
 | --- | --- |
 | Find | `kt_lookup` (`how to …` questions), `kt_find` (ranked, optional JSON), `kt_grep` (literal or regex exact text), `kt_dict`, `kt_roots` |
 | Read | `kt_read` (a leaf's whole answer), `kt_info` (startup knowledge) |
-| Change | `kt_edit` (text must match once; several edits apply atomically), `kt_undo`, `kt_add` |
+| Change | `kt_rewrite` (standard; complete answer plus read hash), `kt_edit` (economy for a tiny surgical change), `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_init` |
 | Check | `kt_renew` (confirm a yellow leaf you verified), `kt_prove`, `kt_status` (every non-green leaf, with why) |
 | Access | `kt_access_status` (what is readable and why), `kt_access_request`, `kt_access_revoke` |
 
-Tool output is lean: a leaf comes back as its answer body only, with no front matter, timestamps,
-or revision hashes, and a one-line notice leads it only when it is yellow or brown (computed live,
-so an expired leaf is flagged before any proof run). Leaves are atomic: they are read whole, and
-`kt_edit` replaces exact text that must match exactly once, so an agent can only change what it has
-read. The server refuses an edit when the leaf's answer has changed since that read (a status stamp
-or check time does not count), so a stale edit fails instead of clobbering. There is no
-whole-answer replacement tool. When an agent meets a yellow leaf it checks the claims against
+Tool output is lean: a whole-leaf read returns the complete answer and a final `Revision:` SHA-256
+line, with no front matter or timestamps; a one-line notice leads it only when yellow or brown.
+There are no partial leaf reads, ranges, paging, or truncation. Search excerpts only select a leaf
+and never yield a rewrite hash. `kt_rewrite` is the standard edit method: it replaces the complete
+answer and must cite the hash obtained by that whole read. The CLI rejects stale hashes under lock.
+`kt_edit` is only the economy option for a tiny surgical exact-match change and uses the server's remembered whole
+read. When an agent meets a yellow leaf it checks the claims against
 current evidence and calls `kt_renew`, which records that the whole leaf was verified and re-runs
 its proofs; that call is the agent's attestation, so it too is refused unless the agent read the
 leaf in this session. The same lean view is available in the shell as `kt --lean`. Read tools are annotated read-only, so harnesses can skip their prompts and keep
@@ -65,8 +65,15 @@ it calls `kt_access_request` and **your harness asks you**, through MCP elicitat
 
 1. The prompt names the root, the project directory, and the agent's reason.
 2. You choose *this directory*, *this directory and subdirectories*, *everywhere*, or decline.
-3. Only your answer saves the grant. The model never sees or answers the prompt, and it is not
-   asked again about a root you declined.
+3. Only an accepted response carrying one of those scopes saves the grant. The model never sees
+   or answers the prompt.
+
+Some clients advertise elicitation but can return decline, cancel, or an error without displaying
+a prompt. The server reports that client action without claiming the user declined, does not cache
+it as a refusal, and supplies the exact interactive `kt access` fallback command. If you explicitly
+authorize that exact root and scope in conversation, the agent may run and confirm the scoped CLI
+command for you; otherwise you can run it yourself. A failed prompt is not a veto, and access to
+two trees does not call for a persistent global permissions bypass.
 
 Access is not one-way: `kt_access_status` says why each root is readable and `kt_access_revoke`
 gives it back. Narrowing the current directory is immediate; anything wider asks you first.
@@ -74,8 +81,8 @@ Approvals are tied to a path, so `kt` drops them when their tree disappears, and
 later created there needs a fresh approval.
 
 Denied and force-private roots are never prompted for, and a client that cannot prompt gets the
-exact `kt access` command instead. This guards against an agent granting itself access to
-private material; it is not a sandbox. The CLI still needs your own terminal, and the real
+exact `kt access` command instead. This guards against an agent inventing its own access decision;
+it is not a sandbox. The CLI still requires interactive confirmation, and the real
 boundary is what your harness lets an agent run. Details, including safeguards and what is
 verified, are in [the design leaf](example/how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md).
 
@@ -325,8 +332,15 @@ built into kt; no separate verifier process or installation is needed.
 `kt prove --help` lists options. Before installation, run `tools/kt prove`
 from the checkout. Explicit roots require the same access approval as retrieval.
 
-Every proof run prints aggregate `green=N yellow=N brown=N` counts and the path
-of each brown leaf. Yellow paths are read from leaves when needed. Leaves are green by default, including specs,
+Every proof run prints aligned leaf and proof summaries:
+
+```text
+Leaves: 28 total · 28 green · 0 yellow · 0 brown
+Proofs:  1 total ·  1 valid · 0 failed · SUCCESS
+```
+
+The result is `FAIL` when a leaf is brown or a proof fails. Brown leaf
+paths follow on standard error. Yellow paths are read from leaves when needed. Leaves are green by default, including specs,
 plans, procedures, opinions, and other content that is not mechanically verifiable.
 A new leaf starts green, and adding or editing a leaf keeps its status; elapsed `expires_at` or
 `expires_every` freshness makes a leaf yellow and unusable until re-verification. Brown means
@@ -370,7 +384,7 @@ an expiry. Missing, malformed, skipped, or failed proofs make it brown. The auth
 responsible for ensuring every claim is covered; the flag cannot detect uncovered
 prose.
 
-`kt init [ORIENTATION]` creates `.knowledge/` in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. The optional argument supplies the exact orientation file contents. It refuses to overwrite an existing tree.
+`kt init [ORIENTATION]` creates `.knowledge/` in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. The optional argument supplies the exact orientation file contents. It automatically registers the new root under `ask` without granting cross-project access, and refuses to overwrite an existing tree.
 
 `kt info` performs fresh-session initialization in output-first order: it prints
 the canonical global procedure and exact local orientation,
@@ -405,7 +419,7 @@ falsification. Manual whole-leaf review is recorded by `kt renew ADDRESS HASH`
 as `checked_at`; only that time anchors recurring expiry. The verifier cannot independently
 infer whether every statement is covered. Use `--no-stamp` for a read-only check.
 
-To check the public example, first approve its root in your own terminal:
+To check the public example, first approve its root for this project (or ask an agent to do so with that exact scope):
 
 ```bash
 tools/kt access "$PWD/example" allow --scope project
@@ -593,36 +607,20 @@ Existing leaves are read or rewritten; absent leaves must be added after investi
 or recorded as unresolved when blocked. Capture an established answer before the
 next unrelated tool call or completion—not in a later documentation pass.
 
-### Failure and capture-review hooks
+### Startup hooks
 
-The installer adds reminders for **Claude Code, Codex, OpenCode, and GitHub Copilot CLI**:
-
-- After a detected tool failure, check `kt` for a known fix; once the cause is understood,
-  capture the reusable diagnosis or rewrite its owner.
-- At task end, a failure or 10 completed tool calls requests one capture-review follow-up:
-  check existing owners, record missing discoveries, or report that there is nothing new.
-
-The same hooks run `kt --lean info` at session start, resume, clear, and compaction and inject its
+The installer runs `kt --lean info` at session start, resume, clear, and compaction and injects its
 complete output (leaf metadata omitted, a notice on any non-green leaf): the procedure, orientation, dictionary, and proof summary. With no local tree
 it falls back to the global root. Claude Code drops hook context past roughly 10,000
 characters, so above 9,500 bytes its hook sends an instruction to call the `kt_info` tool (or run
 `kt info` if there are no kt tools) instead; `KT_HOOK_CONTEXT_LIMIT` tunes the threshold.
 
-Claude Code uses `SessionStart`, `UserPromptSubmit`, `PostToolUse`, `PostToolUseFailure`, and
-`Stop` (merged into `~/.claude/settings.json`); Codex uses `SessionStart`, `UserPromptSubmit`,
-`PostToolUse`, and `Stop`; Copilot CLI uses `sessionStart`, `userPromptSubmitted`,
-`postToolUse`, `postToolUseFailure`, and `agentStop`; OpenCode uses a local plugin and
-`session.idle`. Unrelated hooks are preserved. Review new definitions with `/hooks` (Codex
+Claude Code and Codex use `SessionStart`; Copilot CLI uses `sessionStart`; OpenCode uses a local
+plugin to supply the same startup context. Non-startup knowledge-tree hooks are deliberately
+disabled: MCP tools provide retrieval and capture without failure heuristics, call counters, or
+task-end follow-up turns. Unrelated hooks are preserved. Review new definitions with `/hooks` (Codex
 skips untrusted ones), fully restart OpenCode and start a new Copilot CLI session, and note
-that hooks apply to later activity only. Claude Code relies on its native failure event; Codex,
-OpenCode, and Copilot CLI also use diagnostic-line heuristics, so silent failures can be missed and
-printed examples can false-trigger. Commands are never rewritten.
-
-`KT_HOOK_MIN_CALLS` changes the activity threshold. Session-isolated counters and hashed receipts
-live under `${XDG_STATE_HOME:-~/.local/state}/knowledgetrees` and store no commands, outputs, or
-knowledge. Reviews can cost an extra model turn; a one-shot guard prevents loops. These are
-reliability reminders, not capture verification or a security boundary, and they grant no
-permissions. Update in place with `./install --hooks-only --force` (`--dry-run` previews;
+that hooks apply to later activity only. Update in place with `./install --hooks-only --force` (`--dry-run` previews;
 `--no-hooks` and `--no-mcp` skip parts). The handler needs only Python 3; see
 [the hook procedure](example/how/to/use/knowledgetree/hooks.md) for contracts and limits. This
 targets local Copilot CLI, not its cloud jobs or VS Code.
@@ -635,10 +633,12 @@ a skill-shaped entry as compatibility plumbing and an explicit fallback, not as
 another knowledge store. After installing the canonical procedure at
 `~/.knowledge/how/to/use/knowledgetrees.md`, the installer creates
 `~/.agents/skills/knowledgetrees/SKILL.md` and
-`~/.codex/skills/knowledgetrees/SKILL.md`, and `~/.claude/skills/knowledgetrees/SKILL.md` as hard links to that same file. All four
-paths share one inode: there is no wrapper and no second body to drift.
+`~/.claude/skills/knowledgetrees/SKILL.md` as hard links to that same file. Codex
+discovers the shared `.agents` catalog, so a second `.codex` copy would appear as a
+duplicate. The installer retires those old Codex copies and their explicit config
+entries. The remaining paths share one inode: there is no wrapper or second body to drift.
 
-The installer also exposes four focused skills in each harness directory:
+The installer also exposes four focused skills through the shared and Claude directories:
 `knowledgetrees-lookup`, `knowledgetrees-capture`, `knowledgetrees-maintenance`,
 and `knowledgetrees-ingestion`. Each `SKILL.md` hardlinks to its corresponding
 canonical procedure leaf in the global KT. Their descriptions advertise when to
@@ -716,7 +716,7 @@ The installer is covered by an isolated-home integration test. It verifies that:
 - repeated installation is idempotent;
 - differing knowledge is rejected before overwrite unless `--force` is explicit;
 - built-in verification through `kt prove` runs successfully;
-- each compatibility `SKILL.md` path (`.agents`, `.codex`, `.claude`) has the same
+- each compatibility `SKILL.md` path (`.agents`, `.claude`) has the same
   device and inode as the canonical installed procedure;
 - Claude Code and Codex hook settings are merged without disturbing unrelated keys,
   hooks, or file mode, and malformed configuration is refused before any write; and
@@ -863,8 +863,8 @@ operating-system argument size limits apply.
 Successful rewrites and identical no-ops produce no stdout or stderr; exit 0
 signals success. Neither body is echoed. Dry-run still shows the diff and failures
 report diagnostics.
-The one-shot task-end capture-review hook carries the accuracy and preservation
-reminder once per work cycle. Mandatory proof checks remain intact.
+Agent guidance carries the accuracy and preservation requirement; no task-end
+reminder hook is installed. Mandatory proof checks remain intact.
 
 After manually reviewing the complete answer from a full read, record that review
 with `kt renew ADDRESS HASH` (tool `kt_renew`). This sets `checked_at`, clears any brown, then

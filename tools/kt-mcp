@@ -28,13 +28,15 @@ INSTRUCTIONS = (
     "Knowledge trees: these tools are the way in. Use them instead of the kt shell command or cat/grep/find on "
     ".knowledge files; the shell is only a fallback when these tools are unavailable. Look up before you search "
     "elsewhere (kt_lookup with how to/where is/what is/..., kt_find, kt_grep for exact text). A leaf is read whole "
-    "and comes back as its answer only; a notice leads it only when it is yellow or brown. A yellow leaf is "
+    "and comes back as its answer plus Revision hash, with no other metadata; a notice leads it only when it is yellow or brown. A yellow leaf is "
     "unverified: check its claims against current evidence, then call kt_renew to confirm the whole leaf is accurate "
-    "(your attestation, so renew only what you verified) or fix it with kt_edit. Never rely on a brown leaf; repair "
-    "it. Change a leaf with kt_edit after reading it: each old_text must match exactly once, and the edit fails if the "
-    "leaf changed since you read it. A miss is not proof of absence. If a root needs approval, call "
-    "kt_access_request: it asks the user through the harness. Release access you no longer need with "
-    "kt_access_revoke. Never ask the user to type kt access unless a tool says the client cannot prompt, and never "
+    "(your attestation, so renew only what you verified) or repair it. Never rely on a brown leaf. Rewrite a leaf "
+    "with kt_rewrite as the standard editing tool, citing the Revision hash printed by the whole-leaf read; stale "
+    "hashes fail. Use kt_edit only for economy on a tiny surgical exact-match change. A miss is not proof of absence. If a root needs approval, call "
+    "kt_access_request: it asks through the harness. Release access you no longer need with "
+    "kt_access_revoke. If client elicitation did not complete, explicit user authorization in the conversation "
+    "for the exact root and scope permits running the scoped kt access CLI command in an interactive terminal; "
+    "otherwise give the user that command. Never "
     "work around a refusal."
 )
 
@@ -64,7 +66,8 @@ TOOLS = [
     tool("kt_lookup", "Look up by question",
          "Look something up by natural question (instead of `kt how to ...` in the shell). Start with where is, how to, "
          "when to, what is, why is/does, does, or is. An exact hit returns the leaf itself; otherwise ranked matches. "
-         "`how to _` lists a branch. A miss is not proof of absence; retry other terms.",
+         "An exact hit is always the complete leaf answer plus its Revision hash; ranked excerpts are selectors, not "
+         "partial reads. `how to _` lists a branch. A miss is not proof of absence; retry other terms.",
          {"question": {"type": "string", "description": "e.g. how to expose structured knowledge-tree edits"}},
          ["question"], read_only=True),
     tool("kt_find", "Broad search",
@@ -80,11 +83,22 @@ TOOLS = [
           "context": {"type": "integer", "minimum": 0, "maximum": 10},
           "limit": {"type": "integer", "minimum": 1, "maximum": 500}}, ["pattern"], read_only=True),
     tool("kt_read", "Read a leaf",
-         "Read a whole leaf's answer (instead of cat or `kt open`). A notice leads it only when it is yellow or brown. "
-         "Reading is what entitles you to kt_edit and kt_renew it.",
+         "Read a whole leaf's answer (instead of cat or `kt open`). There are no partial reads, ranges, paging, or "
+         "truncation. A notice leads it only when it is yellow or brown. "
+         "The final Revision line is the SHA-256 hash required by kt_rewrite; no other metadata is shown. Reading also "
+         "entitles you to kt_edit and kt_renew it.",
          {"address": ADDRESS}, ["address"], read_only=True),
+    tool("kt_rewrite", "Rewrite a leaf",
+         "Primary editing method: replace the complete answer body, citing the Revision hash printed by kt_read or an "
+         "exact kt_lookup. The CLI rejects a stale hash under lock. Front matter is never accepted or returned; optional "
+         "metadata is preserved. Returns a diff of the answer.",
+         {"address": ADDRESS,
+          "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Revision hash from a whole-leaf read"},
+          "answer": {"type": "string", "description": "Complete Markdown answer body (no front matter)"},
+          "dry_run": DRY_RUN}, ["address", "revision", "answer"], destructive=True),
     tool("kt_edit", "Edit exact text",
-         "Replace exact text in a leaf's answer. Each old_text must occur exactly once. Give old_text/new_text for one "
+         "Economy option only for a tiny surgical edit; kt_rewrite is the standard editing tool. Replace exact text "
+         "in a leaf's answer. Each old_text must occur exactly once. Give old_text/new_text for one "
          "change, or edits for several applied atomically in order. Read the leaf first; the edit fails if the leaf has "
          "changed since you read it, on restricted access, or on an ambiguous or missing match, and nothing is written on "
          "failure. Returns a diff of the answer.",
@@ -112,6 +126,24 @@ TOOLS = [
           "unresolved": BOOL, "blocker": STR, "next_check": STR, "expires_at": STR, "expires_every": STR,
           "verifiable": BOOL, "dry_run": {"type": "boolean", "description": "Preview path and leaf without writing"}},
          ["question", "answer"]),
+    tool("kt_rm", "Remove a leaf",
+         "Remove one leaf, citing the Revision hash printed by its whole read. The CLI rejects a stale hash. "
+         "Use dry_run to preview; this does not prune parent directories.",
+         {"address": ADDRESS,
+          "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Revision hash from a whole-leaf read"},
+          "dry_run": DRY_RUN}, ["address", "revision"], destructive=True),
+    tool("kt_mv", "Move a leaf",
+         "Move one leaf to a new root-qualified address, citing the source Revision hash from a whole read. The CLI "
+         "rejects stale hashes and existing destinations. Use dry_run to preview.",
+         {"source": {**ADDRESS, "description": "Source root-qualified leaf address"},
+          "destination": {**ADDRESS, "description": "Destination root-qualified leaf address"},
+          "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Source Revision hash from a whole-leaf read"},
+          "dry_run": DRY_RUN}, ["source", "destination", "revision"], destructive=True),
+    tool("kt_init", "Initialize a tree",
+         "Initialize a new .knowledge tree in the MCP project directory, optionally with literal orientation text. "
+         "It also registers the new tree under ask policy, without granting cross-project access. "
+         "The CLI refuses an existing tree; this never changes filesystem permissions.",
+         {"orientation": {"type": "string", "description": "Optional literal contents of where/am/i.md"}}, idempotent=True),
     tool("kt_dict", "Path dictionary",
          "Print the dictionary of useful path segments across accessible roots (or the named roots).",
          {"roots": {"type": "array", "items": STR}}, read_only=True),
@@ -137,7 +169,8 @@ TOOLS = [
           "scope": {"type": "string", "enum": ["project", "all"]}}, ["root"], idempotent=True),
     tool("kt_access_request", "Ask the user for root access",
          "Ask the USER, through the harness, to allow reading a restricted root. Only the user can answer; you cannot "
-         "grant access yourself. Give a short honest reason. If the user declines, do not ask again or work around it.",
+         "grant access yourself. Give a short honest reason. Some clients return decline without displaying a prompt; "
+         "the tool will report that client action and provide a terminal fallback. Never work around access policy.",
          {"root": {"type": "string", "description": "Root label or absolute path shown as restricted by kt_roots"},
           "reason": {"type": "string", "description": "Why you need it (shown to the user, 300 characters)"}},
          ["root", "reason"]),
@@ -153,7 +186,6 @@ CLIENT = {"elicitation": False}
 PENDING = collections.deque()
 HISTORY = collections.deque(maxlen=UNDO_DEPTH)
 READS = {}  # leaf address -> answer text as this session last saw it
-DECLINED = set()
 ELICITATIONS = [0]
 CURRENT = []
 _KT = []
@@ -308,9 +340,9 @@ def tool_lookup(arguments):
     completed = run_kt("--lean", *words(arguments, "question"))
     exact = re.search(r"^kt: exact (\S+)$", completed.stderr, re.M)
     if completed.returncode == 0 and exact:
-        text, _revision = read_leaf(exact[1])
+        text, revision = read_leaf(exact[1])
         note_read(exact[1], body_of(text))
-        return f"[{exact[1]}]\n{completed.stdout}"
+        return f"[{exact[1]}]\n{completed.stdout.rstrip()}\n\nRevision: {revision}\n"
     return report(completed, "kt lookup")
 
 
@@ -362,9 +394,36 @@ def tool_grep(arguments):
 
 def tool_read(arguments):
     address = text_arg(arguments, "address")
-    text, _revision = read_leaf(address)
+    text, revision = read_leaf(address)
     note_read(address, body_of(text))
-    return kt_namespace()["lean_leaf"](text, address)
+    return kt_namespace()["lean_leaf"](text, address).rstrip("\n") + f"\n\nRevision: {revision}\n"
+
+
+def tool_rewrite(arguments):
+    dry_run = arguments.get("dry_run") is True
+    address = text_arg(arguments, "address")
+    revision = text_arg(arguments, "revision", limit=64)
+    answer = text_arg(arguments, "answer")
+    if not re.fullmatch(r"[a-f0-9]{64}", revision):
+        raise ToolError("revision must be the 64-character lowercase SHA-256 hash printed by a whole-leaf read")
+    current, current_revision = read_leaf(address)
+    before = body_of(current)
+    if current_revision != revision:
+        raise ToolError("the Revision hash is stale; kt_read the leaf again and merge before rewriting")
+    try:
+        rewrite(address, revision, answer, dry_run=dry_run)
+    except ToolError as error:
+        if "revision mismatch" in str(error):
+            raise ToolError("the Revision hash is stale; kt_read the leaf again and merge before rewriting")
+        raise
+    if dry_run:
+        return answer_diff(before.strip("\n") + "\n", answer.strip("\n") + "\n")
+    after_text, _after_revision = read_leaf(address)
+    after = body_of(after_text)
+    if after != before:
+        HISTORY.append({"address": address, "before": before, "after": after})
+    note_read(address, after)
+    return answer_diff(before, after)
 
 
 def tool_renew(arguments):
@@ -432,6 +491,48 @@ def tool_undo(arguments):
     restored = body_of(read_leaf(address)[0])
     note_read(address, restored)
     return answer_diff(record["after"], restored)
+
+
+def revision_arg(arguments):
+    revision = text_arg(arguments, "revision", limit=64)
+    if not re.fullmatch(r"[a-f0-9]{64}", revision):
+        raise ToolError("revision must be the 64-character lowercase SHA-256 hash printed by a whole-leaf read")
+    return revision
+
+
+def tool_rm(arguments):
+    address = text_arg(arguments, "address")
+    revision = revision_arg(arguments)
+    completed = run_kt("rm", address, "--expect", revision,
+                       *(["--dry-run"] if arguments.get("dry_run") is True else []))
+    if completed.returncode:
+        output = (completed.stderr or completed.stdout).strip()
+        if completed.returncode == 4:
+            raise ToolError("the Revision hash is stale; kt_read the leaf again before removing it")
+        raise ToolError(output or f"kt rm failed ({completed.returncode})")
+    return completed.stdout or ("Would remove." if arguments.get("dry_run") is True else "Removed.")
+
+
+def tool_mv(arguments):
+    source = text_arg(arguments, "source")
+    destination = text_arg(arguments, "destination")
+    revision = revision_arg(arguments)
+    completed = run_kt("mv", source, destination, "--expect", revision,
+                       *(["--dry-run"] if arguments.get("dry_run") is True else []))
+    if completed.returncode:
+        output = (completed.stderr or completed.stdout).strip()
+        if completed.returncode == 4:
+            raise ToolError("the Revision hash is stale; kt_read the source again before moving it")
+        raise ToolError(output or f"kt mv failed ({completed.returncode})")
+    return completed.stdout or ("Would move." if arguments.get("dry_run") is True else "Moved.")
+
+
+def tool_init(arguments):
+    orientation = text_arg(arguments, "orientation", required=False)
+    completed = run_kt("init", *([orientation] if orientation is not None else []))
+    if completed.returncode:
+        raise ToolError((completed.stderr or completed.stdout).strip() or f"kt init failed ({completed.returncode})")
+    return "Initialized."
 
 
 def tool_add(arguments):
@@ -509,17 +610,24 @@ def read_response(identifier):
 
 
 def elicit(message, schema):
-    """Ask the user (never the model) through the client. Returns the accepted content, or None if the
-    user declined or cancelled."""
+    """Ask through the client and return its action, content, and optional error.
+
+    A protocol action is not proof that the harness actually displayed a prompt, so callers must not
+    turn an unexplained decline, cancellation, or error into the claim that the user declined.
+    """
     ELICITATIONS[0] += 1
     identifier = f"kt-elicit-{ELICITATIONS[0]}"
     send({"jsonrpc": "2.0", "id": identifier, "method": "elicitation/create",
           "params": {"message": message, "requestedSchema": schema}})
     response = read_response(identifier)
+    if "error" in response:
+        error = response.get("error")
+        detail = error.get("message") if isinstance(error, dict) else str(error)
+        return "error", {}, detail
     result = response.get("result") or {}
-    if "error" in response or result.get("action") != "accept":
-        return None
-    return result.get("content") if isinstance(result.get("content"), dict) else {}
+    action = result.get("action")
+    content = result.get("content") if isinstance(result.get("content"), dict) else {}
+    return action, content, None
 
 
 def resolve_root(namespace, value):
@@ -547,13 +655,12 @@ def tool_access_request(arguments):
         raise ToolError("that root is denied by the user's policy; only the user can change that, deliberately, in their "
                         "own terminal. Do not work around it.")
     if not CLIENT["elicitation"]:
-        return ("This client cannot show approval prompts. Ask the user to run this in their terminal, then retry:\n"
+        return ("This client cannot show approval prompts. If the user explicitly authorizes this exact root and "
+                "project scope in conversation, the agent may run and confirm this in an interactive terminal; "
+                "otherwise ask the user to run it. Then retry:\n"
                 f"kt access {root} allow --scope project")
-    if str(root) in DECLINED:
-        return ("The user declined this request earlier in this session. Do not ask again or work around it; continue "
-                "without that root or ask the user in conversation.")
     project = str(Path.cwd().resolve())
-    content = elicit(
+    action, content, elicitation_error = elicit(
         f"An agent is asking to read a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
         f"Project directory: {project}\nReason (from the agent): {reason}\n\n"
         "Approving lets kt read this root's leaves for this project; retrieved text may be sent to your model provider. "
@@ -561,10 +668,21 @@ def tool_access_request(arguments):
         {"type": "object", "required": ["decision"], "properties": {"decision": {
             "type": "string", "title": "Grant", "description": "Where the approval applies",
             "enum": list(ACCESS_CHOICES), "enumNames": [choice[0] for choice in ACCESS_CHOICES.values()]}}})
-    if content is None:
-        DECLINED.add(str(root))
-        return ("The user declined. Do not ask again or work around it; continue without that root or ask the user in "
-                "conversation.")
+    if action != "accept":
+        terminal = f"kt access {root} allow --scope project"
+        if action == "decline":
+            return ("The MCP client returned action=decline; no access changed. The server cannot verify that the "
+                    "harness displayed a prompt, so this is not recorded as a user refusal. If the user explicitly "
+                    "authorizes this exact root and project scope in conversation, the agent may run and confirm "
+                    f"this in an interactive terminal; otherwise ask the user to run it:\n{terminal}")
+        if action == "cancel":
+            return ("The MCP client cancelled the approval request; no access changed. If the user explicitly "
+                    "authorizes this exact root and project scope in conversation, the agent may run and confirm "
+                    f"this in an interactive terminal; otherwise ask the user to run it:\n{terminal}")
+        detail = f" ({elicitation_error})" if elicitation_error else ""
+        return (f"The MCP client failed the approval request{detail}; no access changed. If the user explicitly "
+                "authorizes this exact root and project scope in conversation, the agent may run and confirm "
+                f"this in an interactive terminal; otherwise ask the user to run it:\n{terminal}")
     decision = content.get("decision")
     if decision not in ACCESS_CHOICES:
         raise ToolError("the approval response was not one of the offered choices; nothing was granted")
@@ -595,19 +713,21 @@ def tool_access_revoke(arguments):
         if not CLIENT["elicitation"]:
             return ("This change reaches beyond this project directory, and this client cannot show confirmation prompts. "
                     f"Ask the user to run this in their terminal:\nkt access {root} revoke --scope {scope}")
-        content = elicit(f"An agent asks to revoke access to a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
+        action, content, elicitation_error = elicit(f"An agent asks to revoke access to a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
                          f"Project directory: {cwd}\nEffect: {effect}\n\nAccept to make this change; decline to leave access as it is.",
                          {"type": "object", "required": ["confirm"], "properties": {"confirm": {
                              "type": "boolean", "title": "Revoke access", "description": "Confirm the change described above"}}})
-        if content is None or content.get("confirm") is not True:
-            return "The user declined; access is unchanged."
+        if action != "accept" or content.get("confirm") is not True:
+            detail = f": {elicitation_error}" if elicitation_error else ""
+            return f"The MCP client did not confirm revocation ({action or 'invalid'}{detail}); access is unchanged."
     namespace["apply_revocation"](config, root, label, available, scope, cwd)
     return effect + " Asking for it again will prompt the user."
 
 
 HANDLERS = {"kt_info": tool_info, "kt_lookup": tool_lookup, "kt_find": tool_find, "kt_grep": tool_grep,
-            "kt_read": tool_read, "kt_renew": tool_renew, "kt_edit": tool_edit, "kt_undo": tool_undo,
-            "kt_add": tool_add, "kt_dict": tool_dict, "kt_roots": tool_roots, "kt_prove": tool_prove,
+            "kt_read": tool_read, "kt_rewrite": tool_rewrite, "kt_renew": tool_renew, "kt_edit": tool_edit, "kt_undo": tool_undo,
+            "kt_add": tool_add, "kt_rm": tool_rm, "kt_mv": tool_mv, "kt_init": tool_init,
+            "kt_dict": tool_dict, "kt_roots": tool_roots, "kt_prove": tool_prove,
             "kt_status": tool_status, "kt_access_status": tool_access_status, "kt_access_request": tool_access_request,
             "kt_access_revoke": tool_access_revoke}
 

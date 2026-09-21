@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory() as directory:
     invalid = tree / "invalid.md"
     invalid.write_text("---\nstatus: green\nobsolete: true\n---\n\nNeeds repair.\n")
     result = run(project, "prove", "--local", "invalid", expected=1)
-    assert "brown=1" in result.stdout
+    assert "1 brown" in result.stdout
     assert "status: brown" in invalid.read_text()
     revision = hashlib.sha256(invalid.read_bytes()).hexdigest()
     run(project, "rewrite", "local:invalid.md", revision,
@@ -99,7 +99,7 @@ with tempfile.TemporaryDirectory() as directory:
 
     invalid.write_text("---\nstatus: green\nchecked_at: 2026-09-19\n---\n\nUnknown check time.\n")
     result = run(project, "prove", "--local", "invalid", expected=1)
-    assert "brown=1" in result.stdout
+    assert "1 brown" in result.stdout
 
 print("metadata checks passed")
 

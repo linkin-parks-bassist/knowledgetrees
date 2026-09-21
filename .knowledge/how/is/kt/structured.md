@@ -1,11 +1,11 @@
 ---
 status: green
-revised_at: "2026-09-21T09:03:53+10:00"
+revised_at: "2026-09-21T14:40:17+10:00"
 ---
 
 The CLI remains one self-contained standard-library Python executable for standalone installation. Sections separate root discovery and access, lookup and rendering, leaf maintenance, capture, proof execution, and parser construction. RootAccessView loads discovery and policies once per invocation; LookupContext lazily reads permitted leaf text once. LeafSnapshot centralizes revision and inode checks for rewrite and destructive maintenance. command_parser separates command schemas and handler dispatch from execution. All verification is exposed through kt prove. Regression suites cover access, lookup, maintenance, installation, hooks, MCP tools, and proof timestamps.
 
-Harness adapters are separate files so the CLI stays standalone. `tools/kt-hooks` is one Python handler shared by Claude Code, Codex, Copilot CLI, and OpenCode's plugin (`tools/kt-opencode.mjs`); it runs `kt info` and keeps only hashed counters. `tools/kt-mcp` is a newline-delimited JSON-RPC stdio server that owns no policy beyond the elicitation flow (a server-to-client request whose response is read inline while a tool call is in flight; other requests arriving meanwhile are queued and served afterward, and pings are answered): each tool runs the sibling `kt` in a subprocess with stdin closed and arguments after `--`, and edits compute their replacement from the locked read revision before delegating to `kt rewrite`.
+Harness adapters are separate files so the CLI stays standalone. `tools/kt-hooks` is one Python startup handler shared by Claude Code, Codex, Copilot CLI, and OpenCode's plugin (`tools/kt-opencode.mjs`); installed integrations invoke only `kt info`, while dormant compatibility code is not wired to harness events. `tools/kt-mcp` is a newline-delimited JSON-RPC stdio server that owns no policy beyond the elicitation flow (a server-to-client request whose response is read inline while a tool call is in flight; other requests arriving meanwhile are queued and served afterward, and pings are answered): each tool runs the sibling `kt` in a subprocess with stdin closed and arguments after `--`. Whole reads return their revision hash; primary `kt_rewrite` passes that explicit hash to the locked CLI rewrite, while surgical `kt_edit` computes a replacement from the remembered whole answer.
 
 `kt grep` and `kt status` walk leaves through the same `RootAccessView`/`leaves()` policy filter as `find`, so restricted roots are never read; `status` derives colors from stored metadata and `lifecycle_state` without running proofs. Effective access is computed by `resolve_root_access`, which returns the policy plus its source and the project grant that supplied it (`root_access` is its first element); `apply_revocation` narrows a grant and can preview on a copy, `grants_command` reports sources, and `prune_stale_grants` runs once per invocation from `main` to drop approvals whose tree is gone. Access changes are split into `resolve_access_root` and `apply_access_decision`: the latter persists an already-confirmed decision and never prompts, so the CLI keeps its own-terminal confirmation while another trusted front end (the MCP server's elicitation) can supply a different confirmation. `leaf_health` computes a leaf's live state and reason once for `status` and for lean rendering (`--lean`: `lean_leaf` and `show_leaf` strip front matter and lead a non-green leaf with a notice); `renew_leaf` stamps `checked_at` and then reruns `verify_proofs` restricted to that leaf through its `only` parameter with `raise_ok`; every other proof run keeps a leaf at the worse of its computed and stored status, so proof evaluation never raises one (a `verifiable: true` leaf whose proofs all pass is the exception). `revised_leaf` carries `status` and `checked_at` through a rewrite.
 
@@ -19,8 +19,7 @@ proof handling. Success and no-ops are silent (exit 0); dry-run remains a diff.
 The CLI exposes rewrite as the editing command. Evidence:
 source and rewrite tests, 2026-09-18.
 
-The one-shot capture-review hook carries the accuracy/valid-knowledge preservation
-reminder once per work cycle, rather than every rewrite success/no-op.
+Agent guidance carries the accuracy and valid-knowledge preservation requirement. No task-end capture-review hook is installed, and rewrite success or no-op creates no extra model turn.
 
 Mutation handlers omit normal success/no-op receipts. Internal combine reuse stays
 silent. Access/permission changes retain consent disclosures but omit post-save

@@ -1,9 +1,9 @@
 ---
-status: green
-revised_at: "2026-09-19T23:45:10+10:00"
+status: "green"
+revised_at: "2026-09-21T15:28:05+10:00"
 ---
 
-Run `kt init [ORIENTATION]` from the project directory to create the empty local spine. The optional argument supplies literal `where/am/i.md` contents. It refuses to overwrite an existing tree.
+Run `kt init [ORIENTATION]` from the project directory to create the empty local spine. The optional argument supplies literal `where/am/i.md` contents. It registers the created tree under `ask` for cross-project discovery without granting access elsewhere, and refuses to overwrite an existing tree.
 
 Create `<project>/.knowledge` when entering an active project whose reusable knowledge
 belongs locally. Immediately create `how/`, `what/`, `where/`, `why/`, `does/`, `is/`, and

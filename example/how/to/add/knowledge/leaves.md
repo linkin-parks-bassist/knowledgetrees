@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-21T09:02:51+10:00"
+revised_at: "2026-09-21T14:30:55+10:00"
 name: "knowledgetrees-capture"
 description: "Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs."
 ---
@@ -41,9 +41,10 @@ source evidence; keep review conditions tied to the code or structure that can c
 Put host/personal tooling in `~/.knowledge` and project/subsystem facts in the
 nearest applicable local root. Never promote professional, customer, partner, or
 restricted material into the global tree; sanitize anything intended for publication.
-Keep an existing owner in context before editing. Full reads supply the revision
-hash automatically; `kt_edit` needs a read of the leaf and fails if it changed since, and
-in the shell the hash is passed positionally to kt rewrite ADDRESS HASH BODY.
+Keep an existing owner in context before editing. Full reads return the complete
+answer and its revision hash; there are no partial reads. Use `kt_rewrite` as the
+standard editing method with that hash. Use `kt_edit` only for economy on a tiny
+surgical exact replacement.
 Preserve still-valid knowledge and reread/merge if the leaf changed.
 Use `kt_read` (shell: `kt open ROOT:PATH`) for that read and `kt_prove` (shell: `kt prove --root ROOT TOKEN`) after
 changing eligible proofs. Create a new leaf in one call with `kt_add`; the shell equivalent is:
@@ -80,7 +81,12 @@ Write the answer first, then the context, preconditions, limits, eligible proofs
 links needed to use it. Leaves directly answer their paths rather than outsourcing
 the answer to internal monolithic documents. Link alternate routes to a canonical
 answer instead of copying it; record the conclusion and the distinction that made
-it non-obvious, not chronology or stream of consciousness.
+it non-obvious. A leaf is a current answer, never a log: do not append task chronology,
+session notes, progress updates, tool transcripts, or stream of consciousness.
+Log-shaped leaves are tree poisoning because stale events become indistinguishable
+from current truth and retrieval sends later agents down contradictory paths. Rewrite
+the current answer in place. Retain history only when it explains a present constraint
+or decision; use Git or a purpose-built external log for chronology.
 
 ## Size and provenance
 
@@ -147,7 +153,7 @@ refreshes only its `Proof: (verified at …)` marker. A failing run changes it t
 decide semantic eligibility, faithful coverage, or whether all prose is proved;
 the agent remains responsible. Read maintenance before repairing a falsified leaf.
 
-For an existing owner, use `kt_edit` (shell: kt rewrite ADDRESS HASH BODY) as
+For an existing owner, use `kt_rewrite` (or surgical `kt_edit`; shell: kt rewrite ADDRESS HASH BODY) as
 described in
 `how/to/rewrite/a/knowledge/leaf.md`; creation still refuses overwriting existing leaves.
 

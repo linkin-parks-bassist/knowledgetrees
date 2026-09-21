@@ -1,10 +1,11 @@
 ---
 status: green
-revised_at: "2026-09-20T09:26:15+10:00"
+revised_at: "2026-09-21T15:29:10+10:00"
 ---
 
 Root discovery uses only the exact current-directory tree, the known global
-root, and explicitly registered roots. It never searches parent directories.
+root, and explicitly registered roots. `kt init` registers the tree it creates
+under `ask` without granting cross-project access. It never searches parent directories.
 The private registry is ~/.knowledge/.tools/roots.json; KT_CONFIG overrides it.
 Registered roots are not indexed in advance. Registration saves root metadata,
 not approval or leaf content.
@@ -28,7 +29,7 @@ allowed unless denied. Wider roots default to ask. Ordinary ask/deny roots may
 appear in roots output with their canonical identity, but their leaves, snippets,
 and rankings remain inaccessible. A force-private root is completely omitted.
 
-Run access decisions in the user's own interactive terminal:
+Run access decisions in an interactive terminal:
 
 ```sh
 kt access global allow --scope project
@@ -44,7 +45,7 @@ unless bypass is enabled. ask, deny, and reset replace or revoke decisions at
 --scope project, --scope session, or --scope all. Force-private is always a
 root-wide policy; revoke it with `kt access ROOT reset --scope all` or replace it
 with a different root-wide policy. Project/session grants cannot revoke privacy.
-Agents must not provide the interactive confirmation on the user's behalf.
+An agent may answer the interactive CLI confirmation only when the user explicitly authorizes the exact root and scope in conversation. Without that authorization, ask rather than inventing a decision. Prefer a project-scoped grant for a project need; a global permission bypass is not a substitute.
 
 ## Persistent bypass
 

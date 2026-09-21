@@ -14,6 +14,7 @@ import tomllib
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 INSTALLER = REPOSITORY / "install"
+SYNC = REPOSITORY / "sync-kt-instructions.py"
 
 
 def run(*arguments: str, expected: int = 0, answer: str = "Y\n") -> subprocess.CompletedProcess[str]:
@@ -90,6 +91,11 @@ def main() -> None:
             "[[skills.config]]\n"
             f'path = "{codex_skill}"\n'
             "enabled = false\n"
+            "# BEGIN KNOWLEDGETREES SKILL\n"
+            "[[skills.config]]\n"
+            f'path = "{target_home / ".codex/skills/knowledgetrees-capture/SKILL.md"}"\n'
+            "enabled = true\n"
+            "# END KNOWLEDGETREES SKILL\n"
             "[desktop]\n"
             "followUpQueueMode = \"steer\"\n"
         )
@@ -115,27 +121,23 @@ def main() -> None:
         assert "WARNING" in installation.stdout and "WRITE" in installation.stdout
         knowledge = target_home / ".knowledge"
         hooks = json.loads(codex_hooks.read_text())
-        assert hooks["description"] == "existing hooks" and hooks["hooks"]["Stop"][0] == unrelated_hook
-        assert len(hooks["hooks"]["Stop"]) == 2
+        assert hooks["description"] == "existing hooks" and hooks["hooks"]["Stop"] == [unrelated_hook]
         assert hooks["hooks"]["PreToolUse"][0]["matcher"] == "Bash"
         assert hooks["hooks"]["PreToolUse"][0]["hooks"] == [{"type": "command", "command": "unrelated-pre-check"}]
         assert hooks["hooks"]["SessionStart"][0]["matcher"] == "^(startup|resume|clear|compact)$"
         assert hooks["hooks"]["SessionStart"][0]["hooks"][0]["command"].endswith("codex start")
         claude_config = json.loads(claude_settings.read_text())
-        assert claude_config["theme"] == "dark" and claude_config["hooks"]["Stop"][0] == unrelated_hook
-        assert len(claude_config["hooks"]["Stop"]) == 2
-        assert set(claude_config["hooks"]) == {"SessionStart", "UserPromptSubmit", "PostToolUse", "PostToolUseFailure", "Stop"}
+        assert claude_config["theme"] == "dark" and claude_config["hooks"]["Stop"] == [unrelated_hook]
+        assert set(claude_config["hooks"]) == {"SessionStart", "Stop"}
         assert claude_config["hooks"]["SessionStart"][0]["matcher"] == "startup|resume|clear|compact"
         assert claude_config["hooks"]["SessionStart"][0]["hooks"][0]["command"].endswith("claude start")
-        assert claude_config["hooks"]["PostToolUseFailure"][0]["hooks"][0]["command"].endswith("claude failed")
         assert claude_settings.stat().st_mode & 0o777 == 0o640
         assert (knowledge / ".tools/kt-hooks").is_file()
         assert os.access(knowledge / ".tools/kt-hooks", os.X_OK)
         assert (target_home / ".config/opencode/plugins/knowledgetrees.js").read_bytes() == (REPOSITORY / "tools/kt-opencode.mjs").read_bytes()
         copilot_hooks = json.loads((target_home / ".copilot/hooks/knowledgetrees.json").read_text())
-        assert set(copilot_hooks["hooks"]) == {"sessionStart", "userPromptSubmitted", "postToolUse", "postToolUseFailure", "agentStop"}
+        assert set(copilot_hooks["hooks"]) == {"sessionStart"}
         assert copilot_hooks["hooks"]["sessionStart"][0]["args"][-2:] == ["copilot", "start"]
-        assert copilot_hooks["hooks"]["agentStop"][0]["args"][-2:] == ["copilot", "stop"]
         server = knowledge / ".tools/kt-mcp"
         assert server.read_bytes() == (REPOSITORY / "tools/kt-mcp").read_bytes() and os.access(server, os.X_OK)
         assert tomllib.loads(codex_config.read_text())["mcp_servers"]["knowledgetrees"] == {"command": "python3", "args": [str(server)]}
@@ -160,9 +162,9 @@ def main() -> None:
         assert (target_home / ".local/bin/kt").samefile(knowledge / ".tools/kt")
         assert not canonical.is_symlink()
         assert not shared_skill.is_symlink()
-        assert not codex_skill.is_symlink()
-        assert canonical.stat().st_dev == shared_skill.stat().st_dev == codex_skill.stat().st_dev
-        assert canonical.stat().st_ino == shared_skill.stat().st_ino == codex_skill.stat().st_ino
+        assert not codex_skill.exists()
+        assert canonical.stat().st_dev == shared_skill.stat().st_dev
+        assert canonical.stat().st_ino == shared_skill.stat().st_ino
         assert "kt info" in canonical.read_text()
         assert "first move of every task" not in canonical.read_text()
         assert "For every new question, use kt first" in canonical.read_text()
@@ -178,8 +180,8 @@ def main() -> None:
         assert agents == "# Existing user instructions\n"
         config = codex_config.read_text()
         assert 'model = "example-model"' in config
-        assert config.count(str(codex_skill)) == 1
-        assert "enabled = true\n[desktop]" in config or "enabled = true\n\n[desktop]" in config
+        assert "/.codex/skills/knowledgetrees" not in config
+        assert "BEGIN KNOWLEDGETREES SKILL" not in config
         parsed_config = tomllib.loads(config)
         assert parsed_config["desktop"]["followUpQueueMode"] == "steer"
         installed_skills = runpy.run_path(str(INSTALLER))["SKILL_LEAVES"]
@@ -192,12 +194,10 @@ def main() -> None:
             assert owner.read_text().count("\n---\n") == 1
             assert "kt" in owner.read_text()
             assert "unrelated tool call" in owner.read_text()
-            for harness in (".agents", ".codex", ".claude"):
+            for harness in (".agents", ".claude"):
                 entry = target_home / harness / "skills" / name / "SKILL.md"
                 assert not entry.is_symlink()
                 assert entry.samefile(owner)
-                if harness == ".codex":
-                    assert config.count(str(entry)) == 1
         opencode = json.loads(opencode_config.read_text())
         assert opencode["model"] == "example/local-model"
         permissions = opencode["permission"]
@@ -216,15 +216,15 @@ def main() -> None:
 
         orientation.write_text("Local environment orientation.\n")
         rerun = run(*home_arguments, answer="")
-        assert len(json.loads(codex_hooks.read_text())["hooks"]["Stop"]) == 2
-        assert len(json.loads(claude_settings.read_text())["hooks"]["Stop"]) == 2
+        assert json.loads(codex_hooks.read_text())["hooks"]["Stop"] == [unrelated_hook]
+        assert json.loads(claude_settings.read_text())["hooks"]["Stop"] == [unrelated_hook]
         assert codex_config.read_text().count("[mcp_servers.knowledgetrees]") == 1
         assert list(json.loads(opencode_config.read_text())["mcp"]) == ["knowledgetrees"]
         assert "[n/Y]" not in rerun.stdout
         assert orientation.read_text().startswith("---\nstatus: green\n")
         assert orientation.read_text().endswith("Local environment orientation.\n")
         assert agents_path.read_text() == "# Existing user instructions\n"
-        assert codex_config.read_text().count(str(codex_skill)) == 1
+        assert "/.codex/skills/knowledgetrees" not in codex_config.read_text()
         for name, relative in installed_skills.items():
             assert (target_home / ".agents/skills" / name / "SKILL.md").samefile(knowledge / relative)
 
@@ -256,8 +256,14 @@ def main() -> None:
         run(*home_arguments, "--force")
         assert "Local customization" not in capture_owner.read_text()
         for name, relative in installed_skills.items():
-            for harness in (".agents", ".codex", ".claude"):
+            for harness in (".agents", ".claude"):
                 assert (target_home / harness / "skills" / name / "SKILL.md").samefile(knowledge / relative)
+
+        subprocess.run([sys.executable, str(SYNC), "--home", str(target_home)], check=True)
+        for name, relative in installed_skills.items():
+            for harness in (".agents", ".claude"):
+                assert (target_home / harness / "skills" / name / "SKILL.md").samefile(knowledge / relative)
+            assert not (target_home / ".codex/skills" / name / "SKILL.md").exists()
 
         changed_leaf = knowledge / "what" / "is" / "a" / "knowledge" / "tree.md"
         changed_leaf.write_text("Customized content.\n")
@@ -265,7 +271,7 @@ def main() -> None:
         assert "Refusing to overwrite" in conflict.stderr
         run(*home_arguments, "--force")
         assert "Customized content" not in changed_leaf.read_text()
-        assert canonical.stat().st_ino == shared_skill.stat().st_ino == codex_skill.stat().st_ino
+        assert canonical.stat().st_ino == shared_skill.stat().st_ino
 
         proof_environment = os.environ.copy()
         proof_environment["HOME"] = str(target_home)

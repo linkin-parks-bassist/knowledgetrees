@@ -135,7 +135,8 @@ with tempfile.TemporaryDirectory(prefix="leaf-state-test-") as temporary:
     (root / "default-green.md").write_text("A non-verifiable plan is green by default.\n")
     (root / "explicit-yellow.md").write_text("---\nstatus: yellow\nexpires_every: '2 weeks'\n---\n\nNeeds review.\n")
     result = run(root, "--no-stamp")
-    assert result.stdout == "green=2 yellow=2 brown=0\n"
+    assert result.stdout == ("Leaves: 4 total · 2 green · 2 yellow · 0 brown\n"
+                             "Proofs: 0 total · 0 valid · 0 failed · SUCCESS\n")
     assert "yellow local:" not in result.stderr
     assert "default-green.md" not in result.stderr
     run(root)
@@ -156,7 +157,7 @@ with tempfile.TemporaryDirectory(prefix="leaf-state-test-") as temporary:
     fixed = root / "fixed-deadline.md"
     fixed.write_text("---\nexpires_at: '2000-01-01T00:00:00+00:00'\n---\n\nOne-time review.\n")
     result = run(root)
-    assert "yellow=2" in result.stdout and "yellow local:" not in result.stderr
+    assert "2 yellow" in result.stdout and "yellow local:" not in result.stderr
     digest = hashlib.sha256(fixed.read_bytes()).hexdigest()
     reviewed = subprocess.run([str(TOOLS / "kt"), "renew", str(fixed), digest],
                               capture_output=True, text=True, cwd=root.parent)
@@ -167,7 +168,8 @@ with tempfile.TemporaryDirectory(prefix="leaf-state-test-") as temporary:
     (root / "brown.md").write_text(
         "Broken.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
     result = run(root, "--no-stamp", expected=1)
-    assert result.stdout == "green=4 yellow=1 brown=1\n"
+    assert result.stdout == ("Leaves: 6 total · 4 green · 1 yellow · 1 brown\n"
+                             "Proofs: 1 total · 0 valid · 1 failed · FAIL\n")
     assert "brown local:brown.md" in result.stderr
 
 print("proof timestamp integration checks passed")

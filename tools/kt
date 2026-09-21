@@ -329,8 +329,9 @@ def resolve_access_root(config, value):
 
 def apply_access_decision(config, root, label, available, decision, scope, project, subdirectories=False, session=None):
     """Persist an already-confirmed decision. Confirmation belongs to the caller: the
-    CLI requires the user's own terminal; the MCP server requires the user's answer to a
-    harness elicitation. Nothing here prompts."""
+    CLI requires an interactive terminal confirmation, which an agent may answer only
+    when the user explicitly authorized that exact root and scope; the MCP server
+    requires an accepted harness elicitation. Nothing here prompts."""
     if scope == "session":
         with sqlite3.connect(access_database()) as connection:
             connection.execute("CREATE TABLE IF NOT EXISTS grants (session TEXT, project TEXT, root TEXT, access TEXT, touched REAL, PRIMARY KEY(session,project,root))")
@@ -1639,7 +1640,7 @@ def renew_leaf(args):
         stream.write(updated)
         stream.truncate()
     _, root = require_leaf_root(path)
-    _, states, _ = verify_proofs(["--root", str(root)], emit=False, only=path.resolve().relative_to(root), raise_ok=True)
+    _, states, _, _ = verify_proofs(["--root", str(root)], emit=False, only=path.resolve().relative_to(root), raise_ok=True)
     if states["brown"]:
         print("kt: leaf is still brown after renewal: a proof failed; repair the leaf or its proof", file=sys.stderr)
         return 1
@@ -1796,6 +1797,25 @@ def proof_parser_for_cli():
     return parser
 
 
+def print_proof_summary(states, proof_stats):
+    proof_count, proof_passed, proof_failed = proof_stats
+    leaf_count = sum(states.values())
+    total_width = max(len(str(leaf_count)), len(str(proof_count)))
+    pass_width = max(len(str(states["green"])), len(str(proof_passed)))
+    third_width = max(len(str(states["yellow"])), len(str(proof_failed)))
+    print(
+        f"Leaves: {leaf_count:>{total_width}} total · "
+        f"{states['green']:>{pass_width}} green · "
+        f"{states['yellow']:>{third_width}} yellow · {states['brown']} brown"
+    )
+    print(
+        f"Proofs: {proof_count:>{total_width}} total · "
+        f"{proof_passed:>{pass_width}} valid · "
+        f"{proof_failed:>{third_width}} failed · "
+        f"{'FAIL' if states['brown'] or proof_failed else 'SUCCESS'}"
+    )
+
+
 def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
     """Evaluate proofs. Status only ever moves down here (expiry, failed proofs) unless the leaf is
     verifiable and every proof passes; raise_ok is for kt renew, whose manual review may raise it."""
@@ -1808,14 +1828,14 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
         if not root.is_dir():
             if args.verbose:
                 print(f"ERROR knowledge root is not a directory: {root}", file=sys.stderr)
-            return (1, {state: 0 for state in LEAF_STATES}, []) if not emit else 1
+            return (1, {state: 0 for state in LEAF_STATES}, [], (0, 0, 0)) if not emit else 1
     else:
         try:
             root = discover_knowledge_root(directory)
         except FileNotFoundError as error:
             if args.verbose:
                 print(f"ERROR {error}", file=sys.stderr)
-            return (1, {state: 0 for state in LEAF_STATES}, []) if not emit else 1
+            return (1, {state: 0 for state in LEAF_STATES}, [], (0, 0, 0)) if not emit else 1
 
     # Keep the execution engine guarded against forced-private roots as well.
     if root_access(root) == "force-private" or any(
@@ -1832,6 +1852,8 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
     states = {state: 0 for state in LEAF_STATES}
     non_green = []
     proof_count = 0
+    proof_passed = 0
+    proof_failed = 0
     for relative in selected_other:
         failed += 1
         failed_paths.add(relative)
@@ -1877,9 +1899,11 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
                 command, script, proof_directory, args.timeout)
             results.append((marker, passed))
             if passed:
+                proof_passed += 1
                 if args.verbose:
                     print(f"  PASS line={line} language={command}")
                 continue
+            proof_failed += 1
             failed += 1
             leaf_falsified = True
             failed_paths.add(relative)
@@ -1926,13 +1950,14 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
             f"failures={failed}")
     addressed = [(state, f"{root_identity(root)}:{relative}")
                  for state, relative in non_green]
+    proof_stats = (proof_count, proof_passed, proof_failed)
     if emit:
-        print(" ".join(f"{state}={states[state]}" for state in LEAF_STATES))
+        print_proof_summary(states, proof_stats)
         for state, address in sorted(addressed, key=lambda item: item[1]):
             if state == "brown":
                 print(f"{state} {address}", file=sys.stderr)
         return 1 if states["brown"] else 0
-    return (1 if states["brown"] else 0), states, addressed
+    return (1 if states["brown"] else 0), states, addressed, proof_stats
 
 
 def prove(arguments):
@@ -1967,16 +1992,19 @@ def prove(arguments):
         if not allowed:
             raise AccessRequired("kt: no accessible proof roots")
         totals = {state: 0 for state in LEAF_STATES}
+        proof_totals = [0, 0, 0]
         non_green = []
         for label, root in allowed:
             if any(child != root and child.is_relative_to(root) and root_access(child, child_label) != "allow"
                    for child_label, child in discovered_roots()):
                 raise AccessRequired(f"kt: proof scope {label!r} contains a restricted registered subtree; narrow the scope or approve it first")
-            code, states, paths = verify_proofs(["--root", str(root), *arguments], emit=False)
+            code, states, paths, proof_stats = verify_proofs(["--root", str(root), *arguments], emit=False)
             for state in LEAF_STATES:
                 totals[state] += states[state]
+            for index, count in enumerate(proof_stats):
+                proof_totals[index] += count
             non_green.extend(paths)
-        print(" ".join(f"{state}={totals[state]}" for state in LEAF_STATES))
+        print_proof_summary(totals, proof_totals)
         for state, address in sorted(non_green, key=lambda item: item[1]):
             if state == "brown":
                 print(f"{state} {address}", file=sys.stderr)
@@ -2046,6 +2074,7 @@ def initialize_tree(args):
     root = local_root()
     if root.exists():
         raise ValueError(f"knowledge root already exists: {root}")
+    access_config()  # Refuse malformed registry before creating a tree that cannot be registered.
     for branch in ("how", "what", "where", "why", "does", "is"):
         (root / branch).mkdir(parents=True, exist_ok=True)
     (root / "where/am").mkdir(parents=True)
@@ -2055,6 +2084,7 @@ def initialize_tree(args):
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
+    register_root(root)
     return 0
 
 
@@ -2105,7 +2135,7 @@ def command_parser():
     commands = parser.add_subparsers(dest="command")
     showing_info = commands.add_parser("info", help="prove and load the local startup knowledge")
     showing_info.set_defaults(handler=print_info)
-    initializing = commands.add_parser("init", help="create an empty local knowledge tree")
+    initializing = commands.add_parser("init", help="create and register an empty local knowledge tree (ask policy)")
     initializing.add_argument("orientation", nargs="?", help="optional literal contents of where/am/i.md")
     initializing.set_defaults(handler=initialize_tree)
     search = commands.add_parser("find", help="rank keyword matches across project and global roots", description="Search all permitted active roots. No --root option; open the root-qualified address returned by the search.")

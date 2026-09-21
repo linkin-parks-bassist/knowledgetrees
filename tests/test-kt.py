@@ -175,19 +175,22 @@ def main():
             initialized.index(label) for label in labels)
         assert initialized.index("Test canonical procedure.") < initialized.index("Test orientation.")
         assert "Test specification." not in initialized
-        assert initialized.rstrip().endswith("brown=0")
+        assert "Proofs: " in initialized and "failed ·" in initialized and "brown" in initialized
         fallback = run("info", cwd=base, expected=1)  # the fixture's global root holds one brown leaf
         assert "=== kt note: no ./.knowledge" in fallback and "=== local:where/am/i.md ===" not in fallback
         assert "Test canonical procedure." in fallback and "=== kt prove --global ===" in fallback
-        assert fallback.rstrip().endswith("brown=1")
+        assert "Proofs: " in fallback and "failed ·" in fallback and "brown" in fallback
         bare = base / "bare-root"
         (bare / ".knowledge").mkdir(parents=True)
         partial = run("info", cwd=bare)
         assert "has no where/am/i.md" in partial and "=== kt prove --local ===" in partial
-        assert partial.rstrip().endswith("brown=0")
+        assert "Proofs: " in partial and "failed ·" in partial and "brown" in partial
         fresh = base / "fresh"
         fresh.mkdir()
         assert run("init", "A new orientation.\n", cwd=fresh) == ""
+        registered = json.loads(config.read_text())["roots"]
+        assert any(spec == {"path": str((fresh / ".knowledge").resolve()), "access": "ask"}
+                   for spec in registered.values()), "init must register without granting"
         assert (fresh / ".knowledge/where/am/i.md").read_text() == "A new orientation.\n"
         assert all((fresh / ".knowledge" / branch).is_dir() for branch in
                    ("how", "what", "where", "why", "does", "is"))
@@ -195,30 +198,42 @@ def main():
                    ("what/is/the/spec.md", "what/is/the/plan.md",
                     "what/is/the/state.md", "what/is/next.md"))
         run("init", cwd=fresh, expected=2)
+        assert json.loads(config.read_text())["roots"] == registered, "refused init must not change registration"
         assert (fresh / ".knowledge/where/am/i.md").read_text() == "A new orientation.\n"
         empty = base / "empty"
         empty.mkdir()
         run("init", cwd=empty)
         assert (empty / ".knowledge/where/am/i.md").read_bytes() == b""
+        malformed = base / "malformed registry"
+        malformed.mkdir()
+        broken_config = malformed / "access.json"
+        broken_config.write_text("{broken")
+        refused = subprocess.run([sys.executable, str(SCRIPT), "init"], cwd=malformed,
+                                 env={**env, "KT_CONFIG": str(broken_config)}, text=True, capture_output=True)
+        assert refused.returncode != 0 and not (malformed / ".knowledge").exists(), \
+            "init must validate the registry before creating a tree it cannot register"
         run("proof", expected=2)
-        assert run("prove", "--no-stamp", "leaves") == "green=2 yellow=0 brown=0\n"
-        assert run("prove", "--local", "--no-stamp", "leaves") == "green=1 yellow=0 brown=0\n"
-        assert run("prove", "--global", "--no-stamp", "leaves") == "green=1 yellow=0 brown=0\n"
-        assert "brown=0" in run("prove", str(project), "--no-stamp")
-        assert run("prove", "--root", str(global_root), "--no-stamp", "leaves") == "green=1 yellow=0 brown=0\n"
+        proof_report = run("prove", "--no-stamp", "leaves")
+        assert "Leaves: 2 total" in proof_report and "Proofs: 0 total" in proof_report
+        assert "Leaves: 1 total · 1 green · 0 yellow · 0 brown" in run("prove", "--local", "--no-stamp", "leaves")
+        assert "Leaves: 1 total · 1 green · 0 yellow · 0 brown" in run("prove", "--global", "--no-stamp", "leaves")
+        assert "0 brown" in run("prove", str(project), "--no-stamp")
+        assert "Leaves: 1 total · 1 green · 0 yellow · 0 brown" in run("prove", "--root", str(global_root), "--no-stamp", "leaves")
         assert "--timeout" in run("prove", "--help")
         assert "--local" in run("prove", "--help")
         global_failure = global_root / "what/is/global-proof.md"
         global_failure.parent.mkdir(parents=True, exist_ok=True)
         global_failure.write_text("Failing global proof.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
-        assert run("prove", "--local", "--no-stamp", "global-proof") == "green=0 yellow=0 brown=0\n"
+        proof_report = run("prove", "--local", "--no-stamp", "global-proof")
+        assert "Leaves: 0 total" in proof_report and "Proofs: 0 total" in proof_report
         run("prove", "--global", "--no-stamp", "global-proof", expected=1)
         run("prove", "--no-stamp", "global-proof", expected=1)
         global_failure.unlink()
         proof = local / "what/is/proven.md"
         proof.parent.mkdir(parents=True, exist_ok=True)
         proof.write_text("Passing.\n\nProof: (verified at _)\n\n```bash\ntest 1 -eq 1\n```\n")
-        assert run("prove", "--no-stamp", "proven") == "green=1 yellow=0 brown=0\n"
+        proof_report = run("prove", "--no-stamp", "proven")
+        assert "Leaves: 1 total" in proof_report and "Proofs: 1 total" in proof_report and "1 valid" in proof_report
         assert "verified at _" in proof.read_text()
         run("prove", "proven")
         assert "verified at _" in proof.read_text()

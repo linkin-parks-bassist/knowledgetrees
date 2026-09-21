@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-21T09:02:51+10:00"
+revised_at: "2026-09-21T14:30:56+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
 ---
@@ -64,6 +64,13 @@ Create missing leaves from evidence or truthful minimal/unresolved content, neve
 invent requirements or priorities. Read the active repository spine at task startup.
 Before reporting repository-task completion, refresh state and next action, removing
 superseded information. These are coordinated projections, not append-only journals.
+A leaf is a current answer, never a log. Appending chronology, session notes, progress
+narration, tool transcripts, or stream of consciousness is tree poisoning: it mixes
+stale events into current truth and makes retrieval mislead later agents. Rewrite the
+answer in place. Keep history only when it explains a present constraint or decision;
+use Git or an external log when chronology itself matters.
+These two deranging failure modes—active inconsistency and logleaves—are defined
+at `what/is/tree/poisoning.md` and must be avoided at all costs.
 
 Tree payloads are Markdown leaves only: no scripts, JSON, images, caches, manifests,
 copied code, or source bundles. Root-level `.git` is storage metadata; never create
@@ -131,9 +138,9 @@ keywords and scoped semantic inspection. Retrieve/rewrite existing owners; add a
 leaves. Capture established answers before the next unrelated tool call or completion.
 Tree hits create no duplicate leaf. Unresolved questions record blocker and next check;
 forbidden writes require a scoped handoff. Read `how/to/add/knowledge/leaves.md`
-before capture or proof creation. Installed failure and task-end reminders are
-explained in `how/to/use/knowledgetree/hooks.md`; they do not certify capture or
-replace agent review. A review with no new knowledge needs no invented leaf.
+before capture or proof creation. Startup-hook behavior is explained in
+`how/to/use/knowledgetree/hooks.md`; non-startup reminder hooks are disabled and
+agent review remains explicit. A review with no new knowledge needs no invented leaf.
 Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
 Leaves may declare an ISO-8601 `expires_at` or an `expires_every` duration measured
@@ -141,9 +148,11 @@ from manual `checked_at`. Elapsed expiry makes them yellow until independently r
 Agents should add expiry metadata when a factual answer is liable to change. Do not
 add expiry merely because content cannot be mechanically or independently verified.
 
-Have the original contents in context before editing a leaf. Full reads supply
-the revision hash automatically (`kt_edit` needs a read of the leaf and fails if it changed since); in the shell use kt rewrite ADDRESS HASH BODY. Supply the
-answer body only. Use `--expires-at`, `--expires-every`, or `--verifiable` to set
+Have the original contents in context before editing a leaf. Full reads are always
+complete and return the revision hash; partial reads do not exist. Use `kt_rewrite`
+as the standard method with that hash. Use `kt_edit` only for economy on a tiny
+surgical exact change, or
+in the shell use kt rewrite ADDRESS HASH BODY. Supply the answer body only. Use `--expires-at`, `--expires-every`, or `--verifiable` to set
 optional metadata; `--no-expiry` or `--no-verifiable` to clear it. The required
 hash rejects changed contents; reread and merge on conflict. Preserve still-valid
 knowledge and concurrent edits, correct contradictions

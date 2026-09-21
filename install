@@ -151,6 +151,23 @@ def codex_config_text(current: str, skill_path: Path) -> str:
     return current + separator + block
 
 
+def codex_config_without_skills(current: str, skill_paths: list[Path]) -> str:
+    """Remove every explicit registration of paths now discovered through ~/.agents/skills."""
+    targets = {str(path) for path in skill_paths}
+
+    def retain(match: re.Match[str]) -> str:
+        path_match = PATH_SETTING.search(match.group(0))
+        return "" if path_match is not None and path_match.group(2) in targets else match.group(0)
+
+    updated = SKILLS_TABLE.sub(retain, current)
+    updated = re.sub(
+        r"(?m)^# BEGIN KNOWLEDGETREES SKILL[ \t]*\n[ \t]*# END KNOWLEDGETREES SKILL[ \t]*\n?",
+        "",
+        updated,
+    )
+    return updated
+
+
 def opencode_config_text(current: str, target_home: Path) -> str:
     config = json.loads(current) if current.strip() else {}
     if not isinstance(config, dict):
@@ -237,7 +254,7 @@ def permission_consent(target_home: Path) -> bool:
     print("Folder contents may be sent to your configured model/provider.")
     print(f"Agents will also be allowed to WRITE to {target_home / '.knowledge'}/**.")
     print("The compatibility skill and four knowledge-tree procedure skills will be enabled; edits in .agents still require approval.")
-    print("Default installation also adds failure/task-end reminders; capture reviews can request an extra model turn.")
+    print("Default installation adds startup knowledge-tree context; non-startup reminder hooks are disabled.")
     while True:
         try:
             answer = input("Grant these permissions and continue installation? [n/Y] ").strip().lower()
@@ -261,11 +278,25 @@ def claude_settings_bytes(settings_path: Path, handler: Path) -> tuple[bytes, in
         raise ValueError("Claude Code settings must be an object whose hooks field is an object")
     original = copy.deepcopy(config)
     hooks = config.setdefault("hooks", {})
-    for name, event, matcher in (("SessionStart", "start", "startup|resume|clear|compact"),
-                                 ("UserPromptSubmit", "prompt", None),
-                                 ("PostToolUse", "after", None),
-                                 ("PostToolUseFailure", "failed", None),
-                                 ("Stop", "stop", None)):
+    for name, event in (("UserPromptSubmit", "prompt"), ("PostToolUse", "after"),
+                        ("PostToolUseFailure", "failed"), ("Stop", "stop")):
+        groups = hooks.get(name)
+        if groups is None:
+            continue
+        if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
+            raise ValueError(f"malformed Claude Code {name} hooks")
+        command = f"python3 {shlex.quote(str(handler))} claude {event}"
+        retained = []
+        for group in groups:
+            remaining = [h for h in group.get("hooks", [])
+                         if not (isinstance(h, dict) and h.get("command") == command)]
+            if remaining or not group.get("hooks"):
+                retained.append({**group, "hooks": remaining})
+        if retained:
+            hooks[name] = retained
+        else:
+            hooks.pop(name, None)
+    for name, event, matcher in (("SessionStart", "start", "startup|resume|clear|compact"),):
         groups = hooks.setdefault(name, [])
         if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
             raise ValueError(f"malformed Claude Code {name} hooks")
@@ -304,7 +335,24 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
             hooks["PreToolUse"] = retained
         else:
             hooks.pop("PreToolUse", None)
-    for name, event in (("SessionStart", "start"), ("UserPromptSubmit", "prompt"), ("PostToolUse", "after"), ("Stop", "stop")):
+    for name, event in (("UserPromptSubmit", "prompt"), ("PostToolUse", "after"), ("Stop", "stop")):
+        groups = hooks.get(name)
+        if groups is None:
+            continue
+        if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
+            raise ValueError(f"malformed Codex {name} hooks")
+        command = f"python3 {shlex.quote(str(handler))} codex {event}"
+        retained = []
+        for group in groups:
+            remaining = [h for h in group.get("hooks", [])
+                         if not (isinstance(h, dict) and h.get("command") == command)]
+            if remaining or not group.get("hooks"):
+                retained.append({**group, "hooks": remaining})
+        if retained:
+            hooks[name] = retained
+        else:
+            hooks.pop(name, None)
+    for name, event in (("SessionStart", "start"),):
         groups = hooks.setdefault(name, [])
         if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
             raise ValueError(f"malformed Codex {name} hooks")
@@ -318,8 +366,7 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
     codex_bytes = (current if config == original else json.dumps(config, indent=2) + "\n").encode()
     copilot = {"version": 1, "hooks": {name: [{"type": "command", "exec": "python3",
                   "args": [str(handler), "copilot", event], "timeoutSec": 5}]
-               for name, event in (("sessionStart", "start"), ("userPromptSubmitted", "prompt"), ("postToolUse", "after"),
-                                  ("postToolUseFailure", "failed"), ("agentStop", "stop"))}}
+               for name, event in (("sessionStart", "start"),)}}
     claude_path = target_home / ".claude/settings.json"
     claude_bytes, claude_mode = claude_settings_bytes(claude_path, handler)
     return [
@@ -400,8 +447,9 @@ def main(arguments: list[str] | None = None) -> int:
     skill_links = [
         (knowledge_root / relative, target_home / harness / "skills" / name / "SKILL.md")
         for name, relative in SKILL_LEAVES.items()
-        for harness in (".agents", ".codex", ".claude")
+        for harness in (".agents", ".claude")
     ]
+    retired_codex_skills = [target_home / ".codex" / "skills" / name / "SKILL.md" for name in SKILL_LEAVES]
     if args.hooks_only:
         skill_links = []
     skill_targets = [destination for _canonical, destination in skill_links]
@@ -425,7 +473,7 @@ def main(arguments: list[str] | None = None) -> int:
     kt_bytes = kt_source.read_bytes()
     conflicts: list[Path] = []
     file_targets = [destination for _source, destination, _content in leaf_installs]
-    file_targets.extend((kt_target, kt_command, *skill_targets))
+    file_targets.extend((kt_target, kt_command, *skill_targets, *retired_codex_skills))
     hook_files = []
     if not args.no_hooks:
         try:
@@ -488,10 +536,7 @@ def main(arguments: list[str] | None = None) -> int:
     codex_config = target_home / ".codex" / "config.toml"
     config_storage = writable_target(codex_config)
     config_current = config_storage.read_text() if config_storage.is_file() else ""
-    config_updated = config_current
-    for _canonical, destination in skill_links:
-        if destination.is_relative_to(target_home / ".codex"):
-            config_updated = codex_config_text(config_updated, destination)
+    config_updated = codex_config_without_skills(config_current, retired_codex_skills)
     try:
         if not args.no_mcp:
             config_updated = codex_mcp_text(config_updated, mcp_server)
@@ -526,12 +571,15 @@ def main(arguments: list[str] | None = None) -> int:
             print(f"Would install {destination}")
         for canonical, destination in skill_links:
             print(f"Would hard-link {destination} to {canonical}")
+        for destination in retired_codex_skills:
+            if path_exists(destination):
+                print(f"Would remove redundant Codex skill entry {destination}")
         if agents_updated != agents_current:
             print(f"Would remove the managed bootstrap from {agents_path}")
         if not args.no_mcp:
             print("Would register the knowledge-tree MCP server with Claude Code (via `claude mcp add`), Codex, OpenCode, and Copilot CLI")
-        if not args.hooks_only:
-            print(f"Would enable the Codex skill in {codex_config}")
+        if config_updated != config_current:
+            print(f"Would remove redundant Codex skill registrations from {codex_config}")
         if opencode_updated != opencode_current:
             print(f"Would update {opencode_config} after a permission warning and [n/Y] consent.")
             print(f"Would allow reads of {knowledge_root}/** and {target_home / '.agents'}/**, plus writes to {knowledge_root}/**.")
@@ -582,6 +630,14 @@ def main(arguments: list[str] | None = None) -> int:
             print(f"error: could not hard-link {destination}: {error}", file=sys.stderr)
             return 2
 
+    for destination in retired_codex_skills:
+        if destination.is_file() or destination.is_symlink():
+            destination.unlink()
+            try:
+                destination.parent.rmdir()
+            except OSError:
+                pass
+
     if agents_updated != agents_current:
         if not agents_updated and not agents_path.is_symlink():
             agents_path.unlink()
@@ -616,13 +672,13 @@ def main(arguments: list[str] | None = None) -> int:
     print(f"Installed {len(leaf_installs)} reusable leaves into {knowledge_root}")
     print(f"Installed kt at {kt_target}; command: {kt_command}")
     if hook_files:
-        print("Installed failure and task-end reminders for Claude Code, Codex, OpenCode, and Copilot CLI.")
+        print("Installed startup knowledge-tree context for Claude Code, Codex, OpenCode, and Copilot CLI; non-startup reminders are disabled.")
         print("Claude Code and Codex: review/trust the new definitions with /hooks. Restart OpenCode to load its plugin.")
     if claude_mcp is not None:
         print(f"Knowledge-tree MCP server (lookup, search, edit, access approval, and more) is configured for Codex, OpenCode, and Copilot CLI; Claude Code: {claude_mcp}.")
         print("Restart each harness to load it.")
     if not args.hooks_only:
-        print("Installed hard-linked compatibility skills for shared harnesses, Codex, and Claude Code")
+        print("Installed hard-linked compatibility skills for shared harnesses and Claude Code; retired redundant Codex copies")
     if agents_updated != agents_current:
         print(f"Removed the managed bootstrap from {agents_path}")
     if not args.hooks_only:

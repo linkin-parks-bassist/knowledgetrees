@@ -1,9 +1,9 @@
 ---
-status: green
-revised_at: "2026-09-21T09:02:51+10:00"
+status: "green"
+revised_at: "2026-09-21T15:28:05+10:00"
 ---
 
-This is the shell reference for `kt`. When you have the `kt_*` tools (the knowledgetrees MCP server), use them instead: each command below has a tool (`how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`) with lean output (answer body only, a notice on yellow or brown leaves) and no revision hashes to carry. The shell is the fallback when the tools are unavailable.
+This is the shell reference for `kt`. When you have the `kt_*` tools, use them instead. Whole-leaf MCP reads return the complete answer, an optional non-green notice, and the revision hash required by `kt_rewrite`; no other metadata is shown. Neither MCP nor kt supports partial leaf reads. Ranked excerpts select candidates and are not reads. The shell is the fallback when tools are unavailable.
 
 ## Success output policy
 
@@ -14,11 +14,11 @@ retain required consent prompts and disclosures, without post-save receipts.
 Reads, searches, help, policy inspection, dry-run previews and explicitly verbose
 proof checks return the requested information. Failures retain diagnostics and
 nonzero exit statuses; silence alone is not sufficient without checking status.
-Accuracy/preservation reminders belong in the one-shot review hook.
+Accuracy and preservation remain explicit agent obligations; no task-end reminder hook is installed.
 
 ## Command and address quick reference
 
-- Create: `kt init [ORIENTATION]` creates `.knowledge/` in the current directory with empty canonical branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. The argument, if given, is written literally. Existing trees are preserved.
+- Create: `kt init [ORIENTATION]` creates `.knowledge/` in the current directory with empty canonical branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. The argument, if given, is written literally. The new tree is registered under `ask` without a cross-project grant. Existing trees are preserved.
 
 - Initialize: `kt info` prints the canonical global procedure and exact local
   orientation, then the accessible dictionary, then the
@@ -69,7 +69,7 @@ Accuracy/preservation reminders belong in the one-shot review hook.
   leaf reads. No --expect option. --dry-run previews the diff. Successful writes
   produce no stdout or stderr (exit 0), without echoing either body. No-ops are
   also silent; dry-run shows the diff and failures report diagnostics. Accuracy and
-  preservation reminders belong to the one-shot task-end capture-review hook.
+  preservation remain agent obligations; no task-end reminder hook is installed.
 - Renew: `kt renew ADDRESS HASH` (tool `kt_renew`) records `checked_at` for the complete
   answer read at HASH, clears any brown, then re-runs that leaf's own proofs and leaves it green; exit 1 means a proof failed and it is brown. It is the only manual way to raise a status.
 - Help: `kt COMMAND --help` describes options for that command. Options do not
@@ -106,7 +106,7 @@ leaf. Preserve the established answer before the next unrelated tool call or
 completion. Add a truthful unresolved record if blocked; forbidden writes require
 a scoped handoff. Do not silently move on or create a duplicate from a lexical miss.
 
-`kt register NAME PATH` registers an existing knowledge-root directory as a private (`ask`) root under a lowercase-hyphen name; it does not grant access.
+`kt register NAME PATH` registers an existing knowledge-root directory as a private (`ask`) root under a lowercase-hyphen name; it does not grant access. `kt init` registers its new tree automatically, so separate registration is for already-existing trees.
 
 `kt roots` labels the exact current-directory tree local, the user-global tree global,
 and other roots by full canonical root directory path. It lists the local/global trees
@@ -145,7 +145,7 @@ The installer puts the script in the global `.tools/kt` and links `~/.local/bin/
 
 ## MCP tools
 
-When a harness has the knowledgetrees MCP server (installed by `./install`), use its tools in preference to this shell reference; they have the same semantics with lean output and no hashes: `kt_info`, `kt_lookup` (`kt how to ...`), `kt_find` (optional `json`), `kt_grep`, `kt_read` (`kt open`: the whole leaf's answer, with a notice only when the leaf is yellow or brown), `kt_edit`, `kt_undo`, `kt_add`, `kt_renew` (`kt renew`), `kt_dict`, `kt_roots`, `kt_prove` (does not stamp unless `stamp` is set), `kt_status`, `kt_access_status`, `kt_access_request`, and `kt_access_revoke`. Change a leaf with `kt_edit`: read it first, then it replaces exact text that must occur once in the answer (several edits apply atomically), fails if the leaf changed since you read it, and returns a diff of the answer; `kt_undo` reverses your latest edit of a leaf while its answer is unchanged. `kt_access_request` asks the user through the harness to approve a restricted root; the model cannot answer it, and a decline is final for the session. `kt_access_revoke` gives access back when you no longer need it, and `kt_access_status` (or `kt grants`) says why each root is readable. A miss or brown result comes back as data marked `(exit 1)`; only exit 2 or higher is a tool error. `init`, `rm`, `mv`, `combine`, `register`, `access`, and `permissions`, and whole-answer replacement (`kt rewrite`), remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
+When a harness has the knowledgetrees MCP server, use its 20 tools in preference to this shell reference. `kt_read` and exact `kt_lookup` hits return the whole answer and revision. `kt_rewrite` is the standard edit method and requires that hash; use `kt_edit` only for economy on a tiny surgical exact-match change. `kt_rm` and `kt_mv` likewise require the source read hash; `kt_init` retains the CLI's refusal to overwrite an existing tree. `kt_undo`, `kt_add`, `kt_renew`, retrieval, proof, status, and access tools retain their documented semantics. A miss or brown result is data marked `(exit 1)`; only exit 2 or higher is a tool error. `combine`, `register`, `access`, and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
 
 ## Persistent access settings
 

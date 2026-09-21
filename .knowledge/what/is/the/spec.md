@@ -1,6 +1,6 @@
 ---
-status: green
-revised_at: "2026-09-21T09:03:52+10:00"
+status: "green"
+revised_at: "2026-09-22T09:39:15+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -22,7 +22,7 @@ also need `name` and `description` for harness discovery. Blockers, next checks,
 evidence, provenance, and review conditions belong in the answer body; root and
 path supply scope. All stored timestamps are ISO 8601 with a timezone. Unsupported
 or malformed front matter is rejected by write commands and brown in proof checks.
-Empty orientation and spine leaves created by `kt init` remain empty until filled.
+Empty orientation and spine leaves created by `kt init` remain empty until filled. A leaf is a current answer, never a chronological log: task narration, session notes, progress updates, and tool transcripts are tree poisoning and must not be appended. History remains only when it explains a current constraint or decision; Git or an external log owns chronology.
 
 `kt add` and `kt rewrite` accept answer bodies and generate front matter. Options `--expires-at TIMESTAMP` and `--expires-every DURATION` set freshness; `--verifiable` asserts complete proof coverage. Rewrite preserves omitted optional fields; `--no-expiry` and `--no-verifiable` clear them. `kt add`, `kt rewrite`, and `kt combine` set `revised_at` for changes. A new leaf starts green (with `checked_at` too when `--expires-every` is given), and a rewrite keeps the status and `checked_at`, so a brown leaf stays brown through a rewrite until
 an independent whole-leaf check. `kt combine` yields the worst status of its sources. `kt prove` writes the evaluated color and only ever lowers it; the sole leaf it raises is a `verifiable: true` one whose proofs all pass. Elapsed
@@ -86,11 +86,11 @@ used; kt never discovers parent trees automatically. Wider roots default to ask.
 A user-confirmed persistent permission bypass may skip ordinary ask/deny rules,
 but force-private always wins outside the exact local tree. Protected subtrees
 must not leak through lookup, reads, capture, symlinks, proofs, or startup.
-Agents do not approve access on the user's behalf. The root registry and
+Agents never invent approval; explicit conversational authorization for an exact root and scope permits them to confirm the matching interactive CLI decision. The root registry and
 unrelated host permissions survive installation.
 
-`kt init [ORIENTATION]` creates an empty local tree and spine without overwriting
-one. `kt info` prints the canonical global procedure, exact local orientation,
+`kt init [ORIENTATION]` creates an empty local tree and spine, registers it
+under `ask` without cross-project access, and refuses to overwrite an existing tree. `kt info` prints the canonical global procedure, exact local orientation,
 accessible dictionary, and local proof result in that order; without a local
 tree or local orientation it falls back to the global orientation and proof. Startup hooks inject
 its complete output through the final proof summary. The bootstrap is once per
@@ -104,24 +104,19 @@ installing the example spine, preserves existing orientation, installs the CLI,
 hooks, and MCP server (registered with all four harnesses; `--no-mcp` skips it), removes its obsolete home AGENTS bootstrap, and hardlinks skill entry points to the
 canonical installed procedure leaves. It preserves unrelated configuration.
 OpenCode permission changes require informed `[n/Y]` consent before writes.
-Claude Code, Codex, OpenCode, and Copilot hooks provide startup, failure, and one-shot
-capture-review reminders without storing raw logs. Hook support must respect
-session boundaries and avoid self-triggering loops. The OpenCode backend must
+Claude Code, Codex, OpenCode, and Copilot integrations provide startup context only. The installer removes its formerly managed non-startup reminder hooks while preserving unrelated hooks; no managed prompt, tool-result, failure, stop, idle, call-counter, or capture-review hook remains active. The OpenCode backend must
 restart to load a changed plugin; Codex hook definitions require native trust; Claude Code definitions are reviewed with `/hooks`.
 Claude Code drops hook context past roughly 10,000 characters, so its startup
 hook sends an instruction to call the `kt_info` tool (or run `kt info`) when the output exceeds
 9,500 bytes, rather than a silently truncated startup output.
 
-The 16 MCP tools (`kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_edit`,
-`kt_undo`, `kt_add`, `kt_renew`, `kt_dict`, `kt_roots`, `kt_prove`, `kt_status`,
-`kt_access_status`, `kt_access_request`, `kt_access_revoke`) delegate every operation to the CLI so
-revision, access, locking, and proof semantics are unchanged, and carry read-only and
-destructive annotations. Their output is lean (answer bodies without metadata or revision hashes, a live notice on non-green leaves). Leaves are atomic: read whole, changed only by exact-match `kt_edit` (there is no whole-answer replacement tool), and edits and renewal are refused unless this session read the leaf and its answer is unchanged since. Agent guidance names the tools first with the shell only as the fallback. Destructive, initialization, and access-policy commands stay
-CLI-only, and no input may inject a CLI option. The one exception is access approval:
-`kt_access_request` asks the user through MCP elicitation and persists an accepted
-`allow` with the CLI's own `apply_access_decision`. Only the user's answer grants;
-denied and force-private roots are never prompted for, and the CLI itself keeps its
-own-terminal confirmation. Access can be given back: `kt grants` reports each root's
+The 20 MCP tools (`kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_rewrite`, `kt_edit`, `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_init`, `kt_renew`, `kt_dict`, `kt_roots`, `kt_prove`, `kt_status`, `kt_access_status`, `kt_access_request`, `kt_access_revoke`) delegate every operation to the CLI so revision, access, locking, and proof semantics are unchanged, and carry read-only and destructive annotations. Whole-leaf reads and exact lookup hits return the complete answer plus its SHA-256 `Revision:` line and no other metadata; neither MCP nor kt supports partial leaf reads. Ranked excerpts are selectors, not reads. `kt_rewrite` is the standard editing tool and requires that read hash; the CLI rejects stale hashes under lock. `kt_edit` is used only for economy on a tiny surgical exact-match change, and renewal still requires the server's remembered whole read. Agent guidance names the tools first with the shell only as the fallback. `kt_rm` and `kt_mv` require a whole-read source hash, and `kt_init` automatically registers the new tree under `ask` and retains the CLI refusal to overwrite an existing tree. Combine, registration, and access-policy mutation stay CLI-only, and no input may inject a CLI option. The one exception is access approval:
+`kt_access_request` sends MCP elicitation and persists `allow` with the CLI's own
+`apply_access_decision` only for an accepted response with a valid scope. Denied
+and force-private roots are never prompted for, and the CLI itself keeps its
+interactive confirmation. An unexplained client decline, cancellation, or error
+is not attributed to the user and grants nothing; the tool supplies the exact
+interactive terminal fallback without suppressing a later request. Explicit user authorization in conversation for the exact root and scope permits the agent to run and confirm that fallback; it does not authorize a wider bypass. Access can be given back: `kt grants` reports each root's
 effective access and its source, `kt access ROOT revoke` narrows it (terminal), and
 `kt_access_revoke` does so from the harness (direct for this directory, user-confirmed
 for anything wider). Approvals are path-keyed, so every run prunes project grants, everywhere-allowed registrations, and auto-named
@@ -131,9 +126,7 @@ registrations are kept.
 ## Proof and release checks
 
 Proof commands are explicit, bounded, and read-only predicates attached to
-concrete assertions. `kt prove` checks every selected proof, reports aggregate
-colors and brown paths, and supports exact local, global, and other accessible
-root selection. The verifier does not repair prose or infer complete proof
+concrete assertions. `kt prove` checks every selected proof, prints aligned `Leaves:` and `Proofs:` count lines with `SUCCESS` or `FAIL`, reports brown paths, and supports exact local, global, and other accessible root selection. The verifier does not repair prose or infer complete proof
 coverage. Agents inspect claim-to-proof coverage before setting `verifiable`.
 Publication checks include Python and OpenCode regressions, scoped project,
 example, and installed-global proof sweeps, instruction-sync checks, installed

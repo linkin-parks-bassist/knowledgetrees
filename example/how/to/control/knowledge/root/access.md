@@ -1,10 +1,11 @@
 ---
-status: green
-revised_at: "2026-09-21T08:33:21+10:00"
+status: "green"
+revised_at: "2026-09-21T15:27:41+10:00"
 ---
 
 Root discovery uses only the exact current-directory tree, the known global
-root, and explicitly registered roots. It never searches parent directories.
+root, and explicitly registered roots. `kt init` registers the tree it creates
+under `ask` without granting access elsewhere. It never searches parent directories.
 The private registry is ~/.knowledge/.tools/roots.json; KT_CONFIG overrides it.
 Registered roots are not indexed in advance. Registration saves root metadata,
 not approval or leaf content.
@@ -28,7 +29,7 @@ allowed unless denied. Wider roots default to ask. Ordinary ask/deny roots may
 appear in roots output with their canonical identity, but their leaves, snippets,
 and rankings remain inaccessible. A force-private root is completely omitted.
 
-Run access decisions in the user's own interactive terminal:
+Run access decisions in an interactive terminal:
 
 ```sh
 kt access global allow --scope project
@@ -44,13 +45,13 @@ unless bypass is enabled. ask, deny, and reset replace or revoke decisions at
 --scope project, --scope session, or --scope all. Force-private is always a
 root-wide policy; revoke it with `kt access ROOT reset --scope all` or replace it
 with a different root-wide policy. Project/session grants cannot revoke privacy.
-Agents must not provide the interactive confirmation on the user's behalf.
+An agent may answer the CLI confirmation only after the user explicitly authorizes the exact root and scope in conversation. That is acting on the user's decision, not inventing one. Inspect the displayed root and scope before answering. If authorization is absent or ambiguous, ask the user to confirm it. Prefer a project-scoped grant for a project need; do not substitute the persistent global bypass.
 
-Seeing and revoking grants: `kt grants [ROOT]` lists each root's effective access and its source (local tree, project grant and where it was made, allowed everywhere, session grant, permissions bypass, denied, or none) and marks roots whose tree is gone. `kt access ROOT revoke [--scope project|all]` narrows access already granted: project scope makes the root require approval again for this directory (overriding an everywhere-allow for this project only), and `all` does so everywhere and drops every project grant for it, or removes the registration of a missing root. Like other changes it needs the user's own terminal. The local tree, a permissions bypass, and session grants cannot be revoked this way.
+Seeing and revoking grants: `kt grants [ROOT]` lists each root's effective access and its source (local tree, project grant and where it was made, allowed everywhere, session grant, permissions bypass, denied, or none) and marks roots whose tree is gone. `kt access ROOT revoke [--scope project|all]` narrows access already granted: project scope makes the root require approval again for this directory (overriding an everywhere-allow for this project only), and `all` does so everywhere and drops every project grant for it, or removes the registration of a missing root. Like other changes it needs interactive confirmation, either from the user or from an agent carrying out explicit authorization for that exact change. The local tree, a permissions bypass, and session grants cannot be revoked this way.
 
 Stale approvals: grants are keyed by path, so on every run `kt` drops project grants whose project directory or root no longer exists, registered roots allowed everywhere whose tree is gone, and auto-named `root-<hash>` ask registrations whose tree is gone, printing a one-line notice on stderr; a tree recreated at that path then needs a fresh approval. Deny and force-private entries and user-named ask registrations are kept because they protect or name a tree that may only be unmounted. A tree deleted and recreated between two `kt` runs is not detected.
 
-Asking through the harness: where the knowledgetrees MCP server is installed and the client can prompt (MCP elicitation), an agent calls `kt_access_request(root, reason)` instead of telling the user to open a terminal. The harness shows the user the root, the project directory, and the reason, with three choices: this project directory, this project and subdirectories, or everywhere. Only the user's accept saves the grant (an `allow`; session scope is not offered because the server cannot know the agent's session id); decline or cancel changes nothing, and the same root is not asked about again that session. Denied and force-private roots are never prompted for, and a client without the capability receives the terminal command instead. `kt_access_status` reports each root's state and why read-only, and `kt_access_revoke` gives access back (narrowing this directory is direct; anything wider asks the user first). This is a guardrail against an agent granting itself access, not a sandbox: the CLI still requires the user's own terminal, and an agent that can run arbitrary commands as the same user can already edit the policy files, so the real boundary is what the harness lets the agent run.
+Asking through the harness: where the knowledgetrees MCP server is installed, an agent calls `kt_access_request(root, reason)`. It sends an MCP elicitation request for the client to display the root, project directory, reason, and three choices: this project directory, this project and subdirectories, or everywhere. Only an accepted response with a valid scope saves the grant (an `allow`; session scope is not offered because the server cannot know the agent's session id). Decline, cancel, or client errors change nothing. A client may advertise elicitation yet return decline without displaying a prompt; this is reported as a client action, not a verified user refusal, and is not cached to suppress a retry. Such failures and clients without elicitation receive the exact interactive `kt access` fallback command. After explicit conversational authorization for its exact root and scope, the agent may run and confirm it; otherwise the user runs it. Denied and force-private roots are never prompted for. `kt_access_status` reports each root's state and why read-only, and `kt_access_revoke` gives access back (narrowing this directory is direct; anything wider asks for confirmation). This is a guardrail against an agent granting itself access, not a sandbox: the CLI still requires interactive confirmation, and an agent that can run arbitrary commands as the same user can already edit the policy files, so the real boundary is what the harness lets the agent run.
 
 ## Persistent bypass
 

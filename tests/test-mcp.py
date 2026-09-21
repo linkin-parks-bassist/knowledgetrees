@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -60,8 +61,8 @@ def main():
         assert rpc("notifications/initialized", notify=True) is None
         assert rpc("ping")["result"] == {}
         names = {t["name"] for t in rpc("tools/list")["result"]["tools"]}
-        assert names == {"kt_info", "kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_edit", "kt_undo",
-                         "kt_add", "kt_renew", "kt_dict", "kt_roots", "kt_prove", "kt_status", "kt_access_status", "kt_access_request",
+        assert names == {"kt_info", "kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_rewrite", "kt_edit", "kt_undo",
+                         "kt_add", "kt_rm", "kt_mv", "kt_init", "kt_renew", "kt_dict", "kt_roots", "kt_prove", "kt_status", "kt_access_status", "kt_access_request",
                          "kt_access_revoke"}
         listed = {t["name"]: t for t in rpc("tools/list")["result"]["tools"]}
         for name, definition in listed.items():
@@ -69,10 +70,12 @@ def main():
             assert set(hints) >= {"readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"} and not hints["openWorldHint"], name
         for name in ("kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_dict", "kt_roots", "kt_status", "kt_access_status"):
             assert listed[name]["annotations"]["readOnlyHint"] and not listed[name]["annotations"]["destructiveHint"], name
-        for name in ("kt_edit", "kt_undo"):
+        for name in ("kt_rewrite", "kt_edit", "kt_undo", "kt_rm", "kt_mv"):
             assert not listed[name]["annotations"]["readOnlyHint"] and listed[name]["annotations"]["destructiveHint"], name
         assert not listed["kt_renew"]["annotations"]["destructiveHint"] and not listed["kt_renew"]["annotations"]["readOnlyHint"]
         assert not listed["kt_add"]["annotations"]["destructiveHint"] and not listed["kt_add"]["annotations"]["readOnlyHint"]
+        assert not listed["kt_init"]["annotations"]["destructiveHint"] and not listed["kt_init"]["annotations"]["readOnlyHint"]
+        assert set(listed["kt_read"]["inputSchema"]["properties"]) == {"address"}, "whole reads have no range or paging parameters"
         assert "instructions" in initialized["result"] and "kt_access_request" in initialized["result"]["instructions"]
         assert "kt_renew" in initialized["result"]["instructions"] and "shell" in initialized["result"]["instructions"]
         assert not [n for n, t in listed.items() if len(json.dumps(t)) > 1800], "tool schemas must stay compact"
@@ -84,9 +87,17 @@ def main():
         error, text = tool("kt_edit", address=address, old_text="Alpha", new_text="x")
         assert error and "read this leaf first" in text, "an edit needs a read in this session"
         error, text = tool("kt_read", address=address)
-        assert not error and "Alpha line." in text and "status:" not in text and "Revision" not in text and "revised_at" not in text
+        assert not error and "Alpha line." in text and "status:" not in text and "revised_at" not in text
+        revision = re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
+        assert text.count("Revision:") == 1
         leaf = project / ".knowledge/what/is/the/fixture.md"
         inode = leaf.stat().st_ino
+
+        error, text = tool("kt_rewrite", address=address, revision=revision,
+                           answer="Alpha line.\nBeta line.\nBeta line.\n", dry_run=True)
+        assert not error and text == "No change." and "revised_at" not in text
+        error, text = tool("kt_rewrite", address=address, revision="bad", answer="No.")
+        assert error and "64-character" in text
 
         error, text = tool("kt_edit", address=address, old_text="Beta line.", new_text="Gamma line.")
         assert error and "2 matches" in text and "Gamma" not in leaf.read_text()
@@ -103,6 +114,8 @@ def main():
         assert not error and "+Omega line." in text and "revised_at" not in text
         assert "Omega line.\nBeta line." in leaf.read_text() and leaf.stat().st_ino == inode
         assert 'status: "green"' in leaf.read_text(), "an edit keeps the leaf's status"
+        error, text = tool("kt_rewrite", address=address, revision=revision, answer="Stale overwrite.")
+        assert error and "stale" in text and "Stale overwrite" not in leaf.read_text()
         error, text = tool("kt_edit", address=address, old_text="Omega line.", new_text="Alpha again.")
         assert not error, "an edit updates what this session has seen, so edits chain without a re-read"
 
@@ -123,12 +136,30 @@ def main():
         assert leaf.read_text().startswith("---\n"), "front matter survives"
         error, text = tool("kt_read", address="local:no/such/leaf.md")
         assert error
+        error, text = tool("kt_init")
+        assert error and "exists" in text.lower(), "init refuses an existing tree"
+        error, text = tool("kt_add", question="what is movable", answer="Move me.", scope="local")
+        assert not error
+        error, text = tool("kt_read", address="local:what/is/movable.md")
+        move_revision = re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
+        error, text = tool("kt_mv", source="local:what/is/movable.md", destination="local:what/is/moved.md",
+                           revision=move_revision, dry_run=True)
+        assert not error and (project / ".knowledge/what/is/movable.md").exists()
+        error, text = tool("kt_mv", source="local:what/is/movable.md", destination="local:what/is/moved.md",
+                           revision=move_revision)
+        assert not error and (project / ".knowledge/what/is/moved.md").exists()
+        error, text = tool("kt_read", address="local:what/is/moved.md")
+        remove_revision = re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
+        error, text = tool("kt_rm", address="local:what/is/moved.md", revision=remove_revision, dry_run=True)
+        assert not error and (project / ".knowledge/what/is/moved.md").exists()
+        error, text = tool("kt_rm", address="local:what/is/moved.md", revision=remove_revision)
+        assert not error and not (project / ".knowledge/what/is/moved.md").exists()
         assert rpc("tools/call", {"name": "kt_delete", "arguments": {}})["result"]["isError"]
 
         # Retrieval, creation, and inspection tools wrap the same CLI semantics.
         error, text = tool("kt_lookup", question="what is the fixture")
         assert not error and "Whole new body." in text and text.startswith(f"[{address}]") and "revised_at" not in text
-        assert "kt: exact" not in text and "Revision" not in text
+        assert "kt: exact" not in text and re.search(r"^Revision: [a-f0-9]{64}$", text, re.M)
         error, text = tool("kt_lookup", question="-h what is")
         assert error and "must not start" in text
         error, text = tool("kt_find", terms="Whole body", limit=2)
@@ -162,7 +193,7 @@ def main():
         assert not error and str(project / ".knowledge") in text
         before = created.read_text()
         error, text = tool("kt_prove", scope="local")
-        assert not error and "brown=0" in text and created.read_text() == before, "default prove must not stamp"
+        assert not error and "0 brown" in text and "0 failed · SUCCESS" in text and created.read_text() == before, "default prove must not stamp"
         error, text = tool("kt_prove", scope="galaxy")
         assert error
 
@@ -379,7 +410,7 @@ def main():
         outcome = receive()
         assert outcome["id"] == identifier and not outcome["result"]["isError"] and "approved" in outcome["result"]["content"][0]["text"]
         deferred = receive()
-        assert deferred["id"] == 99 and len(deferred["result"]["tools"]) == 16, "a request that arrived mid-prompt is still served"
+        assert deferred["id"] == 99 and len(deferred["result"]["tools"]) == 20, "a request that arrived mid-prompt is still served"
         assert grants()["projects"][str(project.resolve())][str(vaults["vault"].resolve())] == "allow"
         identifier = next(request_id)
         send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",
@@ -437,7 +468,7 @@ def main():
             assert prompt["params"]["requestedSchema"]["properties"]["confirm"]["type"] == "boolean"
             send({"jsonrpc": "2.0", "id": prompt["id"], "result": answer})
             error, text = outcome(identifier)
-            assert not error and "declined" in text and grants() == before, "anything but a confirmed accept changes nothing"
+            assert not error and "did not confirm" in text and grants() == before, "anything but a confirmed accept changes nothing"
         identifier = call("kt_access_revoke", root=str(vaults["vault3"]), scope="all")
         prompt = receive()
         send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "accept", "content": {"confirm": True}}})
@@ -449,7 +480,7 @@ def main():
         assert prompt["method"] == "elicitation/create"
         send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "decline"}})
         error, text = outcome(identifier)
-        assert "declined" in text and grants()["roots"]["global"]["access"] == "allow"
+        assert "did not confirm" in text and grants()["roots"]["global"]["access"] == "allow"
 
         # Denied and force-private roots never reach the user.
         for refused in ("locked", "hidden"):
@@ -459,7 +490,7 @@ def main():
         client.stdin.close()
         assert client.wait(timeout=10) == 0
 
-        # Decline, cancel, invalid answers, and refusal to nag.
+        # Decline, cancel, client errors, and invalid answers are reported without inventing a user refusal.
         for answer in ({"action": "decline"}, {"action": "cancel"}):
             client, send, receive = start_client({"elicitation": {}})
             before = grants()
@@ -467,13 +498,25 @@ def main():
             prompt = receive()
             send({"jsonrpc": "2.0", "id": prompt["id"], "result": answer})
             reply = receive()
-            assert "declined" in reply["result"]["content"][0]["text"] and grants() == before
+            text = reply["result"]["content"][0]["text"]
+            assert "MCP client" in text and "kt access" in text and "user declined" not in text.lower() and grants() == before
             identifier = ask(base_extra)
-            reply = receive()
-            assert reply["id"] == identifier and "earlier in this session" in reply["result"]["content"][0]["text"], \
-                "a declined root is not asked about again"
+            prompt = receive()
+            assert prompt["method"] == "elicitation/create", "an unshown client decline must not suppress a later request"
+            send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "cancel"}})
+            assert receive()["id"] == identifier
             client.stdin.close()
             assert client.wait(timeout=10) == 0
+        client, send, receive = start_client({"elicitation": {}})
+        before = grants()
+        identifier = ask(base_extra)
+        prompt = receive()
+        send({"jsonrpc": "2.0", "id": prompt["id"], "error": {"code": -32603, "message": "prompt unavailable"}})
+        reply = receive()
+        text = reply["result"]["content"][0]["text"]
+        assert "prompt unavailable" in text and "kt access" in text and grants() == before
+        client.stdin.close()
+        assert client.wait(timeout=10) == 0
         client, send, receive = start_client({"elicitation": {}})
         before = grants()
         identifier = ask(base_extra)

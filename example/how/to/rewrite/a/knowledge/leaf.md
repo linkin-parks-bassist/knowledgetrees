@@ -1,14 +1,13 @@
 ---
 status: green
-revised_at: "2026-09-21T09:02:51+10:00"
+revised_at: "2026-09-21T14:30:57+10:00"
 ---
 
-Change a leaf through the tools with `kt_edit`: read it first with `kt_read` (or an exact sentence-prefix
-`kt_lookup`), then replace exact text that must occur once in the answer (several edits apply atomically in order).
-The edit fails if the leaf changed since you read it, so an agent always edits what it has seen, and it returns a diff
-of the answer; `kt_undo` reverses your latest edit while the answer is unchanged. Leaves are read whole and never in
-pieces. Whole-answer replacement is the shell command below, whose read is `kt open ROOT:PATH` or an exact
-sentence-prefix query.
+Use `kt_rewrite` as the standard editing method. First read the complete leaf with `kt_read` or an exact
+`kt_lookup`; there are no partial reads in MCP or kt. The read returns the answer plus a final `Revision:` SHA-256
+line and no other metadata. Pass that hash and the complete replacement answer to `kt_rewrite`. A stale hash fails
+under the CLI's locked revision check. Use `kt_edit` only for economy when making a tiny surgical exact-match replacement after a whole read;
+`kt_undo` reverses the latest rewrite or edit while the answer remains unchanged.
 Every full shell leaf read supplies `Revision: HASH` on stderr for the same bytes returned
 verbatim on stdout. Ranked excerpts are not full reads and do not supply a
 revision for editing.
@@ -34,9 +33,9 @@ arguments correctly; operating-system argument size limits apply.
 Successful rewrites and identical no-ops produce no stdout or stderr. Exit 0
 signals success. Neither old nor new contents are echoed. --dry-run still shows
 the diff, and failures report diagnostics with a nonzero exit status. Preserve
-still-valid knowledge and check relevant proofs before reliance. The existing
-one-shot task-end capture-review hook carries the accuracy/preservation reminder
-once per work cycle, rather than repeating it after every rewrite.
+still-valid knowledge and check relevant proofs before reliance. Agent guidance
+carries the accuracy/preservation requirement; no task-end reminder hook is active or
+installed and rewrites do not create an extra model turn.
 
 The command needs no Git repository and invokes no editor. Revision mismatch exits
 4 and leaves the file untouched; reread and merge concurrent changes. An advisory

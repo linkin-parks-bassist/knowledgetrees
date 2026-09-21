@@ -42,7 +42,7 @@ def main():
                                if harness in ("codex", "claude") else result["additionalContext"])
                     assert "Canonical procedure fixture." in context
                     assert "Project orientation fixture." in context
-                    assert context.rstrip().endswith("brown=0")
+                    assert context.rstrip().endswith("0 failed · SUCCESS") and "0 brown" in context
             # Claude Code drops hook context past ~10,000 characters, so oversized `kt info` output is
             # replaced by an instruction to run it directly; other harnesses keep the full text.
             with patch.dict(os.environ, {"KT_HOOK_CONTEXT_LIMIT": "200"}):
@@ -58,7 +58,7 @@ def main():
             fallback, _ = handle("claude", "start", {"source": "startup", "cwd": str(root)})
             context = fallback["hookSpecificOutput"]["additionalContext"]
             assert "kt info failed" not in context and "Canonical procedure fixture." in context
-            assert "no ./.knowledge" in context and context.rstrip().endswith("brown=0")
+            assert "no ./.knowledge" in context and context.rstrip().endswith("0 failed · SUCCESS") and "0 brown" in context
             # A genuinely unusable `kt info` run (no global procedure) is still reported, not hidden.
             (global_root / "how/to/use/knowledgetrees.md").unlink()
             failed_info, _ = handle("codex", "start", {"source": "startup", "cwd": str(project)})
