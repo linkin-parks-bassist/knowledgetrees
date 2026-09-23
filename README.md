@@ -31,18 +31,20 @@ This repository contains:
 ## Tools for agents
 
 Knowledge only compounds if using it is effortless, so `./install` gives Claude Code, Codex,
-OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 20 tools
+OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 23 tools
 that mirror the `kt` workflow. Agents are told to use them instead of the `kt` shell command
 (the shell is the fallback when the tools are unavailable). Every tool delegates to the CLI, so
 access policy, locking, and proofs behave identically.
+`kt_add`, `kt_prove`, and `kt_status` can target any approved root directly, so multi-tree work
+does not need a shell detour.
 
 | Job | Tools |
 | --- | --- |
 | Find | `kt_lookup` (`how to …` questions), `kt_find` (ranked, optional JSON), `kt_grep` (literal or regex exact text), `kt_dict`, `kt_roots` |
 | Read | `kt_read` (a leaf's whole answer), `kt_info` (startup knowledge) |
-| Change | `kt_rewrite` (standard; complete answer plus read hash), `kt_edit` (economy for a tiny surgical change), `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_init` |
+| Change | `kt_rewrite` (standard; complete answer plus read hash), `kt_edit` (economy for a tiny surgical change), `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register` |
 | Check | `kt_renew` (confirm a yellow leaf you verified), `kt_prove`, `kt_status` (every non-green leaf, with why) |
-| Access | `kt_access_status` (what is readable and why), `kt_access_request`, `kt_access_revoke` |
+| Access | `kt_access_status` (what is readable and why), `kt_access_request`, `kt_access_confirm` (failed-prompt continuation), `kt_access_revoke` |
 
 Tool output is lean: a whole-leaf read returns the complete answer and a final `Revision:` SHA-256
 line, with no front matter or timestamps; a one-line notice leads it only when yellow or brown.
@@ -54,7 +56,7 @@ read. When an agent meets a yellow leaf it checks the claims against
 current evidence and calls `kt_renew`, which records that the whole leaf was verified and re-runs
 its proofs; that call is the agent's attestation, so it too is refused unless the agent read the
 leaf in this session. The same lean view is available in the shell as `kt --lean`. Read tools are annotated read-only, so harnesses can skip their prompts and keep
-them for writes. `rm`, `mv`, and policy commands are deliberately not exposed. Four prompts
+them for writes. Direct policy changes and the global permissions bypass remain terminal-only. Four prompts
 (`capture_review`, `garden`, `verify_leaf`, `revoke_access`) appear as slash commands where the
 client supports them.
 
@@ -70,18 +72,20 @@ it calls `kt_access_request` and **your harness asks you**, through MCP elicitat
 
 Some clients advertise elicitation but can return decline, cancel, or an error without displaying
 a prompt. The server reports that client action without claiming the user declined, does not cache
-it as a refusal, and supplies the exact interactive `kt access` fallback command. If you explicitly
-authorize that exact root and scope in conversation, the agent may run and confirm the scoped CLI
-command for you; otherwise you can run it yourself. A failed prompt is not a veto, and access to
+it as a refusal, and returns a one-time pending request. If you explicitly authorize that exact root
+and scope in conversation, the agent completes it with `kt_access_confirm`; no shell detour is needed.
+An unknown or reused request ID is rejected, denied and force-private policy still wins, and the
+continuation cannot change to another root or project. A failed prompt is not a veto, and access to
 two trees does not call for a persistent global permissions bypass.
 
 Access is not one-way: `kt_access_status` says why each root is readable and `kt_access_revoke`
-gives it back. Narrowing the current directory is immediate; anything wider asks you first.
+gives it back. Narrowing the current directory is immediate; anything wider asks you first and
+uses the same one-time conversational continuation if the client cannot render that confirmation.
 Approvals are tied to a path, so `kt` drops them when their tree disappears, and a different tree
 later created there needs a fresh approval.
 
 Denied and force-private roots are never prompted for, and a client that cannot prompt gets the
-exact `kt access` command instead. This guards against an agent inventing its own access decision;
+same pending MCP continuation. This guards against an agent inventing its own access decision;
 it is not a sandbox. The CLI still requires interactive confirmation, and the real
 boundary is what your harness lets an agent run. Details, including safeguards and what is
 verified, are in [the design leaf](example/how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md).
@@ -478,6 +482,11 @@ knowledgetree makes maintenance part of normal agent work.
 | One giant guide | Focused answers plus deliberate orientation and spine projections |
 | Skills are separate blobs | Procedures share a namespace with their facts and policies |
 
+After behavior changes, agents inventory every affected owner and presentation, then search both
+for the new behavior and for superseded counts, tool lists, fallbacks, and limitations. Tests,
+green proofs, recent timestamps, and zero installed-byte drift support that semantic review; none
+of them proves by itself that all related leaves and documentation are current.
+
 The long-term effect is cumulative: what one agent learns becomes part of the
 environment in which the next agent thinks.
 
@@ -656,8 +665,8 @@ older descriptions or procedure content.
    `why/`, `does/`, and `is/` branches.
 2. For repositories, create current-truth spine leaves for the spec, plan, state,
    and next action.
-3. Teach agents to repair stale or contradictory active answers before relying on
-   them, including affected guidance and installed copies.
+3. Teach agents to inventory affected owners, repair stale or contradictory answers,
+   and rerun negative searches for superseded claims across guidance and installed copies.
 4. Project frequently needed answers into paths that read as natural-language
    questions.
 5. Add proofs only where a concrete fact is cheap and safe to check.

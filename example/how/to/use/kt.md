@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-21T15:28:05+10:00"
+revised_at: "2026-09-24T07:48:53+10:00"
 ---
 
 This is the shell reference for `kt`. When you have the `kt_*` tools, use them instead. Whole-leaf MCP reads return the complete answer, an optional non-green notice, and the revision hash required by `kt_rewrite`; no other metadata is shown. Neither MCP nor kt supports partial leaf reads. Ranked excerpts select candidates and are not reads. The shell is the fallback when tools are unavailable.
@@ -145,7 +145,7 @@ The installer puts the script in the global `.tools/kt` and links `~/.local/bin/
 
 ## MCP tools
 
-When a harness has the knowledgetrees MCP server, use its 20 tools in preference to this shell reference. `kt_read` and exact `kt_lookup` hits return the whole answer and revision. `kt_rewrite` is the standard edit method and requires that hash; use `kt_edit` only for economy on a tiny surgical exact-match change. `kt_rm` and `kt_mv` likewise require the source read hash; `kt_init` retains the CLI's refusal to overwrite an existing tree. `kt_undo`, `kt_add`, `kt_renew`, retrieval, proof, status, and access tools retain their documented semantics. A miss or brown result is data marked `(exit 1)`; only exit 2 or higher is a tool error. `combine`, `register`, `access`, and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
+When a harness has the knowledgetrees MCP server, use its 23 tools in preference to this shell reference. `kt_read` and exact `kt_lookup` hits return the whole answer and revision. `kt_rewrite` is the standard edit method and requires that hash; use `kt_edit` only for economy on a tiny surgical exact-match change. `kt_rm` and `kt_mv` likewise require the source read hash; `kt_combine` requires every source read hash and any existing destination hash. `kt_init` retains the CLI's refusal to overwrite an existing tree, while `kt_register` records an existing root under `ask` without granting it. `kt_undo`, `kt_add`, `kt_renew`, retrieval, proof, status, and access tools retain their documented semantics; `kt_add`, `kt_prove`, and `kt_status` accept any approved root directly. Failed or unavailable elicitation returns a one-time pending request; after the user explicitly authorizes its exact root and scope in conversation, `kt_access_confirm` completes it without a shell. A miss or brown result is data marked `(exit 1)`; only exit 2 or higher is a tool error. Direct `access` policy changes and `permissions` remain CLI-only. Design and limits: `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`.
 
 ## Persistent access settings
 

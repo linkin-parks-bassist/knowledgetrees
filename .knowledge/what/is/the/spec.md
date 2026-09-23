@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-22T09:39:15+10:00"
+revised_at: "2026-09-24T08:10:39+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -50,11 +50,7 @@ guidance before unrelated work or completion. If truth remains unresolved, remov
 the unsupported claim and record the blocker and next check. Passing proofs and
 metadata colors do not establish correctness of unproved prose.
 
-A behavior or policy change is complete only after a semantic consistency review
-of affected code and CLI behavior against local/global owners, public example,
-README, startup hook payloads and installer templates, and installed guidance.
-Generated copies must be refreshed and checked for drift. Tests and `kt prove`
-are necessary checks, not substitutes for reading and reconciling prose.
+A behavior or policy change is complete only after an explicit affected-owner inventory covers narrow and central procedures, policy/access guidance, local/global owners, public example, README and CLI help, startup and installer surfaces, repository spine leaves, and installed guidance. Search positively for the new behavior and negatively for superseded counts, lists, fallbacks, and limitations; read every hit in context and repeat the negative searches after repair. Generated copies must be refreshed and checked for drift. Tests, `kt prove`, timestamps, and byte equality are necessary checks, not substitutes for reading and reconciling every affected owner.
 
 ## Retrieval and maintenance
 
@@ -86,7 +82,7 @@ used; kt never discovers parent trees automatically. Wider roots default to ask.
 A user-confirmed persistent permission bypass may skip ordinary ask/deny rules,
 but force-private always wins outside the exact local tree. Protected subtrees
 must not leak through lookup, reads, capture, symlinks, proofs, or startup.
-Agents never invent approval; explicit conversational authorization for an exact root and scope permits them to confirm the matching interactive CLI decision. The root registry and
+Agents never invent approval. Normal grants use MCP elicitation; if a client cannot complete it, explicit conversational authorization for the pending request's exact root and scope permits `kt_access_confirm`. Wider revocation uses an equivalent one-time repeat-call continuation. Direct policy administration remains terminal-only. The root registry and
 unrelated host permissions survive installation.
 
 `kt init [ORIENTATION]` creates an empty local tree and spine, registers it
@@ -110,13 +106,11 @@ Claude Code drops hook context past roughly 10,000 characters, so its startup
 hook sends an instruction to call the `kt_info` tool (or run `kt info`) when the output exceeds
 9,500 bytes, rather than a silently truncated startup output.
 
-The 20 MCP tools (`kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_rewrite`, `kt_edit`, `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_init`, `kt_renew`, `kt_dict`, `kt_roots`, `kt_prove`, `kt_status`, `kt_access_status`, `kt_access_request`, `kt_access_revoke`) delegate every operation to the CLI so revision, access, locking, and proof semantics are unchanged, and carry read-only and destructive annotations. Whole-leaf reads and exact lookup hits return the complete answer plus its SHA-256 `Revision:` line and no other metadata; neither MCP nor kt supports partial leaf reads. Ranked excerpts are selectors, not reads. `kt_rewrite` is the standard editing tool and requires that read hash; the CLI rejects stale hashes under lock. `kt_edit` is used only for economy on a tiny surgical exact-match change, and renewal still requires the server's remembered whole read. Agent guidance names the tools first with the shell only as the fallback. `kt_rm` and `kt_mv` require a whole-read source hash, and `kt_init` automatically registers the new tree under `ask` and retains the CLI refusal to overwrite an existing tree. Combine, registration, and access-policy mutation stay CLI-only, and no input may inject a CLI option. The one exception is access approval:
+The 23 MCP tools (`kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_rewrite`, `kt_edit`, `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_renew`, `kt_dict`, `kt_roots`, `kt_register`, `kt_prove`, `kt_status`, `kt_access_status`, `kt_access_request`, `kt_access_confirm`, `kt_access_revoke`) delegate every operation to the CLI so revision, access, locking, and proof semantics are unchanged, and carry read-only and destructive annotations. Whole-leaf reads and exact lookup hits return the complete answer plus its SHA-256 `Revision:` line and no other metadata; neither MCP nor kt supports partial leaf reads. Ranked excerpts are selectors, not reads. `kt_rewrite` is the standard editing tool and requires that read hash; the CLI rejects stale hashes under lock. `kt_edit` is used only for economy on a tiny surgical exact-match change, and renewal still requires the server's remembered whole read. Agent guidance names the tools first with the shell only as the fallback. `kt_add`, `kt_prove`, and `kt_status` accept an approved root label or absolute root path as an alternative to local/global scope. `kt_rm` and `kt_mv` require a whole-read source hash; `kt_combine` requires hashes for every source and any existing destination. `kt_init` automatically registers the new tree under `ask` and retains the CLI refusal to overwrite an existing tree; `kt_register` records an existing root under `ask` without granting it. Direct access-policy mutation and the permissions bypass stay CLI-only, and no input may inject a CLI option. The one exception is access approval:
 `kt_access_request` sends MCP elicitation and persists `allow` with the CLI's own
 `apply_access_decision` only for an accepted response with a valid scope. Denied
 and force-private roots are never prompted for, and the CLI itself keeps its
-interactive confirmation. An unexplained client decline, cancellation, or error
-is not attributed to the user and grants nothing; the tool supplies the exact
-interactive terminal fallback without suppressing a later request. Explicit user authorization in conversation for the exact root and scope permits the agent to run and confirm that fallback; it does not authorize a wider bypass. Access can be given back: `kt grants` reports each root's
+interactive confirmation. An unexplained client decline, cancellation, invalid response, error, or lack of elicitation capability is not attributed to the user and grants nothing. The tool returns a one-time pending request without suppressing a later attempt. Explicit user authorization in conversation for its exact root and scope permits `kt_access_confirm`; unknown, reused, mismatched, denied, and force-private requests fail. Wider revocation has the same exact-request continuation and neither path authorizes a permissions bypass. Access can be given back: `kt grants` reports each root's
 effective access and its source, `kt access ROOT revoke` narrows it (terminal), and
 `kt_access_revoke` does so from the harness (direct for this directory, user-confirmed
 for anything wider). Approvals are path-keyed, so every run prunes project grants, everywhere-allowed registrations, and auto-named

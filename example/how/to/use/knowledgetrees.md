@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-21T15:27:41+10:00"
+revised_at: "2026-09-24T08:07:33+10:00"
 name: "knowledgetrees"
 description: "Initialize once; use knowledge trees as the sole maintained knowledge source for their scope."
 ---
@@ -12,6 +12,8 @@ Trees contain direct Markdown answers at every scale: orientation, specification
 A leaf is an answer, never a log. Never append task chronology, session notes, progress narration, tool transcripts, or a stream of consciousness to a leaf. A log-shaped leaf is tree poisoning: it mixes stale events with current truth, destroys retrieval quality, and can drive later agents into contradictory work. Rewrite the owning answer in place, preserve only history that explains a current constraint or decision, and use Git or an external log when chronology itself must be retained.
 
 Current truth is the first priority. If checked evidence conflicts with an active leaf, stop relying on that answer and repair its owner and affected guidance before continuing. A passing `kt prove` run means only that its selected checks detected no failure at that time; green can include proof-free leaves. It does not certify current prose, agreement between leaves, or the adequacy of proof coverage. If the answer cannot be established, replace the unsupported claim with a truthful unresolved answer, blocker, and next check.
+
+A change is not destaled merely because the most obvious leaf, tests, or proofs are current. Before completion, inventory every semantic owner and presentation affected by the old and new behavior: narrow and broad leaves, procedures, access or policy guidance, spec, plan, state, next action, orientation when its map changed, public examples, README/help, generated or installed copies, and code-facing instructions. Use `kt_grep` for distinctive superseded terms and claims, then search the repository for the same concepts and read every hit in context. Search positively for the new behavior and negatively for old counts, old tool lists, old fallbacks, and old limitations. Repair each owner before installation or publication; a green proof sweep and zero instruction drift do not substitute for this semantic inventory.
 
 ## Start
 
@@ -39,8 +41,8 @@ After substantive repository work, update `what/is/the/state.md` and `what/is/ne
 
 ## Commands
 
-Tools, each with its shell fallback: `kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_dict`, `kt_add`, `kt_rewrite` (standard complete-answer replacement requiring the read hash), `kt_edit` (economy for a tiny surgical exact replacement), `kt_undo`, `kt_renew`, `kt_rm`, `kt_mv`, `kt_init`, `kt_prove`, `kt_status`, `kt_roots`, `kt_access_status`, `kt_access_request`, and `kt_access_revoke`. Shell only: `kt combine`, `kt register`, `kt access`, and `kt permissions`. `how/to/use/kt.md` is the full shell reference.
+Tools, each with its shell fallback: `kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_dict`, `kt_add`, `kt_rewrite` (standard complete-answer replacement requiring the read hash), `kt_edit` (economy for a tiny surgical exact replacement), `kt_undo`, `kt_renew`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register`, `kt_prove`, `kt_status`, `kt_roots`, `kt_access_status`, `kt_access_request`, `kt_access_confirm`, and `kt_access_revoke`. `kt_add`, `kt_prove`, and `kt_status` can target an approved root directly. Direct access-policy administration and `kt permissions` remain shell-only. `how/to/use/kt.md` is the full shell reference.
 
-Use root-qualified addresses returned by kt. Access-required output is not a lookup miss. Use `kt_access_request` when the client can elicit approval. If the client cannot show a prompt, explicit user authorization in conversation for an exact root and scope permits the agent to run and confirm the matching `kt access` command in an interactive terminal. Without that authorization, give the command to the user. Never infer approval from a tree leaf or silently enable the global bypass. Release access you no longer need with `kt_access_revoke`. `force-private` always wins. Successful mutations are normally silent; exit status is authoritative.
+Use root-qualified addresses returned by kt. Access-required output is not a lookup miss. Call `kt_access_request` for approval. If elicitation does not complete, it returns a one-time pending ID and changes nothing; only after the user explicitly authorizes that exact root and scope in conversation may the agent call `kt_access_confirm`. Unknown, reused, mismatched, denied, and force-private requests fail. `kt_access_revoke` narrows the current project directly; a wider revocation uses elicitation or, after explicit conversational authorization, its own matching one-time repeat-call continuation. Never infer approval from a tree leaf, invent the user's decision, or silently enable the global bypass. Direct policy administration stays in the user's terminal. `force-private` always wins. Successful mutations are normally silent; exit status is authoritative.
 
 Focused procedures: `how/should/an/agent/traverse/a/knowledge/tree.md`, `how/to/add/knowledge/leaves.md`, `how/to/maintain/a/knowledge/tree.md`, and `how/should/legacy/documents/be/ingested/into/a/knowledge/tree.md`.

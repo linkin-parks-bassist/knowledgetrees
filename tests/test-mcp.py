@@ -51,8 +51,8 @@ def main():
             server.stdin.flush()
             return None if notify else json.loads(server.stdout.readline())
 
-        def tool(name, **arguments):
-            result = rpc("tools/call", {"name": name, "arguments": arguments})["result"]
+        def tool(tool_name, **arguments):
+            result = rpc("tools/call", {"name": tool_name, "arguments": arguments})["result"]
             return result["isError"], result["content"][0]["text"]
 
         initialized = rpc("initialize", {"protocolVersion": "2025-03-26", "capabilities": {}})
@@ -62,19 +62,21 @@ def main():
         assert rpc("ping")["result"] == {}
         names = {t["name"] for t in rpc("tools/list")["result"]["tools"]}
         assert names == {"kt_info", "kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_rewrite", "kt_edit", "kt_undo",
-                         "kt_add", "kt_rm", "kt_mv", "kt_init", "kt_renew", "kt_dict", "kt_roots", "kt_prove", "kt_status", "kt_access_status", "kt_access_request",
-                         "kt_access_revoke"}
+                         "kt_add", "kt_rm", "kt_mv", "kt_combine", "kt_init", "kt_renew", "kt_dict", "kt_roots",
+                         "kt_register", "kt_prove", "kt_status", "kt_access_status", "kt_access_request",
+                         "kt_access_confirm", "kt_access_revoke"}
         listed = {t["name"]: t for t in rpc("tools/list")["result"]["tools"]}
         for name, definition in listed.items():
             hints = definition["annotations"]
             assert set(hints) >= {"readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"} and not hints["openWorldHint"], name
         for name in ("kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_dict", "kt_roots", "kt_status", "kt_access_status"):
             assert listed[name]["annotations"]["readOnlyHint"] and not listed[name]["annotations"]["destructiveHint"], name
-        for name in ("kt_rewrite", "kt_edit", "kt_undo", "kt_rm", "kt_mv"):
+        for name in ("kt_rewrite", "kt_edit", "kt_undo", "kt_rm", "kt_mv", "kt_combine"):
             assert not listed[name]["annotations"]["readOnlyHint"] and listed[name]["annotations"]["destructiveHint"], name
         assert not listed["kt_renew"]["annotations"]["destructiveHint"] and not listed["kt_renew"]["annotations"]["readOnlyHint"]
         assert not listed["kt_add"]["annotations"]["destructiveHint"] and not listed["kt_add"]["annotations"]["readOnlyHint"]
         assert not listed["kt_init"]["annotations"]["destructiveHint"] and not listed["kt_init"]["annotations"]["readOnlyHint"]
+        assert not listed["kt_register"]["annotations"]["destructiveHint"] and not listed["kt_register"]["annotations"]["readOnlyHint"]
         assert set(listed["kt_read"]["inputSchema"]["properties"]) == {"address"}, "whole reads have no range or paging parameters"
         assert "instructions" in initialized["result"] and "kt_access_request" in initialized["result"]["instructions"]
         assert "kt_renew" in initialized["result"]["instructions"] and "shell" in initialized["result"]["instructions"]
@@ -154,6 +156,53 @@ def main():
         assert not error and (project / ".knowledge/what/is/moved.md").exists()
         error, text = tool("kt_rm", address="local:what/is/moved.md", revision=remove_revision)
         assert not error and not (project / ".knowledge/what/is/moved.md").exists()
+
+        for question, answer in (("what is combine one", "First answer."), ("what is combine two", "Second answer.")):
+            error, text = tool("kt_add", question=question, answer=answer)
+            assert not error, text
+        combined_sources = []
+        for source in ("local:what/is/combine/one.md", "local:what/is/combine/two.md"):
+            error, text = tool("kt_read", address=source)
+            assert not error, text
+            combined_sources.append({"address": source, "revision": re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)})
+        combined_path = project / ".knowledge/what/is/combined.md"
+        error, text = tool("kt_combine", sources=combined_sources, destination="local:what/is/combined.md", dry_run=True)
+        assert not error and "First answer." in text and not combined_path.exists()
+        aliased_sources = [combined_sources[0], {"address": "project:what/is/combine/one.md",
+                                                "revision": combined_sources[0]["revision"]}]
+        error, text = tool("kt_combine", sources=aliased_sources, destination="local:what/is/combined.md", dry_run=True)
+        assert error and "duplicates" in text, "aliases of one source must not be combined twice"
+        error, text = tool("kt_combine", sources=combined_sources,
+                           destination="project:what/is/combine/one.md", dry_run=True)
+        assert not error and "First answer." in text, "a destination alias of a source reuses its read revision"
+        stale_sources = [dict(item) for item in combined_sources]
+        stale_sources[0]["revision"] = "0" * 64
+        error, text = tool("kt_combine", sources=stale_sources, destination="local:what/is/combined.md")
+        assert error and "stale" in text and not combined_path.exists()
+        error, text = tool("kt_combine", sources=combined_sources, destination="local:what/is/combined.md")
+        assert not error and combined_path.exists() and "First answer.\n\nSecond answer." in combined_path.read_text()
+        assert not (project / ".knowledge/what/is/combine/one.md").exists()
+
+        registered = root / "registered"
+        (registered / "where/am").mkdir(parents=True)
+        (registered / "where/am/i.md").write_text("Registered fixture.\n")
+        error, text = tool("kt_register", name="registered", path=str(registered))
+        assert not error and "ask policy" in text
+        assert json.loads((root / "config.json").read_text())["roots"]["registered"]["access"] == "ask"
+        error, text = tool("kt_register", name="relative", path="relative/path")
+        assert error and "absolute" in text
+        error, text = tool("kt_add", question="what is the global mcp fixture", answer="Global MCP fixture.",
+                           root=str(global_root))
+        assert not error and (global_root / "what/is/the/global/mcp/fixture.md").exists()
+        error, text = tool("kt_add", question="what is invalid scope", answer="No.", scope="local",
+                           root=str(global_root))
+        assert error and "either scope or root" in text
+        error, text = tool("kt_prove", root=str(global_root))
+        assert not error and "0 brown" in text
+        error, text = tool("kt_status", root=str(global_root))
+        assert not error and "0 brown" in text
+        error, text = tool("kt_prove", scope="global", root=str(global_root))
+        assert error and "either scope or root" in text
         assert rpc("tools/call", {"name": "kt_delete", "arguments": {}})["result"]["isError"]
 
         # Retrieval, creation, and inspection tools wrap the same CLI semantics.
@@ -318,16 +367,27 @@ def main():
         error, text = tool("kt_access_revoke", root=str(vaults["vault"]))
         assert not error and "nothing to revoke" in text, "an already-restricted root has nothing to revoke"
         error, text = tool("kt_access_revoke", root=str(vaults["vault"]), scope="all")
-        assert not error and "cannot show confirmation prompts" in text and f"kt access {vaults['vault']} revoke --scope all" in text
+        assert not error and "cannot show confirmation prompts" in text and "request_id kt-access-" in text
         error, text = tool("kt_access_revoke", root="global")
         assert not error and "cannot show confirmation prompts" in text, "revoking the global root always needs the user"
         assert json.loads((root / "config.json").read_text())["roots"]["vault"]["access"] == "ask", "no change without the user"
         error, text = tool("kt_access_status", root="relative/path")
         assert error
 
-        # Without a client that can prompt, a request returns the terminal command and grants nothing.
+        # Without a client that can prompt, a request returns a one-time MCP continuation and grants nothing.
         error, text = tool("kt_access_request", root=str(vaults["vault"]), reason="need the vault")
-        assert not error and f"kt access {vaults['vault']} allow --scope project" in text and "cannot show approval prompts" in text
+        assert not error and "kt_access_confirm" in text and "cannot show approval prompts" in text
+        pending_id = re.search(r"request_id: (kt-access-[A-Za-z0-9_-]+)", text).group(1)
+        assert json.loads((root / "config.json").read_text())["projects"] == {}, "request alone never grants"
+        error, text = tool("kt_access_confirm", request_id="unknown", scope="project")
+        assert error and "unknown" in text
+        error, text = tool("kt_access_confirm", request_id=pending_id, scope="project")
+        assert not error and "explicit authorization" in text
+        assert str(vaults["vault"].resolve()) in json.loads((root / "config.json").read_text())["projects"][str(project.resolve())]
+        error, text = tool("kt_access_confirm", request_id=pending_id, scope="project")
+        assert error and "already been used" in text
+        error, text = tool("kt_access_revoke", root=str(vaults["vault"]))
+        assert not error
         error, text = tool("kt_access_request", root=str(vaults["locked"]), reason="please")
         assert error and "denied" in text and "Do not work around" in text
         error, text = tool("kt_access_request", root=str(vaults["hidden"]), reason="please")
@@ -336,8 +396,7 @@ def main():
         assert not error and "already readable" in text
         error, text = tool("kt_access_request", root="-x", reason="x")
         assert error
-        assert '"projects": {}' in (root / "config.json").read_text().replace("\n", "").replace("  ", "") or \
-            json.loads((root / "config.json").read_text())["projects"] == {}, "no grant without the user"
+        assert json.loads((root / "config.json").read_text()).get("projects", {}) == {}, "revocation removed the test grant"
 
         listed_prompts = {p["name"]: p for p in rpc("prompts/list")["result"]["prompts"]}
         assert set(listed_prompts) == {"capture_review", "garden", "verify_leaf", "revoke_access"}
@@ -410,7 +469,7 @@ def main():
         outcome = receive()
         assert outcome["id"] == identifier and not outcome["result"]["isError"] and "approved" in outcome["result"]["content"][0]["text"]
         deferred = receive()
-        assert deferred["id"] == 99 and len(deferred["result"]["tools"]) == 20, "a request that arrived mid-prompt is still served"
+        assert deferred["id"] == 99 and len(deferred["result"]["tools"]) == 23, "a request that arrived mid-prompt is still served"
         assert grants()["projects"][str(project.resolve())][str(vaults["vault"].resolve())] == "allow"
         identifier = next(request_id)
         send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",
@@ -499,7 +558,7 @@ def main():
             send({"jsonrpc": "2.0", "id": prompt["id"], "result": answer})
             reply = receive()
             text = reply["result"]["content"][0]["text"]
-            assert "MCP client" in text and "kt access" in text and "user declined" not in text.lower() and grants() == before
+            assert "MCP client" in text and "kt_access_confirm" in text and "user declined" not in text.lower() and grants() == before
             identifier = ask(base_extra)
             prompt = receive()
             assert prompt["method"] == "elicitation/create", "an unshown client decline must not suppress a later request"
@@ -514,7 +573,7 @@ def main():
         send({"jsonrpc": "2.0", "id": prompt["id"], "error": {"code": -32603, "message": "prompt unavailable"}})
         reply = receive()
         text = reply["result"]["content"][0]["text"]
-        assert "prompt unavailable" in text and "kt access" in text and grants() == before
+        assert "prompt unavailable" in text and "kt_access_confirm" in text and grants() == before
         client.stdin.close()
         assert client.wait(timeout=10) == 0
         client, send, receive = start_client({"elicitation": {}})
@@ -523,15 +582,39 @@ def main():
         prompt = receive()
         send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "accept", "content": {"decision": "everything"}}})
         reply = receive()
-        assert reply["result"]["isError"] and "nothing was granted" in reply["result"]["content"][0]["text"] and grants() == before
+        invalid_text = reply["result"]["content"][0]["text"]
+        assert not reply["result"]["isError"] and "invalid approval response" in invalid_text
+        assert "kt_access_confirm" in invalid_text and grants() == before
         client.stdin.close()
         assert client.wait(timeout=10) == 0
 
-        # A client without the elicitation capability gets the terminal command instead of a prompt.
+        # A client without elicitation gets an MCP-native pending continuation instead of a shell command.
         client, send, receive = start_client({})
         identifier = ask(base_extra)
         reply = receive()
-        assert reply["id"] == identifier and "kt access" in reply["result"]["content"][0]["text"]
+        fallback = reply["result"]["content"][0]["text"]
+        assert reply["id"] == identifier and "kt_access_confirm" in fallback and "kt access" not in fallback
+        pending_id = re.search(r"request_id: (kt-access-[A-Za-z0-9_-]+)", fallback).group(1)
+        identifier = next(request_id)
+        send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",
+              "params": {"name": "kt_access_confirm", "arguments": {"request_id": pending_id, "scope": "project"}}})
+        reply = receive()
+        assert reply["id"] == identifier and not reply["result"]["isError"]
+        assert grants()["projects"][str(project.resolve())][str(base_extra.resolve())] == "allow"
+        identifier = next(request_id)
+        send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",
+              "params": {"name": "kt_access_revoke", "arguments": {"root": str(base_extra), "scope": "all"}}})
+        reply = receive()
+        revoke_fallback = reply["result"]["content"][0]["text"]
+        revoke_id = re.search(r"request_id (kt-access-[A-Za-z0-9_-]+)", revoke_fallback).group(1)
+        assert "cannot show confirmation prompts" in revoke_fallback and grants()["roots"]["extra"]["access"] == "ask"
+        identifier = next(request_id)
+        send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",
+              "params": {"name": "kt_access_revoke", "arguments": {
+                  "root": str(base_extra), "scope": "all", "request_id": revoke_id}}})
+        reply = receive()
+        assert not reply["result"]["isError"] and "explicit authorization" in reply["result"]["content"][0]["text"]
+        assert str(base_extra.resolve()) not in grants()["projects"].get(str(project.resolve()), {})
         client.stdin.close()
         assert client.wait(timeout=10) == 0
     print("mcp server checks passed")

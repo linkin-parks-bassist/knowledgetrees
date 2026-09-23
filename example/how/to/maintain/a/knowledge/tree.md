@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-21T14:30:56+10:00"
+revised_at: "2026-09-24T08:08:12+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
 ---
@@ -24,14 +24,7 @@ failure at that time. Green includes proof-free leaves and does not certify curr
 prose, consistency between leaves, or proof coverage. Even `verifiable: true`
 relies on an author-reviewed coverage assertion and faithful predicates.
 
-After a behavior or policy change, compare the implemented behavior and CLI help
-with every affected knowledge owner and presentation: local/project and global
-leaves, public example, README, startup hook payloads, and installed copies when those surfaces apply. Read the relevant
-passages and compare meaning, not just matching strings. Refresh generated and
-installed guidance, run relevant tests and proof checks, and check instruction
-sync. Do not report completion while a known contradiction or stale instruction
-remains. This is an affected-scope change gate, not a startup inventory of every
-accessible root.
+After a behavior or policy change, build an explicit affected-owner inventory before editing: narrow implementation leaves, broader procedures and policy, the central `how/to/use/knowledgetrees.md`, repository spec/plan/state/next, orientation when its routes changed, public example, README and CLI help, startup payloads, generated copies, and installed guidance. Search both directions: use `kt_grep` and repository search for distinctive old claims, counts, tool lists, fallbacks, and limitations, and also search for the new behavior to find partial presentations. Read every relevant hit in context and compare meaning, not just matching strings. Repair all owners, refresh generated and installed guidance, then repeat the negative searches. Run tests, proofs, and instruction-sync only after that semantic pass. Do not report a change as destaled or complete while any affected owner is unchecked, contradictory, or still describes superseded behavior. This is an affected-scope change gate, not a startup inventory of unrelated roots.
 
 ## Establish and orient active roots
 
@@ -79,9 +72,7 @@ infrastructure directory `.tools/`; scripts otherwise belong outside the tree.
 
 ## Proof checks and falsification
 
-Call `kt_prove` (shell fallback: `kt prove`), which runs the proof engine built into the installed kt CLI.
-Prefer `kt prove --root ROOT TOKEN`
-for scoped checks, or `kt prove --root ROOT --no-stamp` for a read-only sweep.
+Call `kt_prove` (shell fallback: `kt prove`), which runs the proof engine built into the installed kt CLI. Prefer its `root` argument and exact path-component tokens for scoped checks; omit `stamp` for a read-only sweep.
 Use `--root ROOT` for an explicit root. ROOT is the exact allowed knowledge-tree directory shown by `kt roots` (normally PROJECT/.knowledge), not the containing repository directory. If a mistaken repository path returns access-required, correct it to the already allowed tree root; do not grant access to a new root merely to repair that argument. Check the current local root during bootstrap
 and on entry into a new project scope. Do not enumerate or sweep every accessible
 root at startup; broader answers are checked when needed. Supplied orientation
@@ -166,18 +157,11 @@ Ingest redundant documents section by section under
 after verified answer coverage and authorization. Broad enumeration is a last-resort
 retrieval diagnostic, or a bounded authorized migration audit, not routine orientation.
 
-Before finishing, complete the current-truth consistency gate for affected
-behavior and guidance. Check that reusable discoveries were captured, relevant
-predicates passed, every encountered `kt` miss was classified as existing or absent knowledge,
-and missing leaves were added (or left with truthful unresolved records/scoped handoffs).
-Also check that scope and provenance are truthful, roots are canonical, payloads are leaves,
-and a representative sentence-derived route works. Do not turn gardening judgments,
-atomicity, cohesion, or leaf length into automatic rewrite rules.
+Before finishing, complete the current-truth consistency gate for affected behavior and guidance. Account for every item in the affected-owner inventory and retain the negative-search terms used to look for superseded claims until those searches return no unexplained hits. Check that the central procedure and focused procedure owners were updated whenever their workflow changed, reusable discoveries were captured, relevant predicates passed, every encountered `kt` miss was classified, and absent answers were added or truthfully left unresolved. Also check that scope and provenance are truthful, roots are canonical, payloads are leaves, installed copies match their sources, and a representative sentence-derived route works. A test pass, green proof count, recent timestamp, or zero byte drift cannot by itself establish semantic freshness. Do not turn gardening judgments, atomicity, cohesion, or leaf length into automatic rewrite rules.
 
 ## Remove, move, and coalesce leaves
 
-Read a source revision with `kt open local:what/is/old.md`. These maintenance commands are shell only: `kt rm`, `kt mv`, and `kt combine` have no tool.
-Use the hash printed on stderr for destructive single-leaf changes:
+Read each source with `kt_read`. Use `kt_rm` and `kt_mv` with the returned Revision hash. Use `kt_combine` with an ordered address/revision object for every source and a destination revision when replacing an existing destination; it detects aliases of the same source. The shell commands remain fallbacks:
 
 ```sh
 kt rm local:what/is/old.md --expect HASH --dry-run
