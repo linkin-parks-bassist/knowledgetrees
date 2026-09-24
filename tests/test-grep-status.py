@@ -83,6 +83,7 @@ def main():
         bad.write_text("---\nstatus: brown\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nFalsified.\n")
         report = kt("status", "--local").splitlines()
         assert report[0].startswith("brown\tlocal:what/is/broken.md\t"), "brown sorts first"
+        assert "priority-one incident" in report[0] and "report it to the user" in report[0]
         rows = {line.split("\t")[1]: line.split("\t") for line in report if "\t" in line}
         assert "local:what/is/fresh.md" not in rows, "a new leaf starts green"
         assert rows["local:what/is/marked.md"][0] == "yellow" and "marked yellow for re-verification" in rows["local:what/is/marked.md"][2]

@@ -31,7 +31,11 @@ INSTRUCTIONS = (
     "elsewhere (kt_lookup with how to/where is/what is/..., kt_find, kt_grep for exact text). A leaf is read whole "
     "and comes back as its answer plus Revision hash, with no other metadata; a notice leads it only when it is yellow or brown. A yellow leaf is "
     "unverified: check its claims against current evidence, then call kt_renew to confirm the whole leaf is accurate "
-    "(your attestation, so renew only what you verified) or repair it. Never rely on a brown leaf. Rewrite a leaf "
+    "(your attestation, so renew only what you verified) or repair it. Brown is a priority-one incident, including "
+    "at startup with no user task: first report the affected leaf prominently, stop unrelated work, diagnose why "
+    "the leaf or proof differs from reality, remediate and re-check it, or ask the user if safe remediation cannot "
+    "be established. Resume only after brown clears or the user explicitly permits ignoring that specific status; "
+    "permission does not validate the leaf. Rewrite a leaf "
     "with kt_rewrite as the standard editing tool, citing the Revision hash printed by the whole-leaf read; stale "
     "hashes fail. Use kt_edit only for economy on a tiny surgical exact-match change. A miss is not proof of absence. If a root needs approval, call "
     "kt_access_request: it asks through the harness. Release access you no longer need with "
@@ -155,9 +159,12 @@ TOOLS = [
           "dry_run": DRY_RUN}, ["sources", "destination"], destructive=True),
     tool("kt_init", "Initialize a tree",
          "Initialize a new .knowledge tree in the MCP project directory, optionally with literal orientation text. "
+         "By default it creates only neutral canonical branches and where/am/i.md; project=true also creates "
+         "empty spec, plan, state, and next leaves. "
          "It also registers the new tree under ask policy, without granting cross-project access. "
          "The CLI refuses an existing tree; this never changes filesystem permissions.",
-         {"orientation": {"type": "string", "description": "Optional literal contents of where/am/i.md"}}, idempotent=True),
+         {"orientation": {"type": "string", "description": "Optional literal contents of where/am/i.md"},
+          "project": {"type": "boolean", "description": "Also create the repository project spine"}}, idempotent=True),
     tool("kt_dict", "Path dictionary",
          "Print the dictionary of useful path segments across accessible roots (or the named roots).",
          {"roots": {"type": "array", "items": STR}}, read_only=True),
@@ -169,7 +176,8 @@ TOOLS = [
           "path": {"type": "string", "description": "Absolute path to an existing knowledge-root directory"}},
          ["name", "path"], idempotent=True),
     tool("kt_prove", "Run proofs",
-         "Run kt prove and report green/yellow/brown counts. Does not stamp leaf status unless stamp is set.",
+         "Run kt prove and report green/yellow/brown counts. Brown triggers the mandatory report, stop, diagnosis, "
+         "remediation, and re-check protocol in the server instructions. Does not stamp leaf status unless stamp is set.",
          {"scope": {**SCOPE, "description": "Default: every accessible root"},
           "root": {"type": "string", "description": "One approved knowledge-root directory; mutually exclusive with scope"},
           "tokens": {"type": "array", "items": STR, "description": "Select leaves by exact path component"},
@@ -632,7 +640,14 @@ def tool_combine(arguments):
 
 def tool_init(arguments):
     orientation = text_arg(arguments, "orientation", required=False)
-    completed = run_kt("init", *([orientation] if orientation is not None else []))
+    flags = ["init"]
+    if arguments.get("project") is True:
+        flags.append("--project")
+    elif arguments.get("project") not in (None, False):
+        raise ToolError("project must be a Boolean")
+    if orientation is not None:
+        flags.append(orientation)
+    completed = run_kt(*flags)
     if completed.returncode:
         raise ToolError((completed.stderr or completed.stdout).strip() or f"kt init failed ({completed.returncode})")
     return "Initialized."
@@ -934,7 +949,8 @@ PROMPTS = {
     "capture_review": ("Review this work and capture reusable knowledge", [], lambda a: review_text()),
     "garden": ("List non-green leaves and work through them", [],
                lambda a: "Garden the knowledge tree: call kt_status, then for each yellow or brown leaf kt_read it, "
-                         "check its claims against current evidence, repair what is stale with kt_edit (never delete "
+                         "immediately report any brown leaf before other work, check its claims against current evidence, "
+                         "diagnose and repair what is stale with kt_edit (never delete "
                          "still-valid knowledge), and only when the whole leaf is verified call kt_renew. Report what "
                          "you changed and anything you could not verify."),
     "revoke_access": ("Review and give back access this project no longer needs", [],

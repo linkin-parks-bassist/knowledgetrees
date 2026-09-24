@@ -1,6 +1,6 @@
 ---
-status: green
-revised_at: "2026-09-24T08:09:36+10:00"
+status: "green"
+revised_at: "2026-09-24T10:39:15+10:00"
 ---
 
 The operational project tree is `.knowledge/`; `example/` is the public distributable corpus and keeps an empty orientation for adopters. The repository contains the self-contained `tools/kt` CLI, startup adapters for Claude Code, Codex, OpenCode, and Copilot CLI, the `tools/kt-mcp` server, installer, integration tests, README, and public guidance. Repository-specific requirements and progress stay in this tree.
@@ -11,7 +11,25 @@ Access approval normally uses MCP elicitation. If elicitation is absent, cancell
 
 The installer preserves personal orientation, unrelated configuration and access policy, deploys only startup hook events, registers the MCP server with all four harnesses, removes its obsolete managed home `AGENTS.md` block, and hardlinks compatibility skills into the shared skill catalog. `KT_MCP_PROJECT_DIR` or `CLAUDE_PROJECT_DIR` selects the project when a user-scoped MCP server starts elsewhere. Claude Code receives an instruction to call `kt_info` when startup output exceeds its 9,500-byte hook limit. Harnesses must restart to load the 23-tool server.
 
-The canonical current-truth guidance now requires an affected-owner inventory and both positive and negative semantic searches before a change may be called destaled. Tests, green proofs, current timestamps, and zero installed-byte drift are supporting checks, not substitutes for reading every affected owner. The public access procedure, MCP design, shell reference, central `how/to/use/knowledgetrees.md`, maintenance procedure, README, repository spec, state, next action, and installed-update procedure describe the same access and tool behavior.
+The canonical current-truth guidance now requires an affected-owner inventory and both positive and negative semantic searches before a change may be called destaled. Tests, green proofs, current timestamps, and zero installed-byte drift are supporting checks, not substitutes for reading every affected owner. Brown is now an explicit priority-one incident and mandatory stop condition even at idle startup: the agent's first response must report the affected leaf, then work is limited to diagnosis, remediation, and re-checking unless the user explicitly permits ignoring that specific status. The central procedure, focused maintenance/traversal/proof guidance, lifecycle answer, README, CLI notices, MCP instructions, repository spec and plan, public example, installed global leaves, and skill hardlinks carry that policy. A neutral readiness response to a brown startup tree is explicitly noncompliant.
+
+Proof markers are now timeless exact `Proof:` delimiters. Proof execution stores no
+per-proof outcome or timestamp and may write only leaf lifecycle status; manual
+whole-leaf review time remains `checked_at`. A writing `kt prove` accepts former
+`(verified|falsified at …)` markers, including `_`, solely as migration input and
+silently normalizes them to `Proof:` without parsing their timestamp text.
+`--no-stamp` accepts the same legacy forms while remaining byte-for-byte read-only.
+The CLI, installer comparison, sync comparison, README, public guidance, local
+semantic owners, installed guidance, and regression coverage use this contract.
+
+Every non-empty kt CLI stdout and stderr stream now terminates with a newline.
+Whole-leaf reads preserve complete content but append a presentation-only newline
+when stored bytes lack one; revision hashes still cover the stored bytes. Neutral
+`kt init [ORIENTATION]` creates only the six canonical branches and
+`where/am/i.md`. `kt init --project [ORIENTATION]` opts into empty spec, plan,
+state, and next placeholders, and MCP `kt_init` exposes the same choice as
+`project: true`. Focused CLI and MCP tests cover both initialization modes, the
+schema, refusal behavior, and newline termination.
 
 All Python integration suites and the OpenCode adapter suite pass. Focused MCP coverage exercises all 23 tools, schemas and annotations, combine aliases and staleness, arbitrary-root operations, grant continuations, wider-revocation continuations, and refusal paths. Local, public-example, and installed-global proof sweeps have zero yellow and brown leaves; installed instruction sync has zero drift; installed `kt` and `kt-mcp` are byte-identical to the checkout; Git whitespace and public-content scans pass. These checks establish repository behavior, not live client rendering.
 

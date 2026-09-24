@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-22T09:39:15+10:00"
+revised_at: "2026-09-24T10:09:45+10:00"
 ---
 
 Use `kt prove` to check marked proofs. Verification is built into kt; it does
@@ -51,21 +51,22 @@ structure, timeout, or proof failures as failure. A semantic filter matching no
 leaves succeeds as an empty check. Proofs run from the directory containing
 `.knowledge`, with a ten-second default timeout per proof.
 
-Write new markers as `Proof: (verified at _)`. Successful proofs refresh their ISO
-8601 check times only on leaves with `expires_at` or `expires_every`; non-expiring
-leaves retain existing passing markers unchanged. Failed proofs receive
-`Proof: (falsified at …)`, and a failing proof or malformed proof structure sets
-`status: brown`; the proof marker keeps the first failure timestamp.
-When a repaired non-expiring proof transitions from falsified to passing, its marker
-returns to `Proof: (verified at _)` without inventing recurring timestamp churn.
-Every marked proof is executed on every check.
-Write failures or concurrent content changes
-make verification fail rather than silently losing an update.
+Write the exact timeless marker `Proof:`. It stores neither an outcome nor a
+timestamp and is never rewritten after migration. For compatibility, a writing
+`kt prove` accepts legacy `Proof: (verified at …)`, `Proof: (verified at _)`, and
+`Proof: (falsified at …)` markers, executes their predicates normally, and silently
+normalizes them to `Proof:`. `--no-stamp` accepts the same legacy forms without
+changing bytes. Legacy timestamp text is not parsed, validated, or treated as
+freshness evidence. Every marked predicate runs on every check. A failing predicate
+or malformed proof structure sets `status: brown`; the current command result and
+verbose diagnostics report the outcome. Write failures
+or concurrent content changes make verification fail rather than silently losing an
+update.
 
-Proof markers are updated only for expiry refreshes or outcome transitions. The
-evaluated `status` records the current color. Proof verification times stay on
-individual markers. `kt prove` never updates manual `checked_at`. Use `--no-stamp` to
-execute proofs without writing markers or lifecycle status. Writes preserve existing hardlinks.
+The evaluated `status` records the current lifecycle color. Proof markers are
+timeless and remain unchanged; `kt prove` never updates manual `checked_at`. Use
+`--no-stamp` to execute proofs without writing lifecycle status. Status writes
+preserve existing hardlinks.
 
 Every selected leaf has one lifecycle state. Proof-free specs, plans, procedures,
 and opinions can be green. For an ordinary leaf, green requires no elapsed expiry, no sticky brown status,
@@ -83,8 +84,13 @@ For an unflagged leaf, falsification is sticky and makes checks fail until an ag
 independently reviews and repairs it, then uses `kt_renew` to clear
 brown status. For an unflagged leaf, passing every proof is necessary but does not establish
 whole-leaf correctness. The verifier never repairs its knowledge automatically.
-Such falsified, malformed, or proof-failing leaves are brown. An agent encountering
-one must diagnose and repair it rather than use or ignore it.
+Such falsified, malformed, or proof-failing leaves are brown. Brown is an incident,
+not a deferred warning: even at startup with no user task, the agent must first
+report the affected leaf prominently, stop all unrelated work, diagnose why the
+leaf or proof does not match reality, choose and perform the safest remediation,
+and re-check it. If safe remediation cannot be established, the agent asks the user
+for guidance. Only explicit user permission to ignore that specific brown status
+allows unrelated work to resume; the permission does not validate or green the leaf.
 
 Mark a leaf `verifiable: true` when it contains only concrete facts and its
 proofs completely cover every claim, after reviewing that coverage. It requires at least one eligible

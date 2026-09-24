@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T08:08:12+10:00"
+revised_at: "2026-09-24T10:31:10+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
 ---
@@ -45,7 +45,7 @@ contains no general knowledge-tree usage instructions (query conventions,
 traversal strategy, how to use `kt`): those are owned by the bootstrap procedure
 and hooks, not by the orientation leaf.
 
-Repository roots also contain and maintain four current-truth leaves:
+Repository project roots also contain and maintain four current-truth leaves. Create those placeholders explicitly with `kt init --project`; neutral `kt init` does not assume them:
 
 - `what/is/the/spec.md`: governing requirements and acceptance contract; directly
   contain the cohesive answer, except when canonical authority is genuinely external.
@@ -81,11 +81,11 @@ focus narrows, and before completing materially affected work, check relevant ex
 semantic path-component tokens. Multiple tokens are disjunctive, not physical
 subdirectory names; use `--verbose` for diagnostics.
 
-Inspect each proof's assertion and read-only predicate before execution. A passing
-proof stamps `Proof: (verified at …)`; a failed or timed-out execution stamps
-`Proof: (falsified at …)` and marks the leaf brown. Malformed proof
-structure also makes the leaf brown. Writes
-preserve hardlink identity; `--no-stamp` makes checks read-only.
+Inspect each proof's assertion and read-only predicate before execution. The exact
+marker is the timeless delimiter `Proof:` and is never rewritten with an outcome or
+timestamp. A failed or timed-out predicate marks the leaf brown; malformed proof
+structure does too. Lifecycle-status writes preserve hardlink identity;
+`--no-stamp` makes checks read-only.
 
 `kt prove` always reports green, yellow, and brown totals and prints brown
 root-qualified leaf paths. Leaves are green by default, including non-verifiable
@@ -103,15 +103,29 @@ Normal evaluation persists `status: green|yellow|brown` in front matter.
 status. Manual review (`kt_renew`) is needed to renew expiry, clear a yellow mark,
 or clear unflagged sticky brown status.
 
-Stop relying on falsified knowledge. An agent encountering a brown leaf must inspect
-evidence and repair or remove false,
-malformed, or unsafe claims and predicates only within authorized scope. Review the
-whole leaf independently and use `kt_renew` to clear brown status; rerun until
-checks pass. Passing every proof is necessary but not sufficient for an unflagged
-leaf. A reviewed `verifiable: true` leaf is the narrow exception: complete passing
-proofs clear falsification automatically. The verifier
-cannot judge whether the flag's complete-coverage assertion is truthful and does
-not perform agentic repair.
+A brown leaf or failed proof check is a mandatory stop condition. The agent may do
+only the work needed to reconcile it and must perform these steps in order:
+
+1. Immediately and prominently report the brown result and affected leaf to the
+   user before any other task action. This is the required first response at
+   startup even if the user supplied no work; a neutral readiness response or
+   waiting for a later task is noncompliant.
+2. Diagnose why the leaf or proof does not match reality, checking the complete
+   answer, its claim-to-proof relationship, the predicate, and current evidence.
+3. Choose and carry out the safest remediation within authority. Normally, correct
+   the leaf's current content or a faulty proof, preserve still-valid claims, review
+   the whole leaf independently, use `kt_renew` when needed to clear sticky brown,
+   and rerun the check until the leaf is no longer brown. If the cause remains
+   unresolved, repair would be unsafe or unauthorized, or the failure exposes a
+   materially bad situation, report the findings and ask the user for guidance.
+
+The agent cannot resume unrelated work while the brown status remains. The only
+exception is explicit user permission to ignore that specific brown status; this
+waives the stop condition but does not make the leaf reliable or green. Passing
+every proof is necessary but not sufficient for an unflagged leaf. A reviewed
+`verifiable: true` leaf is the narrow auto-clear exception: complete passing proofs
+clear falsification automatically. The verifier cannot judge whether the flag's
+complete-coverage assertion is truthful and does not perform agentic repair.
 
 ## Maintain knowledge at every scale
 
@@ -177,8 +191,8 @@ nothing. Sources are revision/inode checked before saving and removal; detected
 concurrent changes are retained. Cleanup across multiple files is not transactional:
 interruption or a conflict can leave sources beside the saved destination. Inspect
 that state before retrying so content is not duplicated. Source bodies, including their blockers and next checks, are preserved. A brown
-source keeps the destination brown; inherited proof stamps and manual check time
-are reset for review.
+source keeps the destination brown; timeless proof markers remain unchanged, while
+manual check time is reset for review.
 
 Move refuses an existing destination and preserves bytes. Same-filesystem moves
 preserve hardlink identity; cross-filesystem moves copy exclusively before removing

@@ -25,12 +25,12 @@ with tempfile.TemporaryDirectory() as directory:
     leaf.write_text(
         "---\nstatus: green\nrevised_at: '2026-09-01T00:00:00+00:00'\n"
         "expires_every: '200 weeks'\n---\n\n"
-        "Answer.\n\nProof: (verified at _)\n\n```bash\ntrue\n```\n"
+        "Answer.\n\nProof:\n\n```bash\ntrue\n```\n"
     )
     run(project, "prove", "--local")
     revision = hashlib.sha256(leaf.read_bytes()).hexdigest()
     run(project, "rewrite", "local:answer.md", revision,
-        "Revised answer.\n\nProof: (verified at _)\n\n```bash\ntrue\n```\n")
+        "Revised answer.\n\nProof:\n\n```bash\ntrue\n```\n")
     assert 'revised_at: "20' in leaf.read_text() and 'status: "yellow"' in leaf.read_text(), "a rewrite keeps the status it had (unanchored expiry made this yellow)"
     assert "checked_at:" not in leaf.read_text()
     revision = hashlib.sha256(leaf.read_bytes()).hexdigest()
@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert checked_line in leaf.read_text(), "proof runs must not advance manual check time"
     revision = hashlib.sha256(leaf.read_bytes()).hexdigest()
     run(project, "rewrite", "local:answer.md", revision,
-        "Revised answer.\n\nProof: (verified at _)\n\n```bash\ntrue\n```\n",
+        "Revised answer.\n\nProof:\n\n```bash\ntrue\n```\n",
         "--expires-every", "3 weeks")
     assert "checked_at:" in leaf.read_text(), "setting a freshness window starts its clock"
     assert 'expires_every: "3 weeks"' in leaf.read_text()
@@ -50,11 +50,11 @@ with tempfile.TemporaryDirectory() as directory:
     flagged.write_text(
         "---\nstatus: yellow\nrevised_at: '2026-09-01T00:00:00+00:00'\n"
         "verifiable: true\n---\n\n"
-        "A proved claim.\n\nProof: (verified at _)\n\n```bash\ntrue\n```\n"
+        "A proved claim.\n\nProof:\n\n```bash\ntrue\n```\n"
     )
     revision = hashlib.sha256(flagged.read_bytes()).hexdigest()
     run(project, "rewrite", "local:flagged.md", revision,
-        "A proved claim revised.\n\nProof: (verified at _)\n\n```bash\ntrue\n```\n")
+        "A proved claim revised.\n\nProof:\n\n```bash\ntrue\n```\n")
     assert 'verifiable: "true"' in flagged.read_text()
     run(project, "prove", "--local")
     assert "status: green" in flagged.read_text()
@@ -82,7 +82,7 @@ with tempfile.TemporaryDirectory() as directory:
         "A changing answer.", "--no-expiry")
     assert "expires_at:" not in expiry.read_text()
     run(project, "add", "what is proof covered example",
-        "A checked fact.\n\nProof: (verified at _)\n\n```bash\ntrue\n```",
+        "A checked fact.\n\nProof:\n\n```bash\ntrue\n```",
         "--local", "--verifiable")
     covered = tree / "what/is/proof/covered/example.md"
     assert "verifiable: \"true\"" in covered.read_text()
@@ -90,7 +90,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "status: green" in covered.read_text()
     revision = hashlib.sha256(covered.read_bytes()).hexdigest()
     run(project, "rewrite", "local:what/is/proof/covered/example.md", revision,
-        "A checked fact.\n\nProof: (verified at _)\n\n```bash\ntrue\n```", "--no-verifiable")
+        "A checked fact.\n\nProof:\n\n```bash\ntrue\n```", "--no-verifiable")
     assert "verifiable:" not in covered.read_text()
     run(project, "add", "what is invalid expiry", "Body.", "--local",
         "--expires-at", "2026-09-19", expected=2)
@@ -130,11 +130,13 @@ with tempfile.TemporaryDirectory() as directory:
     assert "yellow=0" in run(project, "status").stdout
 
     broken = tree / "broken.md"
-    broken.write_text("Claim.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
+    broken.write_text("Claim.\n\nProof:\n\n```bash\nfalse\n```\n")
     revision = hashlib.sha256(broken.read_bytes()).hexdigest()
     result = run(project, "renew", "local:what/is/broken.md", revision, expected=1)
     assert "still brown" in result.stderr and "status: brown" in broken.read_text()
-    assert run(project, "--lean", "open", "local:what/is/broken.md").stdout.startswith("kt: BROWN leaf")
+    brown_notice = run(project, "--lean", "open", "local:what/is/broken.md").stdout
+    assert brown_notice.startswith("kt: BROWN leaf")
+    assert "STOP: report it to the user" in brown_notice and "before other work" in brown_notice
 
 print("lean output and renew checks passed")
 
@@ -176,7 +178,7 @@ with tempfile.TemporaryDirectory() as directory:
 
     proved = tree / "proved.md"
     proved.write_text("---\nstatus: yellow\nrevised_at: '2026-09-01T00:00:00+00:00'\nverifiable: true\n---\n\n"
-                      "A proved claim.\n\nProof: (verified at _)\n\n```bash\ntrue\n```\n")
+                      "A proved claim.\n\nProof:\n\n```bash\ntrue\n```\n")
     run(project, "prove", "--local", expected=1)  # brown.md is still brown
     assert "status: green" in proved.read_text(), "a verifiable leaf whose proofs all pass is raised by prove"
 

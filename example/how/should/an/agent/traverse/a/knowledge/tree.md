@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-21T09:02:51+10:00"
+revised_at: "2026-09-24T09:32:02+10:00"
 name: "knowledgetrees-lookup"
 description: "Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and capture missing knowledge before continuing."
 ---
@@ -44,8 +44,12 @@ architecture answer; smallness and source visibility are not exemptions.
    specs, plans, procedures, opinions, and other non-verifiable content are not
    yellow merely because they lack manual `checked_at`. Green may be used. Yellow is a warning that
    prohibits relying on the contents until re-verification; once you have verified the whole leaf,
-   `kt_renew` confirms it. Brown means the tree
-   is busted; stop, diagnose the falsification or failed proof, and repair the leaf.
+   `kt_renew` confirms it. Brown means the tree is busted and triggers an incident:
+   stop all other work, immediately report the brown leaf to the user as priority
+   one (including as the first startup response when no task was supplied), diagnose
+   the mismatch, and remediate and re-check it. Ask the user if safe remediation
+   cannot be established. Resume other work only after brown is cleared or the user
+   explicitly permits ignoring that specific brown status.
 4. If `kt` does not find the information, you MUST determine whether a leaf exists.
    Retry distinctive keywords and synonyms, then try plausible sentence paths
    from known orientation routes with `kt_read`. List only the nearest existing

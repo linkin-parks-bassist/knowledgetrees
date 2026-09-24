@@ -76,10 +76,14 @@ def main():
         assert not listed["kt_renew"]["annotations"]["destructiveHint"] and not listed["kt_renew"]["annotations"]["readOnlyHint"]
         assert not listed["kt_add"]["annotations"]["destructiveHint"] and not listed["kt_add"]["annotations"]["readOnlyHint"]
         assert not listed["kt_init"]["annotations"]["destructiveHint"] and not listed["kt_init"]["annotations"]["readOnlyHint"]
+        assert set(listed["kt_init"]["inputSchema"]["properties"]) == {"orientation", "project"}
         assert not listed["kt_register"]["annotations"]["destructiveHint"] and not listed["kt_register"]["annotations"]["readOnlyHint"]
         assert set(listed["kt_read"]["inputSchema"]["properties"]) == {"address"}, "whole reads have no range or paging parameters"
         assert "instructions" in initialized["result"] and "kt_access_request" in initialized["result"]["instructions"]
         assert "kt_renew" in initialized["result"]["instructions"] and "shell" in initialized["result"]["instructions"]
+        assert "priority-one incident" in initialized["result"]["instructions"]
+        assert "startup with no user task" in initialized["result"]["instructions"]
+        assert "explicitly permits ignoring that specific status" in initialized["result"]["instructions"]
         assert not [n for n, t in listed.items() if len(json.dumps(t)) > 1800], "tool schemas must stay compact"
         assert rpc("nope")["error"]["code"] == -32601
         server.stdin.write("{broken\n")

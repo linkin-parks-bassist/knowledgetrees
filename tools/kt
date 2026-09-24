@@ -781,7 +781,7 @@ def find(args, branches=None, browse=False, context=None):
         if excerpt:
             print(textwrap.fill(excerpt, width=width, initial_indent="   ", subsequent_indent="   "))
         print()
-    print("Read verbatim: kt open ROOT:<path> (local, global, or canonical root path)")
+    print("Read complete leaf: kt open ROOT:<path> (local, global, or canonical root path)")
     print("Check relevant proofs before relying on claims; search scores are not confidence.")
     if not adequate:
         print("Check alternate terms and scoped paths; if no leaf exists, investigate and capture the answer.")
@@ -863,9 +863,9 @@ def lean_leaf(text, address):
     state, kind, detail = leaf_health(text, datetime.now(timezone.utc))
     notice = ""
     if kind == "malformed":
-        notice = f"kt: BROWN leaf {address} has malformed metadata ({detail}). Do not rely on it; repair it (kt_edit), then kt_prove."
+        notice = f"kt: BROWN leaf {address} has malformed metadata ({detail}). STOP: report it to the user, diagnose and repair it (kt_edit), then kt_prove before other work."
     elif kind == "falsified":
-        notice = f"kt: BROWN leaf {address}: a proof failed or it was falsified. Do not rely on it; repair it (kt_edit), then kt_prove."
+        notice = f"kt: BROWN leaf {address}: a proof failed or it was falsified. STOP: report it to the user, diagnose and repair it (kt_edit), then kt_prove before other work."
     elif kind:
         why = f"is due for re-verification ({detail})" if kind == "due" else "is marked for re-verification"
         notice = (f"kt: yellow leaf {address} {why}. Verify every claim against current evidence before relying on it, "
@@ -874,8 +874,17 @@ def lean_leaf(text, address):
     return (notice + "\n\n" if notice else "") + body
 
 
+def write_stdout(text):
+    """Write nonempty command output with a terminal-friendly trailing newline."""
+    if not text:
+        return
+    sys.stdout.write(text)
+    if not text.endswith("\n"):
+        sys.stdout.write("\n")
+
+
 def show_leaf(text, address):
-    sys.stdout.write(lean_leaf(text, address) if LEAN else text)
+    write_stdout(lean_leaf(text, address) if LEAN else text)
 
 
 def status_command(args):
@@ -920,7 +929,7 @@ def status_command(args):
             if kind == "malformed":
                 reason = "malformed metadata: " + detail
             elif kind == "falsified":
-                reason = "brown: a proof failed or the leaf was falsified; run kt prove on it, diagnose, repair, then re-check"
+                reason = "brown: priority-one incident; report it to the user, diagnose, repair, then re-check before other work"
             elif kind == "due":
                 reason = f"expired or due for re-verification ({detail}); review the whole answer, then kt renew"
             else:
@@ -1120,7 +1129,7 @@ def proof_records(text):
             index += 1
             while index < len(lines) and lines[index].strip() != "```":
                 index += 1
-        elif re.fullmatch(r"Proof:(?: \((?:verified|falsified) at [^)]+\))?", line):
+        elif line == "Proof:":
             marker_index = index
             previous = index - 1
             while previous >= 0 and not lines[previous].strip():
@@ -1193,29 +1202,15 @@ def rewrite_leaf(args):
                     ("expires_at", "expires_every", "verifiable", "name", "description")
                     if key in prior_metadata}
         inherited = getattr(args, "inherited_status", None)
-        if (not getattr(args, "reset_proofs", False) and
-                not inherited and
+        if (not inherited and
                 replacement.strip("\r\n") == prior_body.strip("\r\n") and
                 requested == existing):
             return 0
-        _, old_records = proof_records(original)
-        previous = {identity: marker for _, identity, marker in old_records if identity is not None}
-        if getattr(args, "reset_proofs", False):
-            previous = {}
-        new_lines, new_records = proof_records(replacement)
-        invalidated = 0
-        for index, identity, _ in new_records:
-            saved = previous.get(identity)
-            ending = "\n" if new_lines[index].endswith("\n") else ""
-            new_lines[index] = (saved or "Proof: (verified at _)") + ending
-            if saved is None:
-                invalidated += 1
-        updated = revised_leaf("".join(new_lines), original, args)
+        updated = revised_leaf(replacement, original, args)
         if inherited and STATE_RANK[inherited] > STATE_RANK[leaf_parts(updated)[0]["status"]]:
             updated = set_lifecycle_status(updated, inherited)
         if args.dry_run:
-            sys.stdout.writelines(difflib.unified_diff(original.splitlines(keepends=True), updated.splitlines(keepends=True), fromfile=str(path), tofile=str(path) + " (rewritten)"))
-            print(f"{invalidated} new or changed proofs need checking.", file=sys.stderr)
+            write_stdout("".join(difflib.unified_diff(original.splitlines(keepends=True), updated.splitlines(keepends=True), fromfile=str(path), tofile=str(path) + " (rewritten)")))
             return 0
         # Never replace the inode: installer-created SKILL.md hardlinks stay intact.
         # Recheck after preparing output to detect ordinary non-locking intervening edits.
@@ -1314,11 +1309,6 @@ def combine_leaves(args):
         if metadata_errors(source_text):
             raise ValueError(f"source leaf has unsupported metadata: {source}")
         metadata, body = leaf_parts(source_text)
-        # Verification happened in a source scope, not in the combined answer.
-        lines, records = proof_records(body)
-        for index, _, _ in records:
-            lines[index] = "Proof: (verified at _)" + ("\n" if lines[index].endswith("\n") else "")
-        body = "".join(lines)
         bodies.append(body.strip("\r\n"))
         inherited = worse(inherited, metadata.get("status", "green"))
     # Abort before saving if any input changed while preparing the answer.
@@ -1335,7 +1325,7 @@ def combine_leaves(args):
             raise ValueError("existing destination requires --expect from a full leaf read")
         rewrite_leaf(argparse.Namespace(path=str(destination), hash=args.expect,
             contents=body, dry_run=args.dry_run, no_expiry=True,
-            verifiable=False, reset_proofs=True, inherited_status=inherited))
+            verifiable=False, inherited_status=inherited))
         if args.dry_run:
             print("Would remove source leaves except the destination.", file=sys.stderr)
             return 0
@@ -1344,7 +1334,7 @@ def combine_leaves(args):
             raise RevisionConflict("kt: expected destination does not exist")
         if args.dry_run:
             print(f"Would coalesce {len(sources)} leaves -> {leaf_address(destination)} and remove sources", file=sys.stderr)
-            sys.stdout.write(content)
+            write_stdout(content)
             return 0
         destination.parent.mkdir(parents=True, exist_ok=True)
         with destination.open("x", encoding="utf-8") as stream:
@@ -1432,7 +1422,7 @@ def capture(args):
                                  for k, v in metadata.items()) + "---\n\n" + answer.rstrip() + "\n"
     if args.dry_run:
         print(f"Would create {label}:{path.relative_to(root)}", file=sys.stderr)
-        sys.stdout.write(content)
+        write_stdout(content)
         return 0
     path.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive creation protects an existing leaf even if it appeared after preflight.
@@ -1441,7 +1431,7 @@ def capture(args):
     return 0
 
 
-# Built-in proof parsing, execution, and outcome stamping.
+# Built-in proof parsing, execution, and lifecycle status handling.
 
 PROOF_FENCES = {
     "```bash": "bash",
@@ -1450,7 +1440,7 @@ PROOF_FENCES = {
     "```python3": "python3",
 }
 OUTPUT_LIMIT = 4096
-PROOF_MARKER = re.compile(r"^Proof: \((verified|falsified) at ([^)]+)\)$")
+LEGACY_PROOF_MARKER = re.compile(r"^Proof: \((?:verified|falsified) at [^)\n]+\)$")
 LEAF_STATES = ("green", "yellow", "brown")
 STATE_RANK = {state: rank for rank, state in enumerate(LEAF_STATES)}
 
@@ -1538,6 +1528,7 @@ def parse_proofs(path):
     original = path.read_text()
     lines = original.splitlines()
     proofs = []
+    legacy_markers = []
     errors = metadata_errors(original)
     index = 0
     while index < len(lines):
@@ -1549,20 +1540,13 @@ def parse_proofs(path):
                 break
             index = closing + 1
             continue
-        marker = PROOF_MARKER.fullmatch(line)
-        if marker is None:
+        if line != "Proof:" and not LEGACY_PROOF_MARKER.fullmatch(line):
             if line.startswith("Proof:"):
-                errors.append((index + 1, "malformed proof verification marker"))
+                errors.append((index + 1, "malformed proof marker; write exactly `Proof:`"))
             index += 1
             continue
-        stamp = marker.group(2)
-        if stamp != "_":
-            try:
-                parsed = datetime.fromisoformat(stamp)
-                if parsed.utcoffset() is None:
-                    raise ValueError("timezone required")
-            except ValueError:
-                errors.append((index + 1, "proof timestamp must be ISO 8601 with timezone"))
+        if line != "Proof:":
+            legacy_markers.append(index)
 
         previous = previous_content_line(lines, index)
         if previous < 0 or lines[previous].startswith("```"):
@@ -1584,7 +1568,7 @@ def parse_proofs(path):
         else:
             proofs.append((index, fence + 1, PROOF_FENCES[lines[fence]], script))
         index = closing + 1
-    return original, proofs, errors
+    return original, proofs, errors, legacy_markers
 
 
 def set_lifecycle_status(text, state):
@@ -1633,8 +1617,8 @@ def renew_leaf(args):
         updated = set_lifecycle_status(original, "yellow")
         updated = stamp_checked_at(updated, datetime.now().astimezone().isoformat(timespec="seconds"))
         if args.dry_run:
-            sys.stdout.write("".join(difflib.unified_diff(original.splitlines(True),
-                             updated.splitlines(True), fromfile=str(path), tofile=str(path))))
+            write_stdout("".join(difflib.unified_diff(original.splitlines(True),
+                         updated.splitlines(True), fromfile=str(path), tofile=str(path))))
             return 0
         stream.seek(0)
         stream.write(updated)
@@ -1647,23 +1631,12 @@ def renew_leaf(args):
     return 0
 
 
-def stamp_proofs(path, original, markers, state,
-                 refresh_proofs=False):
+def write_lifecycle_status(path, original, state, legacy_markers=()):
     lines = original.splitlines(keepends=True)
-    timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
-    for index, passed in markers:
-        if passed and not refresh_proofs:
-            if lines[index].startswith("Proof: (falsified at "):
-                ending = "\r\n" if lines[index].endswith("\r\n") else "\n" if lines[index].endswith("\n") else ""
-                lines[index] = f"Proof: (verified at _){ending}"
-            continue
-        if not passed and lines[index].startswith("Proof: (falsified at "):
-            continue
+    for index in legacy_markers:
         ending = "\r\n" if lines[index].endswith("\r\n") else "\n" if lines[index].endswith("\n") else ""
-        status = "verified" if passed else "falsified"
-        lines[index] = f"Proof: ({status} at {timestamp}){ending}"
-    updated = "".join(lines)
-    updated = set_lifecycle_status(updated, state)
+        lines[index] = "Proof:" + ending
+    updated = set_lifecycle_status("".join(lines), state)
     if updated == original:
         return
     # Write through existing links: atomic replacement would detach hardlinks.
@@ -1787,7 +1760,7 @@ def proof_parser_for_cli():
     parser.add_argument(
         "--no-stamp",
         action="store_true",
-        help="check without writing proof timestamps or leaf falsification metadata",
+        help="check without writing leaf lifecycle status",
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -1865,14 +1838,13 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
     proof_directory = root.parent
     now = datetime.now().astimezone()
     for relative, path in selected:
-        original, proofs, errors = parse_proofs(path)
+        original, proofs, errors, legacy_markers = parse_proofs(path)
         if not original.strip():
             states["green"] += 1
             continue
         metadata, _ = leaf_parts(original)
         raw_verifiable = metadata.get("verifiable", "false").casefold()
         verifiable = raw_verifiable == "true"
-        expiring = bool(metadata.get("expires_at") or metadata.get("expires_every"))
         if raw_verifiable not in ("true", "false"):
             errors.append((1, "verifiable must be true or false"))
         if verifiable and not proofs:
@@ -1929,8 +1901,7 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
             state = worse(state, metadata.get("status", "green"))
         if not args.no_stamp:
             try:
-                stamp_proofs(path, original, [] if errors else results,
-                             state, expiring)
+                write_lifecycle_status(path, original, state, legacy_markers)
             except OSError as error:
                 failed += 1
                 failed_paths.add(relative)
@@ -2041,14 +2012,10 @@ def print_info(args):
     print("=== global:how/to/use/knowledgetrees.md ===")
     contents = procedure.read_text()
     show_leaf(contents, "global:how/to/use/knowledgetrees.md")
-    if contents and not contents.endswith("\n"):
-        print()
     if has_orientation:
         print("=== local:where/am/i.md ===")
         contents = (root / "where/am/i.md").read_text()
         show_leaf(contents, "local:where/am/i.md")
-        if contents and not contents.endswith("\n"):
-            print()
     else:
         reason = ("local knowledge root has no where/am/i.md (add one to orient this project)" if has_root
                   else "no ./.knowledge in the current directory (kt init creates one)")
@@ -2061,8 +2028,6 @@ def print_info(args):
             print("=== global:where/am/i.md ===")
             contents = orientation.read_text()
             show_leaf(contents, "global:where/am/i.md")
-            if contents and not contents.endswith("\n"):
-                print()
     print("=== kt dict ===")
     dictionary(argparse.Namespace(roots=[]))
     scope = "--local" if has_root else "--global"
@@ -2079,11 +2044,12 @@ def initialize_tree(args):
         (root / branch).mkdir(parents=True, exist_ok=True)
     (root / "where/am").mkdir(parents=True)
     (root / "where/am/i.md").write_text(args.orientation or "")
-    for relative in ("what/is/the/spec.md", "what/is/the/plan.md",
-                     "what/is/the/state.md", "what/is/next.md"):
-        path = root / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.touch()
+    if args.project:
+        for relative in ("what/is/the/spec.md", "what/is/the/plan.md",
+                         "what/is/the/state.md", "what/is/next.md"):
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
     register_root(root)
     return 0
 
@@ -2135,8 +2101,9 @@ def command_parser():
     commands = parser.add_subparsers(dest="command")
     showing_info = commands.add_parser("info", help="prove and load the local startup knowledge")
     showing_info.set_defaults(handler=print_info)
-    initializing = commands.add_parser("init", help="create and register an empty local knowledge tree (ask policy)")
+    initializing = commands.add_parser("init", help="create and register a neutral local knowledge tree (ask policy)")
     initializing.add_argument("orientation", nargs="?", help="optional literal contents of where/am/i.md")
+    initializing.add_argument("--project", action="store_true", help="also create empty spec, plan, state, and next leaves")
     initializing.set_defaults(handler=initialize_tree)
     search = commands.add_parser("find", help="rank keyword matches across project and global roots", description="Search all permitted active roots. No --root option; open the root-qualified address returned by the search.")
     search.set_defaults(handler=find)

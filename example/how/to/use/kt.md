@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T07:48:53+10:00"
+revised_at: "2026-09-24T10:31:24+10:00"
 ---
 
 This is the shell reference for `kt`. When you have the `kt_*` tools, use them instead. Whole-leaf MCP reads return the complete answer, an optional non-green notice, and the revision hash required by `kt_rewrite`; no other metadata is shown. Neither MCP nor kt supports partial leaf reads. Ranked excerpts select candidates and are not reads. The shell is the fallback when tools are unavailable.
@@ -12,13 +12,15 @@ prove. Successful create/rewrite/remove/move/combine/register operations and
 identical no-ops emit no stdout or stderr; check exit 0. Access/permissions changes
 retain required consent prompts and disclosures, without post-save receipts.
 Reads, searches, help, policy inspection, dry-run previews and explicitly verbose
-proof checks return the requested information. Failures retain diagnostics and
-nonzero exit statuses; silence alone is not sufficient without checking status.
+proof checks return the requested information. Every non-empty stdout or stderr
+stream ends with a newline, so the shell prompt never attaches to kt output.
+Failures retain diagnostics and nonzero exit statuses; silence alone is not
+sufficient without checking status.
 Accuracy and preservation remain explicit agent obligations; no task-end reminder hook is installed.
 
 ## Command and address quick reference
 
-- Create: `kt init [ORIENTATION]` creates `.knowledge/` in the current directory with empty canonical branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. The argument, if given, is written literally. The new tree is registered under `ask` without a cross-project grant. Existing trees are preserved.
+- Create: `kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the current directory with empty canonical branches and `where/am/i.md`; it creates no project spine. `kt init --project [ORIENTATION]` additionally creates empty spec, plan, state, and next leaves. The argument, if given, is written literally. Both forms register the new tree under `ask` without a cross-project grant. Existing trees are preserved.
 
 - Initialize: `kt info` prints the canonical global procedure and exact local
   orientation, then the accessible dictionary, then the
@@ -53,8 +55,11 @@ Accuracy and preservation remain explicit agent obligations; no task-end reminde
   means no selected leaf is brown; `--verbose` supplies diagnostics. Optional filters are separate
   semantic components, e.g. `kt prove --root .knowledge --no-stamp how to use`;
   every run reports green/yellow/brown totals and prints brown addresses only.
-  Normal evaluation writes `status` in front matter; `kt renew` writes `checked_at`;
-  `--no-stamp` preserves bytes. Evaluation only lowers a status: an expired leaf
+  Normal evaluation writes only leaf lifecycle `status` in front matter; proof
+  markers remain exactly `Proof:` and carry no outcome or timestamp. A writing run
+  silently migrates legacy `(verified|falsified at …)` markers to `Proof:` without
+  interpreting their timestamp text; `--no-stamp` accepts them but preserves bytes.
+  `kt renew` writes `checked_at`. Evaluation only lowers a status: an expired leaf
   becomes yellow and needs manual review (`kt renew`), a failed proof or remaining
   falsification makes it brown, which fails the command and requires diagnosis and
   repair. A `verifiable: true` leaf whose proofs all pass is green.
@@ -117,13 +122,14 @@ no leaf paths/snippets; force-private roots expose no generated root identity ei
 
 `kt open global:how/to/add/knowledge/leaves.md` selects a global leaf explicitly;
 `local:` selects the exact local tree; `project:` is a compatibility alias. An unqualified relative path tries project
-then global. Absolute Markdown leaf paths also work. Content and frontmatter are
-returned verbatim on stdout; full reads also print Revision: HASH on stderr. Relative paths cannot escape the selected root.
+then global. Absolute Markdown leaf paths also work. Complete content and frontmatter are returned on stdout; when the stored bytes lack
+a final newline, the CLI appends one for presentation only. Full reads also print
+Revision: HASH on stderr, hashing the stored bytes. Relative paths cannot escape the selected root.
 
 `kt prove --no-stamp leaves` checks exact semantic-component tokens across all
 accessible roots. Narrow with `--local`, `--global`, or `--root ROOT`; explicit
-ROOT is the exact knowledge-tree directory from `kt roots`. Default proof checks may stamp
-outcomes; lookup and open do not verify or stamp proofs.
+ROOT is the exact knowledge-tree directory from `kt roots`. Proof markers remain the exact, timeless delimiter `Proof:`; evaluation stores no
+per-proof outcome or timestamp. Lookup and open do not run proofs.
 
 Default output is compact plain text for agents. Non-exact searches print one
 summary (`matches=shown/total`, adequate count, selected branch where applicable,
@@ -136,11 +142,12 @@ Use `kt --pretty find leaves`, `kt find leaves --pretty`, or
 `kt where is vivado --pretty` for the expanded human layout. Pretty mode retains
 scores, longer excerpts, spacing, reminders, and terminal-only colors; `NO_COLOR`
 disables colors. Default output never emits ANSI colors, including in a terminal.
-Both modes preserve exact question hits and `kt open` byte-for-byte, including
-frontmatter. Search modes share ordering, limits, access checks, and exit statuses.
+Both modes preserve the complete content of exact question hits and `kt open`,
+including frontmatter; the only presentation difference is an appended final
+newline when the stored content lacks one. Search modes share ordering, limits, access checks, and exit statuses.
 Empty or weak-only keyword matches exit 1; blocked root access exits 3.
-Results show the current leaf status. Manual check time is distinct from proof
-verification time. Check relevant proofs before reliance.
+Results show the current leaf status. Manual whole-leaf review time is stored in
+`checked_at`; proofs have no separate timestamp. Check relevant proofs before reliance.
 The installer puts the script in the global `.tools/kt` and links `~/.local/bin/kt`.
 
 ## MCP tools
@@ -179,8 +186,8 @@ nothing. Sources are revision/inode checked before saving and removal; detected
 concurrent changes are retained. Cleanup across multiple files is not transactional:
 interruption or a conflict can leave sources beside the saved destination. Inspect
 that state before retrying so content is not duplicated. Source answer bodies, including unresolved blockers and next checks, survive.
-A brown source keeps the combined leaf brown. Manual check time and inherited
-proof stamps are reset for review.
+A brown source keeps the combined leaf brown. Manual check time is reset for
+review; exact, timeless `Proof:` markers remain part of the combined answer.
 
 Move refuses an existing destination and preserves bytes. Same-filesystem moves
 preserve hardlink identity; cross-filesystem moves copy exclusively before removing

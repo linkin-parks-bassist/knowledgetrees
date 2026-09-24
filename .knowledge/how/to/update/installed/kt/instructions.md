@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T08:16:39+10:00"
+revised_at: "2026-09-24T10:06:24+10:00"
 ---
 
 From this repository directory, refresh installed guidance before deploying executables:
@@ -12,7 +12,7 @@ From this repository directory, refresh installed guidance before deploying exec
 5. Prove any affected source root changed since step 1, then re-run the sync check and compare installed `kt` and `kt-mcp` byte-for-byte with this checkout. Zero drift is required before completion.
 6. Restart clients or start fresh sessions so they reload tools, hooks, and instructions.
 
-The Git-excluded sync script owns its current `LEAVES` and `SKILLS` sets; do not copy their counts into this leaf. It renders public-example scope as personal-global scope and normalizes successful proof timestamps during comparison, but it deliberately compares lifecycle status. Proving an installed copy can canonicalize its status serialization, so prove the edited source first; if drift still looks status-only, inspect both leaves and establish which copy is current rather than blindly overwriting either one.
+The Git-excluded sync script owns its current `LEAVES` and `SKILLS` sets; do not copy their counts into this leaf. It renders public-example scope as personal-global scope and compares the rendered bytes directly, including exact, timeless `Proof:` markers and lifecycle status. Proving an installed copy can canonicalize its status serialization, so prove the edited source first; if drift still looks status-only, inspect both leaves and establish which copy is current rather than blindly overwriting either one.
 
 Repository and installed leaves have separate inodes; installed rewrites cannot alter public source. Personal leaves, orientations, project spines, unrelated configuration, and unrelated access policy are preserved. The sync does not deploy executables or every installer-managed leaf, and the installer does not replace the sync's backup step, so both operations are required when guidance and tools change. The installer removes only its formerly managed home `AGENTS.md` block and preserves unrelated instructions.
 

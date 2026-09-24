@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-21T14:30:55+10:00"
+revised_at: "2026-09-24T10:01:54+10:00"
 name: "knowledgetrees-capture"
 description: "Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs."
 ---
@@ -130,7 +130,7 @@ otherwise use truthful provenance. The cadence is:
 
     The single mechanically verifiable assertion.
 
-    Proof: (verified at _)
+    Proof:
 
     ```bash
     the_read_only_predicate
@@ -147,11 +147,11 @@ persistent processes, or have other externally visible side effects. Never use
 Inspect and run the predicate before relying on its assertion. An eligible
 assertion without a marked proof, or a marker whose predicate is unsafe or tests
 a different assertion, is a defect to repair within current authority before
-reliance. A passing run
-refreshes only its `Proof: (verified at …)` marker. A failing run changes it to
-`Proof: (falsified at …)` and sets `status: brown`. The verifier cannot
-decide semantic eligibility, faithful coverage, or whether all prose is proved;
-the agent remains responsible. Read maintenance before repairing a falsified leaf.
+reliance. The exact marker is always `Proof:` and stores no timestamp or outcome.
+A failing run sets `status: brown`; the current command output reports the result.
+The verifier cannot decide semantic eligibility, faithful coverage, or whether all
+prose is proved; the agent remains responsible. Read maintenance before repairing
+a falsified leaf.
 
 For an existing owner, use `kt_rewrite` (or surgical `kt_edit`; shell: kt rewrite ADDRESS HASH BODY) as
 described in

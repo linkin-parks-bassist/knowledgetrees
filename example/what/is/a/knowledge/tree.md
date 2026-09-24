@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-18T13:14:39+10:00"
+revised_at: "2026-09-24T10:03:02+10:00"
 ---
 
 A knowledge tree is an authoritative, semantically structured knowledge substrate.
@@ -46,9 +46,9 @@ retirement of redundant sources. Documents and task bundles may be external
 authorities, primary evidence, temporary ingestion sources, or presentations; they
 are not competing internal knowledge stores.
 
-Executable proofs connect eligible atomic factual claims to reality. Their passing
-timestamps do not verify unproved prose. Any failed proof falsifies its leaf; all
-proofs passing is necessary but not sufficient unless a reviewed `verifiable: true`
+Executable proofs connect eligible atomic factual claims to reality. Their timeless
+`Proof:` markers record neither outcomes nor timestamps. Any failed proof falsifies
+its leaf; all proofs passing is necessary but not sufficient unless a reviewed `verifiable: true`
 declaration asserts that every claim is covered. Independent review and explicit
 repair remain agent responsibilities for unflagged leaves and proof coverage.
 
@@ -57,8 +57,12 @@ plans, procedures, opinions, and other content that is not actually verifiable;
 it also requires no active falsification or failing proof. Yellow is explicitly
 marked or has passed an optional `expires_at` or
 `expires_every` boundary and cannot be used until re-verification. Brown is actually
-falsified or proof-failing; it makes the tree busted and must be diagnosed and repaired.
-Agents should optionally add expiries to factual knowledge liable to change.
+falsified or proof-failing and makes the tree busted. It is a mandatory incident:
+the agent's first response is to report it to the user, then all work is limited to
+diagnosis, remediation, and re-checking until brown clears. When safe remediation
+cannot be established, ask the user for guidance. Only the user's explicit permission
+to ignore that specific brown status waives the stop condition, without validating
+the leaf. Agents should optionally add expiries to factual knowledge liable to change.
 
 The installed skill-shaped entry point is compatibility bootstrap into this
 substrate, not a precedent for proliferating separately maintained skill documents.

@@ -1,9 +1,9 @@
 ---
 status: green
-revised_at: "2026-09-21T09:03:52+10:00"
+revised_at: "2026-09-24T09:37:08+10:00"
 ---
 
-Every nonempty leaf has one lifecycle color in front matter as `status: green|yellow|brown`. Proof-free specs, plans, procedures, opinions, and other content that is not mechanically verifiable can be green. A new leaf starts green, and adding or editing a leaf keeps its status. Expired `expires_at` or `expires_every` makes an ordinary leaf yellow. A failed proof, malformed proof, or unsupported metadata makes it brown; brown persists until manual check or complete passing proofs on a `verifiable: true` leaf. Yellow cannot be used before re-verification; brown must be diagnosed and repaired.
+Every nonempty leaf has one lifecycle color in front matter as `status: green|yellow|brown`. Proof-free specs, plans, procedures, opinions, and other content that is not mechanically verifiable can be green. A new leaf starts green, and adding or editing a leaf keeps its status. Expired `expires_at` or `expires_every` makes an ordinary leaf yellow. A failed proof, malformed proof, or unsupported metadata makes it brown; brown persists until manual check or complete passing proofs on a `verifiable: true` leaf. Yellow cannot be used before re-verification. Brown is a priority-one incident: even at idle startup, the agent must first report the affected leaf to the user, stop unrelated work, diagnose and remediate the mismatch, and re-check it. If safe remediation cannot be established, ask the user for guidance. Only explicit permission to ignore that specific brown status waives the stop condition without validating the leaf.
 
 Every normal `kt prove` evaluation writes `status` in front matter, and only ever lowers it. `kt renew ADDRESS HASH` (tool `kt_renew`) records `checked_at` after manual review, clears any brown, and re-runs that leaf's own proofs, leaving it green or brown; it is the only manual way up, and proof runs never advance it. `revised_at` records the last content change. Only flat front matter stores lifecycle status. `--no-stamp` remains byte-preserving. Content rewrites keep the status and check time and refresh `revised_at`; only `kt renew` records manual review time. Status and proof writes preserve hardlink identity.
 

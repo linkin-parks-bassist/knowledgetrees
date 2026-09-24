@@ -32,7 +32,7 @@ name: test-skill
 
 The first assertion is true.
 
-Proof: (verified at 2026-09-12T12:00:00+00:00)
+Proof:
 
 ```bash
 true
@@ -40,7 +40,7 @@ true
 
 The second assertion is true.
 
-Proof: (verified at 2026-09-12T12:00:00+00:00)
+Proof:
 
 ```bash
 true
@@ -70,23 +70,22 @@ true
         run("rewrite", "project:how/to/test.md", token, revised)
         updated = path.read_text()
         assert "status: \"brown\"" in updated and "revised_at:" in updated
-        assert updated.count("Proof: (verified at 2026-09-12T12:00:00+00:00)") == 1
-        assert updated.count("Proof: (verified at _)") == 1
+        assert updated.count("Proof:") == 2
         assert alias.read_text() == updated and path.stat().st_ino == inode
         run("rewrite", "project:how/to/test.md", token, "stale replacement", expected=4)
         assert path.read_text() == updated
         token = run("open", "project:how/to/test.md").stderr.strip().removeprefix("Revision: ")
         no_op = run("rewrite", "project:how/to/test.md", token, body(updated))
         assert no_op.stdout == "" and no_op.stderr == "" and path.read_text() == updated
-        # Changed predicate cannot retain an old proof stamp, even if submitted as verified.
+        # Proof markers are timeless; changing a predicate leaves the delimiter intact.
         revised = body(updated).replace("```bash\ntrue\n```", "```bash\nfalse\n```", 1)
         run("rewrite", "project:how/to/test.md", token, revised)
-        assert "Proof: (verified at 2026-09-12" not in path.read_text()
-        # Newly inserted orphan proof markers must not carry caller-invented verification.
+        assert path.read_text().count("Proof:") == 2
+        # Rewriting does not execute or validate a newly inserted orphan marker.
         token = hashlib.sha256(path.read_bytes()).hexdigest()
         run("rewrite", "project:how/to/test.md", token,
-            body(path.read_text()) + "\nProof: (verified at 2030-01-01T00:00:00+00:00)\n")
-        assert "2030-01-01" not in path.read_text()
+            body(path.read_text()) + "\nProof:\n")
+        assert path.read_text().count("Proof:") == 3
         # Body-only input gets current metadata on rewrite.
         bare = root / "bare.md"
         bare.write_text("Old body")

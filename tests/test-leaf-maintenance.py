@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix="kt-maintenance-") as temporary:
 
     source = root / "what/is/first.md"
     source.parent.mkdir(parents=True)
-    first = "---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nFirst answer.\n\nA true assertion.\n\nProof: (verified at 2026-09-12T12:00:00+00:00)\n\n```bash\ntest 1 -eq 1\n```\n"
+    first = "---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nFirst answer.\n\nA true assertion.\n\nProof:\n\n```bash\ntest 1 -eq 1\n```\n"
     source.write_text(first)
     alias = base / "alias.md"
     os.link(source, alias)
@@ -90,7 +90,7 @@ with tempfile.TemporaryDirectory(prefix="kt-maintenance-") as temporary:
     run(*args)
     text = output.read_text()
     assert text.count("---\n") == 2 and text.index("First answer") < text.index("Second answer")
-    assert "Proof: (verified at _)" in text
+    assert "Proof:" in text
     assert 'status: "brown"' in text
     assert "revised_at:" in text
     assert not source.exists() and not second.exists()
@@ -102,11 +102,12 @@ with tempfile.TemporaryDirectory(prefix="kt-maintenance-") as temporary:
     run(*args, "--expect", "0" * 64, expected=4)
     combined_alias = base / "combined-alias.md"
     os.link(output, combined_alias)
-    # Replacement preserves destination hardlinks and invalidates even unchanged proofs.
-    output.write_text(text.replace("verified at _", "verified at caller-invented-date"))
+    # Replacement preserves destination hardlinks and rebuilds from current sources.
+    output.write_text(text.replace("First answer.", "Caller-local stale answer."))
     run(*args, "--expect", digest(output))
     assert output.samefile(combined_alias)
-    assert "caller-invented-date" not in output.read_text()
+    assert "Caller-local stale answer." not in output.read_text()
+    assert "Proof:" in output.read_text()
     assert not source.exists() and not second.exists()
     source.write_text(first)
     second.write_text(second_body)

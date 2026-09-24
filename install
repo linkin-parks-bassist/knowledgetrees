@@ -74,11 +74,10 @@ def same_bytes(path: Path, expected: bytes) -> bool:
 
 
 def same_leaf_bytes(path: Path, expected: bytes) -> bool:
-    """Successful proof refreshes are expected local state, not content conflicts."""
+    """Ignore only expected local review/status state when detecting conflicts."""
     try:
         def normalize(data):
-            text = re.sub(r"(?m)^Proof: \(verified at [^)\n]+\)[ \t]*$",
-                          "Proof: (verified at _)", data.decode())
+            text = data.decode()
             text = re.sub(r"(?m)^checked_at: [^\n]+\n", "", text)
             return re.sub(r'(?m)^status: ["\']?(?:green|yellow)["\']?$',
                           "status: checked", text)

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T08:10:39+10:00"
+revised_at: "2026-09-24T10:31:58+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -22,19 +22,23 @@ also need `name` and `description` for harness discovery. Blockers, next checks,
 evidence, provenance, and review conditions belong in the answer body; root and
 path supply scope. All stored timestamps are ISO 8601 with a timezone. Unsupported
 or malformed front matter is rejected by write commands and brown in proof checks.
-Empty orientation and spine leaves created by `kt init` remain empty until filled. A leaf is a current answer, never a chronological log: task narration, session notes, progress updates, and tool transcripts are tree poisoning and must not be appended. History remains only when it explains a current constraint or decision; Git or an external log owns chronology.
+The empty orientation created by neutral `kt init` remains empty until filled; only `kt init --project` creates empty spec, plan, state, and next placeholders. A leaf is a current answer, never a chronological log: task narration, session notes, progress updates, and tool transcripts are tree poisoning and must not be appended. History remains only when it explains a current constraint or decision; Git or an external log owns chronology.
 
 `kt add` and `kt rewrite` accept answer bodies and generate front matter. Options `--expires-at TIMESTAMP` and `--expires-every DURATION` set freshness; `--verifiable` asserts complete proof coverage. Rewrite preserves omitted optional fields; `--no-expiry` and `--no-verifiable` clear them. `kt add`, `kt rewrite`, and `kt combine` set `revised_at` for changes. A new leaf starts green (with `checked_at` too when `--expires-every` is given), and a rewrite keeps the status and `checked_at`, so a brown leaf stays brown through a rewrite until
 an independent whole-leaf check. `kt combine` yields the worst status of its sources. `kt prove` writes the evaluated color and only ever lowers it; the sole leaf it raises is a `verifiable: true` one whose proofs all pass. Elapsed
 expiry makes an otherwise passing leaf yellow; it reports yellow counts without
 listing their paths. Brown is sticky after proof failure or malformed structure,
-prints the affected path, and causes a nonzero exit. Proof verification timestamps
-belong to individual `Proof:` markers and never advance manual `checked_at`.
-An unflagged brown leaf needs an independent `kt renew` after repair. A reviewed
+prints the affected path, and causes a nonzero exit. Every executable predicate follows
+an exact, timeless `Proof:` delimiter; proof runs never write an outcome or timestamp
+to that marker and never advance manual `checked_at`. A writing proof run accepts
+legacy `(verified|falsified at …)` markers as migration input and silently normalizes
+them to `Proof:` without parsing the timestamp; `--no-stamp` accepts them read-only. An unflagged brown leaf needs
+an independent `kt renew` after repair. A reviewed
 `verifiable: true` leaf requires at least one proof and becomes green when every
 proof runs and passes with valid structure, even after a prior failure or expiry.
-Missing or failed proofs make it brown. `--no-stamp` is read-only. Proof and status
-writes preserve hardlink identity and avoid steady-state timestamp churn.
+Missing or failed proofs make it brown. `--no-stamp` is fully read-only; ordinary
+proof runs may write only leaf lifecycle status. Status writes preserve hardlink
+identity, while stable results avoid steady-state file churn.
 
 A zero-exit `kt prove` run means only that selected leaves had no brown-level
 failure detected at that time; yellow expiry warnings may remain. Green includes
@@ -50,21 +54,32 @@ guidance before unrelated work or completion. If truth remains unresolved, remov
 the unsupported claim and record the blocker and next check. Passing proofs and
 metadata colors do not establish correctness of unproved prose.
 
+A brown leaf or failed proof check is a priority-one incident and mandatory stop
+condition, including during startup when the user gave no task. Before any other
+action, the agent's first response prominently reports the brown result and leaf;
+a neutral readiness response is noncompliant. The agent then limits work to finding
+why the leaf or proof differs from reality, choosing and performing the safest
+remediation (normally correcting its content or proof), independently reviewing it,
+and re-checking until brown clears. If safe remediation cannot be established, the
+agent asks the user for guidance. Only explicit user permission to ignore that
+specific brown status allows unrelated work to resume, without validating the leaf.
+
 A behavior or policy change is complete only after an explicit affected-owner inventory covers narrow and central procedures, policy/access guidance, local/global owners, public example, README and CLI help, startup and installer surfaces, repository spine leaves, and installed guidance. Search positively for the new behavior and negatively for superseded counts, lists, fallbacks, and limitations; read every hit in context and repeat the negative searches after repair. Generated copies must be refreshed and checked for drift. Tests, `kt prove`, timestamps, and byte equality are necessary checks, not substitutes for reading and reconciling every affected owner.
 
 ## Retrieval and maintenance
 
 The CLI supports sentence-prefix questions, root-qualified `kt open`, ranked
 `kt find`, `kt grep` (literal or regex text search that respects access), `kt dict`, `kt add`, `kt rewrite`, `kt renew`, `kt status` (read-only listing of non-green leaves with reasons), `kt rm`, `kt mv`,
-`kt combine`, root registration/access, and `kt prove`. Exact reads print verbatim
-content on stdout and its SHA-256 revision on stderr. `kt rewrite ADDRESS HASH
+`kt combine`, root registration/access, and `kt prove`. Exact reads print complete content on stdout, adding a presentation-only trailing
+newline when stored bytes lack one, and print the stored bytes' SHA-256 revision on
+stderr. Every non-empty CLI stdout or stderr stream ends with a newline. `kt rewrite ADDRESS HASH
 BODY` requires the full-read revision, rejects stale writes, preserves
-hardlinks and still-valid answer text, resets changed proof markers, and produces
-no normal success output. Evidence belongs in the answer. `kt rm` and `kt mv`
+hardlinks and still-valid answer text, leaves exact `Proof:` markers as supplied in
+the answer, and produces no normal success output. Evidence belongs in the answer. `kt rm` and `kt mv`
 require `--expect`; move refuses overwrites and preserves bytes. `kt combine`
-concatenates source bodies in order, resets inherited proof stamps and manual
-check time, keeps brown if any source was brown, and removes sources only after a
-successful save. Destructive maintenance must detect conflicts and preserve
+concatenates source bodies in order, preserves exact, timeless `Proof:` markers,
+resets manual check time, keeps brown if any source was brown, and removes sources
+only after a successful save. Destructive maintenance must detect conflicts and preserve
 changed sources. All mutations honor root access and forced privacy.
 
 Default lookup output is compact plain text with root-qualified addresses,
@@ -85,8 +100,10 @@ must not leak through lookup, reads, capture, symlinks, proofs, or startup.
 Agents never invent approval. Normal grants use MCP elicitation; if a client cannot complete it, explicit conversational authorization for the pending request's exact root and scope permits `kt_access_confirm`. Wider revocation uses an equivalent one-time repeat-call continuation. Direct policy administration remains terminal-only. The root registry and
 unrelated host permissions survive installation.
 
-`kt init [ORIENTATION]` creates an empty local tree and spine, registers it
-under `ask` without cross-project access, and refuses to overwrite an existing tree. `kt info` prints the canonical global procedure, exact local orientation,
+`kt init [ORIENTATION]` creates a neutral local tree with the six canonical
+branches and `where/am/i.md`, registers it under `ask` without cross-project
+access, and refuses to overwrite an existing tree. `kt init --project
+[ORIENTATION]` additionally creates empty spec, plan, state, and next leaves. `kt info` prints the canonical global procedure, exact local orientation,
 accessible dictionary, and local proof result in that order; without a local
 tree or local orientation it falls back to the global orientation and proof. Startup hooks inject
 its complete output through the final proof summary. The bootstrap is once per
@@ -106,7 +123,7 @@ Claude Code drops hook context past roughly 10,000 characters, so its startup
 hook sends an instruction to call the `kt_info` tool (or run `kt info`) when the output exceeds
 9,500 bytes, rather than a silently truncated startup output.
 
-The 23 MCP tools (`kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_rewrite`, `kt_edit`, `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_renew`, `kt_dict`, `kt_roots`, `kt_register`, `kt_prove`, `kt_status`, `kt_access_status`, `kt_access_request`, `kt_access_confirm`, `kt_access_revoke`) delegate every operation to the CLI so revision, access, locking, and proof semantics are unchanged, and carry read-only and destructive annotations. Whole-leaf reads and exact lookup hits return the complete answer plus its SHA-256 `Revision:` line and no other metadata; neither MCP nor kt supports partial leaf reads. Ranked excerpts are selectors, not reads. `kt_rewrite` is the standard editing tool and requires that read hash; the CLI rejects stale hashes under lock. `kt_edit` is used only for economy on a tiny surgical exact-match change, and renewal still requires the server's remembered whole read. Agent guidance names the tools first with the shell only as the fallback. `kt_add`, `kt_prove`, and `kt_status` accept an approved root label or absolute root path as an alternative to local/global scope. `kt_rm` and `kt_mv` require a whole-read source hash; `kt_combine` requires hashes for every source and any existing destination. `kt_init` automatically registers the new tree under `ask` and retains the CLI refusal to overwrite an existing tree; `kt_register` records an existing root under `ask` without granting it. Direct access-policy mutation and the permissions bypass stay CLI-only, and no input may inject a CLI option. The one exception is access approval:
+The 23 MCP tools (`kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_rewrite`, `kt_edit`, `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_renew`, `kt_dict`, `kt_roots`, `kt_register`, `kt_prove`, `kt_status`, `kt_access_status`, `kt_access_request`, `kt_access_confirm`, `kt_access_revoke`) delegate every operation to the CLI so revision, access, locking, and proof semantics are unchanged, and carry read-only and destructive annotations. Whole-leaf reads and exact lookup hits return the complete answer plus its SHA-256 `Revision:` line and no other metadata; neither MCP nor kt supports partial leaf reads. Ranked excerpts are selectors, not reads. `kt_rewrite` is the standard editing tool and requires that read hash; the CLI rejects stale hashes under lock. `kt_edit` is used only for economy on a tiny surgical exact-match change, and renewal still requires the server's remembered whole read. Agent guidance names the tools first with the shell only as the fallback. `kt_add`, `kt_prove`, and `kt_status` accept an approved root label or absolute root path as an alternative to local/global scope. `kt_rm` and `kt_mv` require a whole-read source hash; `kt_combine` requires hashes for every source and any existing destination. `kt_init` creates the neutral baseline by default, accepts `project: true` for the four project-spine placeholders, automatically registers the new tree under `ask`, and retains the CLI refusal to overwrite an existing tree; `kt_register` records an existing root under `ask` without granting it. Direct access-policy mutation and the permissions bypass stay CLI-only, and no input may inject a CLI option. The one exception is access approval:
 `kt_access_request` sends MCP elicitation and persists `allow` with the CLI's own
 `apply_access_decision` only for an accepted response with a valid scope. Denied
 and force-private roots are never prompted for, and the CLI itself keeps its

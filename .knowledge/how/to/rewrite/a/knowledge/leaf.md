@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-21T14:45:59+10:00"
+revised_at: "2026-09-24T10:06:24+10:00"
 ---
 
 Agents use `kt_rewrite` as the standard editing tool: first use `kt_read` or an exact lookup, which returns the complete answer plus its `Revision: HASH` and no other metadata, then pass that hash with the complete replacement answer. Neither MCP nor kt has partial leaf reads. Ranked excerpts are selectors, not reads, and supply no hash. The locked CLI rejects stale hashes. Use `kt_edit` only for economy when making a tiny surgical exact-match change after a whole read; the shell command below has the same whole-answer contract.
@@ -38,15 +38,14 @@ Access policies apply to reading and rewriting; symlink aliases cannot be rewrit
 
 An unchanged body with no metadata-option change is a no-op. Changed body or
 optional metadata refreshes `revised_at` and keeps the leaf's `status` and
-`checked_at` (`--expires-every` starts its clock at that moment). An unchanged assertion-paragraph
-plus fenced predicate retains its original proof marker. New or changed proofs
-are reset to `Proof: (verified at _)` and must be checked separately. Rewriting
-never executes proof bodies or claims independent whole-leaf verification.
+`checked_at` (`--expires-every` starts its clock at that moment). Exact, timeless `Proof:` markers remain part of the supplied answer whether their
+assertion or fenced predicate changed. Rewriting never executes proof bodies,
+stores proof outcomes or timestamps, or claims independent whole-leaf verification.
 A brown leaf stays brown, and a yellow leaf yellow, through a rewrite until an independent whole-leaf
 review is recorded with `kt renew`, or complete eligible proofs pass on a
 `verifiable: true` leaf.
 
 Evidence: the rewrite integration test uses a standalone non-Git tree and verifies conflict
-refusal, dry-run/no-op behavior, in-place hardlinks, status and check-time preservation, unchanged
-and changed proof stamps, sticky falsification, body-only text, input validation,
+refusal, dry-run/no-op behavior, in-place hardlinks, status and check-time preservation, timeless proof-marker preservation,
+sticky falsification, body-only text, input validation,
 symlink refusal, and denied-root behavior. Existing lookup and access tests pass.

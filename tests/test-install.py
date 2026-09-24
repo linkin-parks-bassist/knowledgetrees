@@ -231,10 +231,10 @@ def main() -> None:
         capture_owner = knowledge / installed_skills["knowledgetrees-capture"]
         proof_owner = knowledge / "how/to/use/knowledgetree/hooks.md"
         proof_content = proof_owner.read_text()
-        assert "Proof: (verified at " in proof_content
-        proof_owner.write_text(proof_content.replace("Proof: (verified at ", "Proof: (falsified at "))
+        assert "\nProof:\n" in proof_content
+        proof_owner.write_text(proof_content.replace("\nProof:\n", "\nProof: stale-validation-metadata\n", 1))
         run(*home_arguments, expected=2)
-        assert "Proof: (falsified at " in proof_owner.read_text()
+        assert "Proof: stale-validation-metadata" in proof_owner.read_text()
         proof_owner.write_text(proof_content.replace("status: green", "status: brown", 1))
         run(*home_arguments, expected=2)
         assert "status: brown" in proof_owner.read_text()

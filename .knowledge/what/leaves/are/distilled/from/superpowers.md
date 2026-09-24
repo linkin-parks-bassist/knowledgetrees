@@ -1,11 +1,11 @@
 ---
 status: green
-revised_at: "2026-09-20T08:51:45+10:00"
+revised_at: "2026-09-24T10:01:02+10:00"
 ---
 
 Exactly four example leaves identify Superpowers as their source.
 
-Proof: (verified at _)
+Proof:
 
 ```bash
 test "$(grep -rl 'Adapted from Superpowers 6.3.0' example --include='*.md' | wc -l)" = 4

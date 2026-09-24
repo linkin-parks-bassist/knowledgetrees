@@ -52,6 +52,8 @@ def main():
                                     env=env, text=True, capture_output=True)
             assert result.returncode == expected, (result.stdout, result.stderr)
             assert "\033[" not in result.stdout
+            assert not result.stdout or result.stdout.endswith("\n"), (args, result.stdout)
+            assert not result.stderr or result.stderr.endswith("\n"), (args, result.stderr)
             return result.stdout
 
         result = run("add", "How to do the thing?", "Do it carefully.")
@@ -111,19 +113,19 @@ def main():
         pretty_paths = [line.split()[1] for line in pretty.splitlines() if line[:1].isdigit() and ". " in line]
         assert compact_paths == pretty_paths, (compact_paths, pretty_paths)
         assert run("--pretty", "find", "leaves") == pretty
-        assert "Read verbatim:" not in compact and "Read verbatim:" in pretty
+        assert "Read complete leaf:" not in compact and "Read complete leaf:" in pretty
         long_leaf = local / "what/is/longexcerpt.md"
         long_leaf.parent.mkdir(parents=True, exist_ok=True)
         long_body = "longexcerpt " + "useful context " * 1000
         long_leaf.write_text(long_body)
         long_result = run("find", "longexcerpt")
         assert len(long_result) < 400, "default search must not dump a long paragraph"
-        assert run("open", "project:what/is/longexcerpt.md") == long_body
-        assert run("what", "is", "longexcerpt") == long_body
+        assert run("open", "project:what/is/longexcerpt.md") == long_body + "\n"
+        assert run("what", "is", "longexcerpt") == long_body + "\n"
         for arguments in (("open", "local:what/is/longexcerpt.md"), ("what", "is", "longexcerpt")):
             read = subprocess.run([sys.executable, str(SCRIPT), *arguments], cwd=project, env=env, text=True, capture_output=True)
             import hashlib
-            assert read.returncode == 0 and read.stdout == long_body
+            assert read.returncode == 0 and read.stdout == long_body + "\n"
             assert "Revision: " + hashlib.sha256(long_body.encode()).hexdigest() in read.stderr
 
         for question in ("does a proof verify a leaf", "is a tree authorization"):
@@ -194,9 +196,9 @@ def main():
         assert (fresh / ".knowledge/where/am/i.md").read_text() == "A new orientation.\n"
         assert all((fresh / ".knowledge" / branch).is_dir() for branch in
                    ("how", "what", "where", "why", "does", "is"))
-        assert all((fresh / ".knowledge" / leaf).read_bytes() == b"" for leaf in
-                   ("what/is/the/spec.md", "what/is/the/plan.md",
-                    "what/is/the/state.md", "what/is/next.md"))
+        assert not any((fresh / ".knowledge" / leaf).exists() for leaf in
+                       ("what/is/the/spec.md", "what/is/the/plan.md",
+                        "what/is/the/state.md", "what/is/next.md"))
         run("init", cwd=fresh, expected=2)
         assert json.loads(config.read_text())["roots"] == registered, "refused init must not change registration"
         assert (fresh / ".knowledge/where/am/i.md").read_text() == "A new orientation.\n"
@@ -204,6 +206,14 @@ def main():
         empty.mkdir()
         run("init", cwd=empty)
         assert (empty / ".knowledge/where/am/i.md").read_bytes() == b""
+        project_root = base / "project-init"
+        project_root.mkdir()
+        run("init", "--project", "Project orientation.", cwd=project_root)
+        assert (project_root / ".knowledge/where/am/i.md").read_text() == "Project orientation."
+        assert all((project_root / ".knowledge" / leaf).read_bytes() == b"" for leaf in
+                   ("what/is/the/spec.md", "what/is/the/plan.md",
+                    "what/is/the/state.md", "what/is/next.md"))
+        assert "--project" in run("init", "--help", cwd=base)
         malformed = base / "malformed registry"
         malformed.mkdir()
         broken_config = malformed / "access.json"
@@ -223,7 +233,7 @@ def main():
         assert "--local" in run("prove", "--help")
         global_failure = global_root / "what/is/global-proof.md"
         global_failure.parent.mkdir(parents=True, exist_ok=True)
-        global_failure.write_text("Failing global proof.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
+        global_failure.write_text("Failing global proof.\n\nProof:\n\n```bash\nfalse\n```\n")
         proof_report = run("prove", "--local", "--no-stamp", "global-proof")
         assert "Leaves: 0 total" in proof_report and "Proofs: 0 total" in proof_report
         run("prove", "--global", "--no-stamp", "global-proof", expected=1)
@@ -231,14 +241,14 @@ def main():
         global_failure.unlink()
         proof = local / "what/is/proven.md"
         proof.parent.mkdir(parents=True, exist_ok=True)
-        proof.write_text("Passing.\n\nProof: (verified at _)\n\n```bash\ntest 1 -eq 1\n```\n")
+        proof.write_text("Passing.\n\nProof:\n\n```bash\ntest 1 -eq 1\n```\n")
         proof_report = run("prove", "--no-stamp", "proven")
         assert "Leaves: 1 total" in proof_report and "Proofs: 1 total" in proof_report and "1 valid" in proof_report
-        assert "verified at _" in proof.read_text()
+        assert "\nProof:\n" in proof.read_text()
         run("prove", "proven")
-        assert "verified at _" in proof.read_text()
+        assert "\nProof:\n" in proof.read_text()
         assert proof.read_text().startswith("---\nstatus: green\n")
-        proof.write_text("Failing.\n\nProof: (verified at _)\n\n```bash\nfalse\n```\n")
+        proof.write_text("Failing.\n\nProof:\n\n```bash\nfalse\n```\n")
         run("prove", "--no-stamp", "proven", expected=1)
         assert "status: brown" not in proof.read_text()
     print("kt integration checks passed")

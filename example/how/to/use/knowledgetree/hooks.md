@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-21T14:30:56+10:00"
+revised_at: "2026-09-24T10:01:06+10:00"
 ---
 
 Install startup-only knowledge-tree context with the knowledge-tree installer. For an
@@ -19,7 +19,7 @@ adapters are rewritten as startup-only adapters.
 
 The installed handler is executable.
 
-Proof: (verified at _)
+Proof:
 
 ```sh
 test -x "$HOME/.knowledge/.tools/kt-hooks"

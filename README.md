@@ -60,6 +60,14 @@ them for writes. Direct policy changes and the global permissions bypass remain 
 (`capture_review`, `garden`, `verify_leaf`, `revoke_access`) appear as slash commands where the
 client supports them.
 
+Brown is an incident, including at startup when the user supplied no task. The agent's first
+response must prominently identify the brown leaf and make reconciliation priority one; a neutral
+readiness response is noncompliant. Until brown clears, the agent may only diagnose why the leaf or
+proof no longer matches reality, choose and perform the safest remediation (normally correcting the
+leaf or proof), and re-check it. If safe remediation cannot be established, the agent asks the user
+for guidance. Only explicit user permission to ignore that specific brown status allows other work
+to resume, and that permission does not validate or green the leaf.
+
 ### Approving access without leaving the harness
 
 Access control used to mean opening another terminal. Now, when an agent hits a restricted root,
@@ -317,7 +325,7 @@ immediately and mechanically verifiable:
 ````markdown
 The repository has a local orientation leaf.
 
-Proof: (verified at _)
+Proof:
 
 ```bash
 test -f .knowledge/where/am/i.md
@@ -348,7 +356,8 @@ paths follow on standard error. Yellow paths are read from leaves when needed. L
 plans, procedures, opinions, and other content that is not mechanically verifiable.
 A new leaf starts green, and adding or editing a leaf keeps its status; elapsed `expires_at` or
 `expires_every` freshness makes a leaf yellow and unusable until re-verification. Brown means
-falsified, malformed, or proof-failing; it makes the tree busted and must be repaired.
+falsified, malformed, or proof-failing; it makes the tree busted and activates the mandatory
+brown-incident response above.
 A proof run only ever lowers a status. Raising one takes a manual whole-leaf review
 (`kt renew`), except that a `verifiable: true` leaf whose proofs all pass is green.
 Agents should add expiry metadata to facts likely to change, while leaving durable
@@ -357,7 +366,8 @@ Normal proof evaluation writes `status: green|yellow|brown` in flat front matter
 `revised_at` records the last content change; `kt renew ADDRESS HASH`
 (tool `kt_renew`) records `checked_at` after manual review. Optional `expires_at` and `expires_every` set
 freshness limits, and `verifiable: true` asserts complete proof coverage.
-Timestamps use ISO 8601 with a timezone. Unsupported front matter makes a leaf
+Metadata timestamps use ISO 8601 with a timezone. Proof markers carry no timestamp
+or outcome. Unsupported front matter makes a leaf
 brown; `--no-stamp` writes nothing.
 
 For example, `kt` can emit this front matter; supply only the answer body to
@@ -388,7 +398,7 @@ an expiry. Missing, malformed, skipped, or failed proofs make it brown. The auth
 responsible for ensuring every claim is covered; the flag cannot detect uncovered
 prose.
 
-`kt init [ORIENTATION]` creates `.knowledge/` in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches, `where/am/i.md`, and empty spec, plan, state, and next leaves. The optional argument supplies the exact orientation file contents. It automatically registers the new root under `ask` without granting cross-project access, and refuses to overwrite an existing tree.
+`kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches plus `where/am/i.md`. It does not assume an ongoing linear project. Use `kt init --project [ORIENTATION]` when the scope is a repository project that also needs empty spec, plan, state, and next leaves. The optional argument supplies the exact orientation file contents. Both forms register the new root under `ask` without granting cross-project access and refuse to overwrite an existing tree.
 
 `kt info` performs fresh-session initialization in output-first order: it prints
 the canonical global procedure and exact local orientation,
@@ -411,10 +421,13 @@ This gives the schema a layer of executable provability: eligible facts reconnec
 to reality instead of remaining unchecked prose. A passing verifier establishes
 that the marked predicates passed—not that every unproved statement is true.
 
-Passing proof timestamps refresh only for leaves with expiry metadata; non-expiring
-leaves keep their existing markers unchanged. Failed proofs receive
-`Proof: (falsified at …)` and set `status: brown`. The first failure time remains
-on the proof marker rather than churning on every sweep.
+The marker is always the exact timeless delimiter `Proof:`. Proof runs never rewrite
+it or store per-proof outcomes or timestamps. A failure sets the leaf's lifecycle
+status to brown; the current run's summary and diagnostics report the outcome.
+For compatibility, a writing `kt prove` accepts legacy `(verified|falsified at …)`
+markers and silently normalizes them to `Proof:` after evaluation. `--no-stamp`
+accepts the same legacy input without changing bytes; legacy timestamp text is not
+parsed or treated as freshness evidence.
 Unflagged leaves require independent review to clear falsification:
 even if every proof later passes, the leaf remains falsified. Passing every proof is
 necessary but not sufficient for an unflagged leaf. A reviewed `verifiable: true`
@@ -552,14 +565,15 @@ Preview its work with `./install --dry-run`.
 Installation also puts `kt` in `~/.local/bin` (add that directory to your `PATH`
 if needed). Use `kt find leaves` or `kt find "how to add knowledge leaves"` for
 ranked keyword results, `kt open global:how/to/add/knowledge/leaves.md` to read a
-leaf verbatim, and `kt prove --no-stamp leaves` to check relevant proofs.
+complete leaf, and `kt prove --no-stamp leaves` to check relevant proofs.
 `kt roots` shows the active scopes. Default output is compact plain text for
 agents. Non-exact searches use one summary and one tab-separated line per result:
 leaf address, lexical coverage (with `weak` below threshold), leaf status, and
 an excerpt of at most 160 characters. Use `kt --pretty find leaves`
 or `kt where is vivado --pretty` for the expanded human layout and terminal colors.
-Exact answers and `kt open` remain verbatim in both modes; search ranking and
-exit statuses are unchanged. Search is lexical, not a semantic model;
+Exact answers and `kt open` preserve complete content in both modes; when stored
+content lacks a final newline, the CLI adds one to its presentation so the shell
+prompt starts cleanly. Search ranking and exit statuses are unchanged. Search is lexical, not a semantic model;
 scores rank matches, and a miss does not prove knowledge is absent.
 
 `kt dict` prints the sorted unique vocabulary from the final two segments of leaf paths across
@@ -661,10 +675,10 @@ older descriptions or procedure content.
 
 ## A minimal adoption path
 
-1. Create `.knowledge/where/am/i.md` and the canonical `how/`, `what/`, `where/`,
-   `why/`, `does/`, and `is/` branches.
-2. For repositories, create current-truth spine leaves for the spec, plan, state,
-   and next action.
+1. Run `kt init [ORIENTATION]` to create `.knowledge/where/am/i.md` and the
+   canonical `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches.
+2. For repositories, use `kt init --project [ORIENTATION]` so the initial tree
+   also contains current-truth spine leaves for the spec, plan, state, and next action.
 3. Teach agents to inventory affected owners, repair stale or contradictory answers,
    and rerun negative searches for superseded claims across guidance and installed copies.
 4. Project frequently needed answers into paths that read as natural-language
@@ -701,9 +715,13 @@ authority, ownership, acceptance criteria, and runtime lifecycle.
 
 ### What happens when a proof fails?
 
-Stop trusting the claim. Determine whether the fact is stale, the predicate is
-broken, or the check could not run. Then update or mark the knowledge accordingly. A
-failed implementation check does not automatically rewrite a requirement.
+Treat it as a priority-one brown incident. First, immediately tell the user which leaf failed—even
+when this is the startup check and the user supplied no work. Stop all unrelated work. Determine
+whether the fact is stale, the predicate is broken, or the check could not run; then choose the
+safest remediation, normally correcting the leaf or proof, and re-check it. If the cause or safe
+repair cannot be established, ask the user for guidance. Resume other work only after brown clears
+or the user explicitly permits ignoring that specific status. A failed implementation check does
+not automatically rewrite a requirement.
 
 ## Methodology provenance
 
@@ -827,7 +845,7 @@ Combine coalesces in input order and removes sources after saving successfully.
 An existing destination requires --expect HASH; if it is an input, it is retained.
 Dry-run changes nothing. Source answer bodies, including unresolved blockers and
 next checks, survive. A brown source keeps the combined leaf brown; manual check
-time and proof stamps are reset for review. Sources changed
+time is reset for review while timeless proof markers remain unchanged. Sources changed
 during coalescing are retained. Multi-file cleanup is not transactional, so inspect
 partially completed cleanup before retrying. Moves refuse overwrites and preserve
 same-filesystem hardlinks; cross-filesystem moves copy before removing the source.
@@ -846,13 +864,16 @@ retain required consent prompts and disclosures, without post-save receipts.
 Reads, searches, help, policy inspection, dry-run previews and explicitly verbose
 proof checks return the requested information. Failures retain diagnostics and
 nonzero exit statuses; silence alone is not sufficient without checking status.
+Every non-empty stdout or stderr stream ends with a newline.
 Accuracy/preservation reminders belong in the one-shot review hook.
 
 ### Rewriting an existing answer
 
 Every full leaf read (`kt open` or an exact question) automatically prints its
-SHA-256 hash as `Revision: HASH` on stderr. stdout remains the verbatim leaf, so
-the read brings both contents and revision into context without an extra call.
+SHA-256 hash as `Revision: HASH` on stderr. Stdout contains the complete leaf and
+adds a presentation-only trailing newline when the stored bytes lack one. The
+revision still hashes the stored bytes, so the read brings both contents and
+revision into context without an extra call.
 
 Rewrite using that required positional hash:
 
@@ -882,7 +903,7 @@ advance manual check time or raise a status.
 
 Empty orientation leaves remain empty.
 
-Rewrite preserves hardlinks, keeps the leaf's status and check time, and resets new or
-changed proof stamps. It does not execute proofs or clear sticky falsification.
+Rewrite preserves hardlinks, keeps the leaf's status and check time, and leaves
+timeless `Proof:` markers unchanged. It does not execute proofs or clear sticky falsification.
 Git is optional history, not a requirement. See
 `how/to/rewrite/a/knowledge/leaf.md` for the canonical procedure.
