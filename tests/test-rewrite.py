@@ -69,7 +69,7 @@ true
         assert path.read_text() == original and path.stat().st_ino == inode
         run("rewrite", "project:how/to/test.md", token, revised)
         updated = path.read_text()
-        assert "status: \"brown\"" in updated and "revised_at:" in updated
+        assert "status: brown" in updated and "revised_at:" in updated
         assert updated.count("Proof:") == 2
         assert alias.read_text() == updated and path.stat().st_ino == inode
         run("rewrite", "project:how/to/test.md", token, "stale replacement", expected=4)
@@ -91,7 +91,7 @@ true
         bare.write_text("Old body")
         token = run("open", "project:bare.md").stderr.strip().removeprefix("Revision: ")
         run("rewrite", "project:bare.md", token, "New body\n")
-        assert 'status: "green"' in bare.read_text()
+        assert 'status: green' in bare.read_text()
         assert "New body" in bare.read_text()
         fresh = hashlib.sha256(bare.read_bytes()).hexdigest()
         for invalid in ("", "---\nunclosed"):
@@ -111,7 +111,7 @@ true
         assert rewritten.stderr == ""
         assert path.stat().st_ino == inode and alias.read_text() == path.read_text()
         assert "Inline answer\nwith multiple lines" in path.read_text()
-        assert 'status: "brown"' in path.read_text() and "revised_at:" in path.read_text()
+        assert 'status: brown' in path.read_text() and "revised_at:" in path.read_text()
         run("rewrite", "project:how/to/test.md", token, "stale", expected=4)
         current = path.read_text()
         token = hashlib.sha256(current.encode()).hexdigest()

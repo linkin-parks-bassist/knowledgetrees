@@ -1170,9 +1170,7 @@ def revised_leaf(body, original, args):
     if getattr(args, "expires_every", None) is not None:
         fields["checked_at"] = now
     fields.update(requested_lifecycle(args, previous))
-    header = "".join(f"{key}: {json.dumps(value, ensure_ascii=False)}\n"
-                     for key, value in fields.items())
-    return "---\n" + header + "---\n\n" + body.strip("\r\n") + "\n"
+    return "---\n" + front_matter(fields) + "---\n\n" + body.strip("\r\n") + "\n"
 
 
 def rewrite_leaf(args):
@@ -1317,7 +1315,7 @@ def combine_leaves(args):
                             message="kt: combine input changed; no output saved; reread inputs")
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     metadata = {"status": inherited, "revised_at": now}
-    content = "---\n" + "".join(f"{key}: {json.dumps(value, ensure_ascii=False)}\n" for key, value in metadata.items())
+    content = "---\n" + front_matter(metadata)
     body = "\n\n".join(bodies) + "\n"
     content += "---\n\n" + body
     if destination.exists():
@@ -1418,8 +1416,7 @@ def capture(args):
     require_verifiable_proof(answer, metadata)
     if args.unresolved:
         answer = answer.rstrip() + f"\n\nBlocker: {args.blocker}\n\nNext check: {args.next_check}"
-    content = "---\n" + "".join(f"{k}: {json.dumps(v, ensure_ascii=False)}\n"
-                                 for k, v in metadata.items()) + "---\n\n" + answer.rstrip() + "\n"
+    content = "---\n" + front_matter(metadata) + "---\n\n" + answer.rstrip() + "\n"
     if args.dry_run:
         print(f"Would create {label}:{path.relative_to(root)}", file=sys.stderr)
         write_stdout(content)
@@ -1569,6 +1566,13 @@ def parse_proofs(path):
             proofs.append((index, fence + 1, PROOF_FENCES[lines[fence]], script))
         index = closing + 1
     return original, proofs, errors, legacy_markers
+
+
+def front_matter(metadata):
+    """Leaf metadata lines, written one way: status bare, exactly as stamping writes it, so a
+    later stamp never rewrites a leaf that did not change state."""
+    return "".join(f"{key}: {value if key == 'status' else json.dumps(value, ensure_ascii=False)}\n"
+                   for key, value in metadata.items())
 
 
 def set_lifecycle_status(text, state):

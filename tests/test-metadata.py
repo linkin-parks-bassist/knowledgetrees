@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory() as directory:
     revision = hashlib.sha256(leaf.read_bytes()).hexdigest()
     run(project, "rewrite", "local:answer.md", revision,
         "Revised answer.\n\nProof:\n\n```bash\ntrue\n```\n")
-    assert 'revised_at: "20' in leaf.read_text() and 'status: "yellow"' in leaf.read_text(), "a rewrite keeps the status it had (unanchored expiry made this yellow)"
+    assert 'revised_at: "20' in leaf.read_text() and 'status: yellow' in leaf.read_text(), "a rewrite keeps the status it had (unanchored expiry made this yellow)"
     assert "checked_at:" not in leaf.read_text()
     revision = hashlib.sha256(leaf.read_bytes()).hexdigest()
     run(project, "renew", "local:answer.md", revision)
@@ -147,14 +147,14 @@ with tempfile.TemporaryDirectory() as directory:
     tree.mkdir(parents=True)
     run(project, "add", "what is new", "A new answer.", "--local")
     new = tree / "new.md"
-    assert 'status: "green"' in new.read_text() and "checked_at" not in new.read_text(), "a new leaf starts green"
+    assert 'status: green' in new.read_text() and "checked_at" not in new.read_text(), "a new leaf starts green"
     run(project, "add", "what is timed", "A timed answer.", "--local", "--expires-every", "2 weeks")
     timed = tree / "timed.md"
-    assert 'status: "green"' in timed.read_text() and "checked_at:" in timed.read_text(), "a recurring window starts its clock"
+    assert 'status: green' in timed.read_text() and "checked_at:" in timed.read_text(), "a recurring window starts its clock"
 
     revision = hashlib.sha256(new.read_bytes()).hexdigest()
     run(project, "rewrite", "local:what/is/new.md", revision, "A revised answer.")
-    assert 'status: "green"' in new.read_text() and "A revised answer." in new.read_text(), "an edit keeps the status"
+    assert 'status: green' in new.read_text() and "A revised answer." in new.read_text(), "an edit keeps the status"
 
     marked = tree / "marked.md"
     marked.write_text("---\nstatus: yellow\nrevised_at: '2026-09-01T00:00:00+00:00'\n---\n\nAwaiting review.\n")
@@ -162,7 +162,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "status: yellow" in marked.read_text(), "prove never raises a status"
     revision = hashlib.sha256(marked.read_bytes()).hexdigest()
     run(project, "rewrite", "local:what/is/marked.md", revision, "Still awaiting review.")
-    assert 'status: "yellow"' in marked.read_text(), "an edit does not clear a yellow mark either"
+    assert 'status: yellow' in marked.read_text(), "an edit does not clear a yellow mark either"
     run(project, "prove", "--local")
     assert "status: yellow" in marked.read_text()
     revision = hashlib.sha256(marked.read_bytes()).hexdigest()
@@ -174,7 +174,7 @@ with tempfile.TemporaryDirectory() as directory:
     revision = hashlib.sha256(brown.read_bytes()).hexdigest()
     run(project, "rewrite", "local:what/is/brown.md", revision, "Repaired but unreviewed.")
     run(project, "prove", "--local", expected=1)
-    assert 'status: "brown"' in brown.read_text() or "status: brown" in brown.read_text(), "only review clears brown"
+    assert "status: brown" in brown.read_text(), "only review clears brown"
 
     proved = tree / "proved.md"
     proved.write_text("---\nstatus: yellow\nrevised_at: '2026-09-01T00:00:00+00:00'\nverifiable: true\n---\n\n"
@@ -187,6 +187,18 @@ with tempfile.TemporaryDirectory() as directory:
     first.write_text("---\nstatus: green\nrevised_at: '2026-09-01T00:00:00+00:00'\n---\n\nOne.\n")
     second.write_text("---\nstatus: yellow\nrevised_at: '2026-09-01T00:00:00+00:00'\n---\n\nTwo.\n")
     run(project, "combine", "local:what/is/first.md", "local:what/is/second.md", "-o", "local:what/is/both.md")
-    assert 'status: "yellow"' in (tree / "both.md").read_text(), "a combined leaf is as unverified as its worst source"
+    assert "status: yellow\n" in (tree / "both.md").read_text(), "a combined leaf is as unverified as its worst source"
 
 print("lifecycle checks passed")
+
+with tempfile.TemporaryDirectory() as directory:
+    project = Path(directory)
+    (project / ".knowledge").mkdir()
+    run(project, "capture", "--local", "what is fresh", "A fresh answer.")
+    fresh = project / ".knowledge/what/is/fresh.md"
+    written = fresh.read_text()
+    assert "status: green\n" in written, written
+    run(project, "prove", "--local")
+    assert fresh.read_text() == written, "a stamp must not rewrite a leaf whose state did not change"
+
+print("front matter checks passed")

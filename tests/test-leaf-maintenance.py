@@ -91,7 +91,7 @@ with tempfile.TemporaryDirectory(prefix="kt-maintenance-") as temporary:
     text = output.read_text()
     assert text.count("---\n") == 2 and text.index("First answer") < text.index("Second answer")
     assert "Proof:" in text
-    assert 'status: "brown"' in text
+    assert 'status: brown' in text
     assert "revised_at:" in text
     assert not source.exists() and not second.exists()
     assert "pending evidence" in text and "inspect source" in text

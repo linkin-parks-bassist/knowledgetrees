@@ -119,7 +119,7 @@ def main():
         error, text = tool("kt_edit", address=address, old_text="Alpha line.", new_text="Omega line.")
         assert not error and "+Omega line." in text and "revised_at" not in text
         assert "Omega line.\nBeta line." in leaf.read_text() and leaf.stat().st_ino == inode
-        assert 'status: "green"' in leaf.read_text(), "an edit keeps the leaf's status"
+        assert 'status: green' in leaf.read_text(), "an edit keeps the leaf's status"
         error, text = tool("kt_rewrite", address=address, revision=revision, answer="Stale overwrite.")
         assert error and "stale" in text and "Stale overwrite" not in leaf.read_text()
         error, text = tool("kt_edit", address=address, old_text="Omega line.", new_text="Alpha again.")
