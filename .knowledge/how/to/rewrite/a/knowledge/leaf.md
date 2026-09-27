@@ -1,9 +1,9 @@
 ---
 status: green
-revised_at: "2026-09-27T14:38:36+10:00"
+revised_at: "2026-09-27T14:50:06+10:00"
 ---
 
-Agents use `kt_rewrite` as the standard editing tool: first use `kt_read` or an exact lookup, which returns the complete answer plus its `Revision: HASH` and no other metadata, then pass that hash with the complete replacement answer. Neither MCP nor kt has partial leaf reads. Ranked excerpts are selectors, not reads, and supply no hash. The locked CLI rejects stale hashes. Use `kt_edit` only for economy when making a tiny surgical exact-match change after a whole read; the shell command below has the same whole-answer contract.
+Agents use `kt_rewrite` as the only editing tool: first use `kt_read` or an exact lookup, which returns the complete answer plus its `Revision: HASH` and no other metadata, then pass that hash with the complete replacement answer. Neither MCP nor kt has partial leaf reads. Ranked excerpts are selectors, not reads, and supply no hash. The locked CLI rejects stale hashes. There is no partial edit: every change rewrites the whole answer, so its full contents are reconsidered each time. Keep leaves short enough to rewrite whole. The shell command below has the same whole-answer contract.
 
 Use the canonical editing command:
 

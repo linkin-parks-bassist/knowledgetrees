@@ -863,13 +863,13 @@ def lean_leaf(text, address):
     state, kind, detail = leaf_health(text, datetime.now(timezone.utc))
     notice = ""
     if kind == "malformed":
-        notice = f"kt: BROWN leaf {address} has malformed metadata ({detail}). STOP: report it to the user, diagnose and repair it (kt_edit), then kt_prove before other work."
+        notice = f"kt: BROWN leaf {address} has malformed metadata ({detail}). STOP: report it to the user, diagnose and repair it (kt_rewrite), then kt_prove before other work."
     elif kind == "falsified":
-        notice = f"kt: BROWN leaf {address}: a proof failed or it was falsified. STOP: report it to the user, diagnose and repair it (kt_edit), then kt_prove before other work."
+        notice = f"kt: BROWN leaf {address}: a proof failed or it was falsified. STOP: report it to the user, diagnose and repair it (kt_rewrite), then kt_prove before other work."
     elif kind:
         why = f"is due for re-verification ({detail})" if kind == "due" else "is marked for re-verification"
         notice = (f"kt: yellow leaf {address} {why}. Verify every claim against current evidence before relying on it, "
-                  "then confirm with kt_renew (kt renew ADDRESS HASH) or repair it with kt_edit.")
+                  "then confirm with kt_renew (kt renew ADDRESS HASH) or repair it with kt_rewrite.")
     body = leaf_parts(text)[1].lstrip("\n")
     return (notice + "\n\n" if notice else "") + body
 

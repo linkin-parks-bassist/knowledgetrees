@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T14:38:17+10:00"
+revised_at: "2026-09-27T14:50:04+10:00"
 ---
 
 Install startup context and turn-end maintenance reminders with the knowledge-tree
@@ -61,7 +61,7 @@ A turn gets no reminder when either of these holds:
   reminder per five minutes per session). Skipped turns are covered by the next
   reminder, which asks about everything since the last pass. Direction-only turns
   with no tool calls are still reminded, because user guidance often belongs in a leaf.
-- **Already maintained:** the turn wrote the tree (a `kt_rewrite`, `kt_edit`,
+- **Already maintained:** the turn wrote the tree (a `kt_rewrite`,
   `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_renew`, or `kt_undo` call under any
   MCP prefix, or a `kt rewrite|add|rm|mv|combine|renew` shell command) and made no
   code edit afterward (`Edit`, `Write`, `MultiEdit`, `NotebookEdit`, OpenCode

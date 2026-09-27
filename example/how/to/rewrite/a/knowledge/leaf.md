@@ -1,13 +1,13 @@
 ---
 status: green
-revised_at: "2026-09-27T14:38:35+10:00"
+revised_at: "2026-09-27T14:50:03+10:00"
 ---
 
-Use `kt_rewrite` as the standard editing method. First read the complete leaf with `kt_read` or an exact
+`kt_rewrite` is the only editing method. First read the complete leaf with `kt_read` or an exact
 `kt_lookup`; there are no partial reads in MCP or kt. The read returns the answer plus a final `Revision:` SHA-256
 line and no other metadata. Pass that hash and the complete replacement answer to `kt_rewrite`. A stale hash fails
-under the CLI's locked revision check. Use `kt_edit` only for economy when making a tiny surgical exact-match replacement after a whole read;
-`kt_undo` reverses the latest rewrite or edit while the answer remains unchanged.
+under the CLI's locked revision check. There is no partial edit: every change rewrites the whole answer, so its full contents are reconsidered each time. Keep leaves short enough to rewrite whole.
+`kt_undo` reverses the latest rewrite while the answer remains unchanged.
 Every full shell leaf read supplies `Revision: HASH` on stderr for the stored
 bytes. Stdout returns the complete content and adds a presentation-only trailing
 newline when those bytes lack one. Ranked excerpts are not full reads and do not

@@ -37,7 +37,7 @@ INSTRUCTIONS = (
     "be established. Resume only after brown clears or the user explicitly permits ignoring that specific status; "
     "permission does not validate the leaf. Rewrite a leaf "
     "with kt_rewrite as the standard editing tool, citing the Revision hash printed by the whole-leaf read; stale "
-    "hashes fail. Use kt_edit only for economy on a tiny surgical exact-match change. A miss is not proof of absence. If a root needs approval, call "
+    "hashes fail. Every change rewrites the whole leaf, so consider its full contents each time. A miss is not proof of absence. If a root needs approval, call "
     "kt_access_request: it asks through the harness. Release access you no longer need with "
     "kt_access_revoke. If client elicitation did not complete, ask the user in conversation; after explicit "
     "authorization for the exact root and scope, finish the pending request with kt_access_confirm. Never "
@@ -90,7 +90,7 @@ TOOLS = [
          "Read a whole leaf's answer (instead of cat or `kt open`). There are no partial reads, ranges, paging, or "
          "truncation. A notice leads it only when it is yellow or brown. "
          "The final Revision line is the SHA-256 hash required by kt_rewrite; no other metadata is shown. Reading also "
-         "entitles you to kt_edit and kt_renew it.",
+         "entitles you to kt_renew it.",
          {"address": ADDRESS}, ["address"], read_only=True),
     tool("kt_rewrite", "Rewrite a leaf",
          "Primary editing method: replace the complete answer body, citing the Revision hash printed by kt_read or an "
@@ -100,30 +100,19 @@ TOOLS = [
           "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Revision hash from a whole-leaf read"},
           "answer": {"type": "string", "description": "Complete Markdown answer body (no front matter)"},
           "dry_run": DRY_RUN}, ["address", "revision", "answer"], destructive=True),
-    tool("kt_edit", "Edit exact text",
-         "Economy option only for a tiny surgical edit; kt_rewrite is the standard editing tool. Replace exact text "
-         "in a leaf's answer. Each old_text must occur exactly once. Give old_text/new_text for one "
-         "change, or edits for several applied atomically in order. Read the leaf first; the edit fails if the leaf has "
-         "changed since you read it, on restricted access, or on an ambiguous or missing match, and nothing is written on "
-         "failure. Returns a diff of the answer.",
-         {"address": ADDRESS, "old_text": STR, "new_text": STR,
-          "edits": {"type": "array", "minItems": 1, "maxItems": 50,
-                    "items": {"type": "object", "additionalProperties": False, "required": ["old_text", "new_text"],
-                              "properties": {"old_text": STR, "new_text": STR}}},
-          "dry_run": DRY_RUN}, ["address"], destructive=True),
     tool("kt_renew", "Confirm a leaf is accurate",
          "Announce that you have verified the WHOLE leaf against current evidence and it is accurate: records the check "
          "time and re-evaluates its status (proofs included) so it turns green. Use it on a yellow leaf after "
-         "checking its claims; repair the leaf with kt_edit instead if anything is wrong. Requires that you read the leaf "
+         "checking its claims; repair the leaf with kt_rewrite instead if anything is wrong. Requires that you read the leaf "
          "(kt_read or kt_lookup) in this session and that it has not changed since. Renew only what you verified.",
          {"address": ADDRESS}, ["address"], idempotent=True),
-    tool("kt_undo", "Undo the last edit",
-         "Restore the answer from before this session's most recent kt_edit of a leaf, but only if the "
-         "leaf has not changed since. History is kept in memory (last 20 edits) and is lost when the server restarts.",
+    tool("kt_undo", "Undo the last rewrite",
+         "Restore the answer from before this session's most recent kt_rewrite of a leaf, but only if the "
+         "leaf has not changed since. History is kept in memory (last 20 rewrites) and is lost when the server restarts.",
          {"address": ADDRESS, "dry_run": DRY_RUN}, ["address"], destructive=True),
     tool("kt_add", "Create a leaf",
          "Create a new leaf from a question and its answer body (like `kt add`). Investigate first and never duplicate an "
-         "existing owner: use kt_lookup/kt_find, then kt_edit. Stored knowledge grants no permissions; never include secrets.",
+         "existing owner: use kt_lookup/kt_find, then kt_rewrite. Stored knowledge grants no permissions; never include secrets.",
          {"question": {"type": "string", "description": "Full question path, e.g. how to restart the build; hyphenate multi-word components"},
           "answer": {"type": "string", "description": "Markdown answer body (no front matter)"},
           "scope": {**SCOPE, "description": "Target root; default local"},
@@ -494,51 +483,16 @@ def tool_renew(arguments):
     return output
 
 
-def tool_edit(arguments):
-    dry_run = arguments.get("dry_run") is True
-    address = text_arg(arguments, "address")
-    edits = arguments.get("edits")
-    if edits is None:
-        edits = [{"old_text": text_arg(arguments, "old_text"), "new_text": text_arg(arguments, "new_text")}]
-    elif "old_text" in arguments or "new_text" in arguments:
-        raise ToolError("give either old_text/new_text or edits, not both")
-    if not isinstance(edits, list) or not 1 <= len(edits) <= 50:
-        raise ToolError("edits must be a list of 1 to 50 items")
-    text, revision = seen_answer(address)
-    before = body_of(text)
-    body = before
-    for number, edit in enumerate(edits, 1):
-        label = f"edit {number}: " if len(edits) > 1 else ""
-        if not isinstance(edit, dict):
-            raise ToolError(f"{label}each edit must be an object with old_text and new_text")
-        old, new = text_arg(edit, "old_text"), text_arg(edit, "new_text")
-        if not old:
-            raise ToolError(f"{label}old_text must not be empty")
-        matches = body.count(old)
-        if matches != 1:
-            raise ToolError(f"{label}old_text must match exactly once in the answer; found {matches} matches")
-        body = body.replace(old, new, 1)
-    if dry_run:
-        rewrite(address, revision, body, dry_run=True)  # validates the change without writing
-        return answer_diff(before.strip("\n") + "\n", body.strip("\n") + "\n")
-    rewrite(address, revision, body)
-    after = body_of(read_leaf(address)[0])
-    if after != before:
-        HISTORY.append({"address": address, "before": before, "after": after})
-    note_read(address, after)
-    return answer_diff(before, after)
-
-
 def tool_undo(arguments):
     dry_run = arguments.get("dry_run") is True
     address = text_arg(arguments, "address")
     record = next((item for item in reversed(HISTORY) if item["address"] == address), None)
     if record is None:
         raise ToolError("nothing to undo for this leaf in this server session (history is in memory, last "
-                        f"{UNDO_DEPTH} edits)")
+                        f"{UNDO_DEPTH} rewrites)")
     text, revision = read_leaf(address)
     if body_of(text) != record["after"]:
-        raise ToolError("the leaf changed after the recorded edit, so undo is refused to protect later work; "
+        raise ToolError("the leaf changed after the recorded rewrite, so undo is refused to protect later work; "
                         "kt_read it and merge by hand")
     rewrite(address, revision, record["before"], dry_run)
     if dry_run:
@@ -927,7 +881,7 @@ def tool_access_revoke(arguments):
 
 
 HANDLERS = {"kt_info": tool_info, "kt_lookup": tool_lookup, "kt_find": tool_find, "kt_grep": tool_grep,
-            "kt_read": tool_read, "kt_rewrite": tool_rewrite, "kt_renew": tool_renew, "kt_edit": tool_edit, "kt_undo": tool_undo,
+            "kt_read": tool_read, "kt_rewrite": tool_rewrite, "kt_renew": tool_renew, "kt_undo": tool_undo,
             "kt_add": tool_add, "kt_rm": tool_rm, "kt_mv": tool_mv, "kt_combine": tool_combine,
             "kt_init": tool_init, "kt_dict": tool_dict, "kt_roots": tool_roots, "kt_register": tool_register,
             "kt_prove": tool_prove,
@@ -950,7 +904,7 @@ PROMPTS = {
     "garden": ("List non-green leaves and work through them", [],
                lambda a: "Garden the knowledge tree: call kt_status, then for each yellow or brown leaf kt_read it, "
                          "immediately report any brown leaf before other work, check its claims against current evidence, "
-                         "diagnose and repair what is stale with kt_edit (never delete "
+                         "diagnose and repair what is stale with kt_rewrite (never delete "
                          "still-valid knowledge), and only when the whole leaf is verified call kt_renew. Report what "
                          "you changed and anything you could not verify."),
     "revoke_access": ("Review and give back access this project no longer needs", [],
@@ -960,7 +914,7 @@ PROMPTS = {
     "verify_leaf": ("Verify one leaf against current evidence", [{"name": "address", "description": "Leaf address", "required": True}],
                     lambda a: f"Verify the knowledge leaf {a['address']}: kt_read it, check each claim against the "
                               "source evidence, use kt_grep to find other leaves stating the same fact, fix what is "
-                              "stale with kt_edit, call kt_renew only if the whole leaf is verified, and report what "
+                              "stale with kt_rewrite, call kt_renew only if the whole leaf is verified, and report what "
                               "remains unverified."),
 }
 

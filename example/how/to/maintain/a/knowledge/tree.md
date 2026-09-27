@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T14:43:23+10:00"
+revised_at: "2026-09-27T14:50:03+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and the repository plan updated to its remaining steps."
 ---
@@ -159,9 +159,7 @@ add expiry merely because content cannot be mechanically or independently verifi
 
 Have the original contents in context before editing a leaf. Full reads are always
 complete and return the revision hash; partial reads do not exist. Use `kt_rewrite`
-as the standard method with that hash. Use `kt_edit` only for economy on a tiny
-surgical exact change, or
-in the shell use kt rewrite ADDRESS HASH BODY. Supply the answer body only. Use `--expires-at`, `--expires-every`, or `--verifiable` to set
+as the only editing method with that hash, or in the shell use kt rewrite ADDRESS HASH BODY. Supply the complete answer body only; there is no partial edit: every change rewrites the whole answer, so its full contents are reconsidered each time. Keep leaves short enough to rewrite whole. Use `--expires-at`, `--expires-every`, or `--verifiable` to set
 optional metadata; `--no-expiry` or `--no-verifiable` to clear it. The required
 hash rejects changed contents; reread and merge on conflict. Preserve still-valid
 knowledge and concurrent edits, correct contradictions

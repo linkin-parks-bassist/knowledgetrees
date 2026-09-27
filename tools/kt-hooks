@@ -18,7 +18,7 @@ FAILURE = (
     "the kt shell command only if you have no kt tools), read relevant leaves, "
     "and inspect/check eligible proofs before reliance; renew a yellow leaf only after verifying it. A kt miss is not proof of "
     "absence: check alternate terms and scoped paths. After understanding what went "
-    "wrong, capture the reusable diagnosis/fix with kt_add (or kt_edit its existing "
+    "wrong, capture the reusable diagnosis/fix with kt_add (or kt_rewrite its existing "
     "owner), before unrelated work or completion. If unresolved, record the blocker "
     "and next check. Expected negative tests need no invented lesson or duplicate "
     "leaf. Respect scope, privacy, and permissions; never capture passwords or raw logs."
@@ -143,7 +143,7 @@ def session_key(harness, payload):
 
 
 # A call writes the tree when it is a kt mutation tool (any MCP prefix) or a kt shell mutation.
-TREE_WRITE = re.compile(r"(?:^|[^A-Za-z0-9])kt_(?:rewrite|edit|add|rm|mv|combine|renew|undo)(?![A-Za-z0-9_])"
+TREE_WRITE = re.compile(r"(?:^|[^A-Za-z0-9])kt_(?:rewrite|add|rm|mv|combine|renew|undo)(?![A-Za-z0-9_])"
                         r"|(?:^|[^\w.-])kt\s+(?:rewrite|add|rm|mv|combine|renew)\b")
 CODE_EDITS = {"edit", "write", "multiedit", "notebookedit", "patch", "apply_patch"}
 PATCH = re.compile(r"\bapply_patch\b|\*\*\* Begin Patch")

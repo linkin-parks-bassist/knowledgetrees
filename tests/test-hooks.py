@@ -145,7 +145,7 @@ def main():
             return run("claude", "stop", {"session_id": "claude-transcript", "stop_hook_active": False, "transcript_path": str(transcript)})
         assert claude_turn("Edit", "mcp__knowledgetrees__kt_rewrite") == {}
         assert claude_turn("Edit", "Bash", "Read") == {}, "shell kt writes count and reads do not undo them"
-        assert claude_turn("mcp__knowledgetrees__kt_edit", "Write")["decision"] == "block", "code edits after the tree write"
+        assert claude_turn("mcp__knowledgetrees__kt_rewrite", "Write")["decision"] == "block", "code edits after the tree write"
         assert claude_turn()["decision"] == "block", "direction-only turns still get a reminder"
         assert run("claude", "stop", {"session_id": "claude-transcript", "stop_hook_active": False,
                                       "transcript_path": str(Path(temporary) / "missing.jsonl")})["decision"] == "block"
@@ -155,9 +155,9 @@ def main():
             entries += [{"type": "response_item", "payload": {"type": "custom_tool_call", "name": "exec", "input": text}} for text in inputs]
             transcript.write_text("\n".join(map(json.dumps, entries)) + "\n")
             return run("codex", "stop", {"session_id": "codex-transcript", "stop_hook_active": False, "transcript_path": str(transcript)})
-        assert codex_turn("*** Begin Patch", '{"method":"tools/call","params":{"name":"kt_edit"}}') == {}
-        assert codex_turn('{"name":"kt_edit"}', "apply_patch <<EOF")["decision"] == "block"
-        assert codex_turn("ls kt_editor_notes")["decision"] == "block", "only exact kt tool names count"
+        assert codex_turn("*** Begin Patch", '{"method":"tools/call","params":{"name":"kt_rewrite"}}') == {}
+        assert codex_turn('{"name":"kt_rewrite"}', "apply_patch <<EOF")["decision"] == "block"
+        assert codex_turn("ls kt_rewriter_notes")["decision"] == "block", "only exact kt tool names count"
         assert run("opencode", "stop", {"sessionID": "oc-tools", "tools": [{"name": "edit"}, {"name": "knowledgetrees_kt_rewrite"}]}) == {}
         del env["KT_HOOK_MAINTENANCE_INTERVAL"]
         assert run("codex", "after", {"session_id": "silent", "tool_response": ""}) == {}

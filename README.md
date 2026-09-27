@@ -31,7 +31,7 @@ This repository contains:
 ## Tools for agents
 
 Knowledge only compounds if using it is effortless, so `./install` gives Claude Code, Codex,
-OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 23 tools
+OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 22 tools
 that mirror the `kt` workflow. Agents are told to use them instead of the `kt` shell command
 (the shell is the fallback when the tools are unavailable). Every tool delegates to the CLI, so
 access policy, locking, and proofs behave identically.
@@ -42,17 +42,17 @@ does not need a shell detour.
 | --- | --- |
 | Find | `kt_lookup` (`how to …` questions), `kt_find` (ranked, optional JSON), `kt_grep` (literal or regex exact text), `kt_dict`, `kt_roots` |
 | Read | `kt_read` (a leaf's whole answer), `kt_info` (startup knowledge) |
-| Change | `kt_rewrite` (standard; complete answer plus read hash), `kt_edit` (economy for a tiny surgical change), `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register` |
+| Change | `kt_rewrite` (the only edit: complete answer plus read hash), `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register` |
 | Check | `kt_renew` (confirm a yellow leaf you verified), `kt_prove`, `kt_status` (every non-green leaf, with why) |
 | Access | `kt_access_status` (what is readable and why), `kt_access_request`, `kt_access_confirm` (failed-prompt continuation), `kt_access_revoke` |
 
 Tool output is lean: a whole-leaf read returns the complete answer and a final `Revision:` SHA-256
 line, with no front matter or timestamps; a one-line notice leads it only when yellow or brown.
 There are no partial leaf reads, ranges, paging, or truncation. Search excerpts only select a leaf
-and never yield a rewrite hash. `kt_rewrite` is the standard edit method: it replaces the complete
+and never yield a rewrite hash. `kt_rewrite` is the only edit method: it replaces the complete
 answer and must cite the hash obtained by that whole read. The CLI rejects stale hashes under lock.
-`kt_edit` is only the economy option for a tiny surgical exact-match change and uses the server's remembered whole
-read. When an agent meets a yellow leaf it checks the claims against
+There is no partial edit, so every change reconsiders the whole leaf; a bad leaf cannot hide behind
+a surgical patch, and long leaves cost more to change. When an agent meets a yellow leaf it checks the claims against
 current evidence and calls `kt_renew`, which records that the whole leaf was verified and re-runs
 its proofs; that call is the agent's attestation, so it too is refused unless the agent read the
 leaf in this session. The same lean view is available in the shell as `kt --lean`. Read tools are annotated read-only, so harnesses can skip their prompts and keep

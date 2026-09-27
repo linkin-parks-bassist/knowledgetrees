@@ -61,7 +61,7 @@ def main():
         assert rpc("notifications/initialized", notify=True) is None
         assert rpc("ping")["result"] == {}
         names = {t["name"] for t in rpc("tools/list")["result"]["tools"]}
-        assert names == {"kt_info", "kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_rewrite", "kt_edit", "kt_undo",
+        assert names == {"kt_info", "kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_rewrite", "kt_undo",
                          "kt_add", "kt_rm", "kt_mv", "kt_combine", "kt_init", "kt_renew", "kt_dict", "kt_roots",
                          "kt_register", "kt_prove", "kt_status", "kt_access_status", "kt_access_request",
                          "kt_access_confirm", "kt_access_revoke"}
@@ -71,7 +71,7 @@ def main():
             assert set(hints) >= {"readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"} and not hints["openWorldHint"], name
         for name in ("kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_dict", "kt_roots", "kt_status", "kt_access_status"):
             assert listed[name]["annotations"]["readOnlyHint"] and not listed[name]["annotations"]["destructiveHint"], name
-        for name in ("kt_rewrite", "kt_edit", "kt_undo", "kt_rm", "kt_mv", "kt_combine"):
+        for name in ("kt_rewrite", "kt_undo", "kt_rm", "kt_mv", "kt_combine"):
             assert not listed[name]["annotations"]["readOnlyHint"] and listed[name]["annotations"]["destructiveHint"], name
         assert not listed["kt_renew"]["annotations"]["destructiveHint"] and not listed["kt_renew"]["annotations"]["readOnlyHint"]
         assert not listed["kt_add"]["annotations"]["destructiveHint"] and not listed["kt_add"]["annotations"]["readOnlyHint"]
@@ -90,8 +90,8 @@ def main():
         server.stdin.flush()
         assert json.loads(server.stdout.readline())["error"]["code"] == -32700
 
-        error, text = tool("kt_edit", address=address, old_text="Alpha", new_text="x")
-        assert error and "read this leaf first" in text, "an edit needs a read in this session"
+        error, text = tool("kt_renew", address=address)
+        assert error and "read this leaf first" in text, "renewal needs a read in this session"
         error, text = tool("kt_read", address=address)
         assert not error and "Alpha line." in text and "status:" not in text and "revised_at" not in text
         revision = re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
@@ -99,45 +99,37 @@ def main():
         leaf = project / ".knowledge/what/is/the/fixture.md"
         inode = leaf.stat().st_ino
 
+        def latest():
+            error, text = tool("kt_read", address=address)
+            assert not error, text
+            return re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
+
         error, text = tool("kt_rewrite", address=address, revision=revision,
                            answer="Alpha line.\nBeta line.\nBeta line.\n", dry_run=True)
         assert not error and text == "No change." and "revised_at" not in text
         error, text = tool("kt_rewrite", address=address, revision="bad", answer="No.")
         assert error and "64-character" in text
-
-        error, text = tool("kt_edit", address=address, old_text="Beta line.", new_text="Gamma line.")
-        assert error and "2 matches" in text and "Gamma" not in leaf.read_text()
-        error, text = tool("kt_edit", address=address, old_text="missing", new_text="x")
-        assert error and "0 matches" in text
-        error, text = tool("kt_edit", address=address, old_text="status:", new_text="x")
-        assert error and "0 matches" in text, "front matter is not part of the answer"
-        error, text = tool("kt_edit", address=address, old_text="", new_text="x")
-        assert error
-        error, text = tool("kt_edit", address=address, old_text="Alpha line.", new_text="Omega line.", dry_run=True)
+        error, text = tool("kt_rewrite", address=address, revision=revision,
+                           answer="Omega line.\nBeta line.\nBeta line.\n", dry_run=True)
         assert not error and "+Omega line." in text and "Omega" not in leaf.read_text() and "revised_at" not in text
 
-        error, text = tool("kt_edit", address=address, old_text="Alpha line.", new_text="Omega line.")
+        error, text = tool("kt_rewrite", address=address, revision=revision, answer="Omega line.\nBeta line.\nBeta line.\n")
         assert not error and "+Omega line." in text and "revised_at" not in text
         assert "Omega line.\nBeta line." in leaf.read_text() and leaf.stat().st_ino == inode
-        assert 'status: green' in leaf.read_text(), "an edit keeps the leaf's status"
+        assert 'status: green' in leaf.read_text(), "a rewrite keeps the leaf's status"
         error, text = tool("kt_rewrite", address=address, revision=revision, answer="Stale overwrite.")
         assert error and "stale" in text and "Stale overwrite" not in leaf.read_text()
-        error, text = tool("kt_edit", address=address, old_text="Omega line.", new_text="Alpha again.")
-        assert not error, "an edit updates what this session has seen, so edits chain without a re-read"
 
         def external_edit(new_body):
             """A change made outside this server (another agent, the shell)."""
             digest = subprocess.run([sys.executable, str(KT), "open", address], cwd=project, env=env, capture_output=True,
                                     text=True).stderr.split()[-1]
             subprocess.run([sys.executable, str(KT), "rewrite", address, digest, new_body], cwd=project, env=env, check=True)
+        seen = latest()
         external_edit("External body.\nBeta line.\nBeta line.\n")
-        error, text = tool("kt_edit", address=address, old_text="Beta", new_text="x")
-        assert error and "changed since you read it" in text and "External body." in leaf.read_text()
-        error, text = tool("kt_read", address=address)
-        assert not error and "External body." in text
-
-        error, text = tool("kt_edit", address=address, edits=[
-            {"old_text": "External body.\nBeta line.\nBeta line.", "new_text": "Whole new body."}])
+        error, text = tool("kt_rewrite", address=address, revision=seen, answer="Clobber.")
+        assert error and "stale" in text and "External body." in leaf.read_text()
+        error, text = tool("kt_rewrite", address=address, revision=latest(), answer="Whole new body.")
         assert not error and "Whole new body." in leaf.read_text() and "External" not in leaf.read_text()
         assert leaf.read_text().startswith("---\n"), "front matter survives"
         error, text = tool("kt_read", address="local:no/such/leaf.md")
@@ -307,37 +299,25 @@ def main():
         assert not error and "status:" not in text and "Whole new body." in text
 
         external_edit("Line one.\nLine two.\nLine three.\n")
-        error, text = tool("kt_read", address=address)
-        original = leaf.read_text()
-        error, text = tool("kt_edit", address=address, edits=[
-            {"old_text": "Line one.", "new_text": "First."}, {"old_text": "Line missing.", "new_text": "x"}])
-        assert error and "edit 2:" in text and "0 matches" in text and leaf.read_text() == original, "multi-edit is atomic"
-        error, text = tool("kt_edit", address=address, edits=[], old_text="a", new_text="b")
-        assert error
-        error, text = tool("kt_edit", address=address, old_text="Line one.", new_text="X", edits=[
-            {"old_text": "Line two.", "new_text": "Y"}])
-        assert error and "either" in text
-        error, text = tool("kt_edit", address=address, edits=[
-            {"old_text": "Line one.", "new_text": "First."}, {"old_text": "First.", "new_text": "Primary."},
-            {"old_text": "Line three.", "new_text": "Third."}])
+        error, text = tool("kt_rewrite", address=address, revision=latest(), answer="Primary.\nLine two.\nThird.\n")
         assert not error, text
-        assert "Primary.\nLine two.\nThird." in leaf.read_text(), "edits apply in order against the running body"
+        assert "Primary.\nLine two.\nThird." in leaf.read_text()
 
         error, text = tool("kt_undo", address=address, dry_run=True)
         assert not error and "+Line one." in text and "Primary." in leaf.read_text()
         error, text = tool("kt_undo", address=address)
         assert not error and "Line one.\nLine two.\nLine three." in leaf.read_text() and "Primary." not in leaf.read_text()
-        error, text = tool("kt_edit", address=address, old_text="Line two.", new_text="Second.")
+        error, text = tool("kt_rewrite", address=address, revision=latest(), answer="Line one.\nSecond.\nLine three.\n")
         assert not error
         error, text = tool("kt_prove", scope="local", stamp=True)
         assert not error
         error, text = tool("kt_undo", address=address)
         assert not error and "Line two." in leaf.read_text(), "a status stamp is not a change to the answer, so undo still works"
-        error, text = tool("kt_edit", address=address, old_text="Line two.", new_text="Second.")
+        error, text = tool("kt_rewrite", address=address, revision=latest(), answer="Line one.\nSecond.\nLine three.\n")
         assert not error
         leaf.write_text(leaf.read_text() + "\nHand edit.\n")
         error, text = tool("kt_undo", address=address)
-        assert error and "changed after the recorded edit" in text and "Hand edit." in leaf.read_text(), "undo never clobbers later work"
+        assert error and "changed after the recorded rewrite" in text and "Hand edit." in leaf.read_text(), "undo never clobbers later work"
         error, text = tool("kt_undo", address="local:no/such/leaf.md")
         assert error
 
@@ -473,7 +453,7 @@ def main():
         outcome = receive()
         assert outcome["id"] == identifier and not outcome["result"]["isError"] and "approved" in outcome["result"]["content"][0]["text"]
         deferred = receive()
-        assert deferred["id"] == 99 and len(deferred["result"]["tools"]) == 23, "a request that arrived mid-prompt is still served"
+        assert deferred["id"] == 99 and len(deferred["result"]["tools"]) == 22, "a request that arrived mid-prompt is still served"
         assert grants()["projects"][str(project.resolve())][str(vaults["vault"].resolve())] == "allow"
         identifier = next(request_id)
         send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",

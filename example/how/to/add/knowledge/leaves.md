@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T10:01:54+10:00"
+revised_at: "2026-09-27T14:50:02+10:00"
 name: "knowledgetrees-capture"
 description: "Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs."
 ---
@@ -43,8 +43,7 @@ nearest applicable local root. Never promote professional, customer, partner, or
 restricted material into the global tree; sanitize anything intended for publication.
 Keep an existing owner in context before editing. Full reads return the complete
 answer and its revision hash; there are no partial reads. Use `kt_rewrite` as the
-standard editing method with that hash. Use `kt_edit` only for economy on a tiny
-surgical exact replacement.
+standard editing method with that hash. There is no partial edit: every change rewrites the whole answer, so its full contents are reconsidered each time. Keep leaves short enough to rewrite whole.
 Preserve still-valid knowledge and reread/merge if the leaf changed.
 Use `kt_read` (shell: `kt open ROOT:PATH`) for that read and `kt_prove` (shell: `kt prove --root ROOT TOKEN`) after
 changing eligible proofs. Create a new leaf in one call with `kt_add`; the shell equivalent is:
@@ -153,7 +152,7 @@ The verifier cannot decide semantic eligibility, faithful coverage, or whether a
 prose is proved; the agent remains responsible. Read maintenance before repairing
 a falsified leaf.
 
-For an existing owner, use `kt_rewrite` (or surgical `kt_edit`; shell: kt rewrite ADDRESS HASH BODY) as
+For an existing owner, use `kt_rewrite` (shell: kt rewrite ADDRESS HASH BODY) as
 described in
 `how/to/rewrite/a/knowledge/leaf.md`; creation still refuses overwriting existing leaves.
 
