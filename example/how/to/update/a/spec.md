@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T08:51:45+10:00"
+revised_at: "2026-09-27T14:43:36+10:00"
 ---
 
 Adapted from Superpowers 6.3.0 (brainstorming and spec-review).
@@ -12,7 +12,7 @@ chronological correction that leaves incompatible instructions active.
 
 After the edit, check for placeholders, contradictions, ambiguity that could produce
 different implementations, accidental scope growth, and requirements that no longer
-fit the architecture or acceptance criteria. Update affected plan tasks and current
-state projections when the specification change alters implementation work. Keep
+fit the architecture or acceptance criteria. Update the affected planned steps when the
+specification change alters implementation work. Keep
 historical rationale only when it still explains a live decision or constraint; rely
 on version control for superseded wording.

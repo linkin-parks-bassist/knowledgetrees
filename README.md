@@ -108,7 +108,7 @@ This repository intentionally contains two different semantic trees:
 
 | Path | Role |
 | --- | --- |
-| [`.knowledge/`](.knowledge/where/am/i.md) | The real operational knowledge root for developing and publishing this repository. It contains this project's requirements, plan, current state, and next action. |
+| [`.knowledge/`](.knowledge/where/am/i.md) | The real operational knowledge root for developing and publishing this repository. It contains this project's requirements, plan, and procedures. |
 | [`example/`](example/where/am/i.md) | The visible distributable example. It contains public, reusable knowledge-tree methodology and illustrative planning/specification leaves. |
 
 They are not mirrors. Repository-specific facts belong only in `.knowledge/`.
@@ -147,8 +147,7 @@ agent retrieve the answer.
 │   └── is/
 │       ├── the/
 │       │   ├── spec.md
-│       │   ├── plan.md
-│       │   └── state.md
+│       │   └── plan.md
 │       └── a/
 │           └── knowledge/
 │               └── tree.md
@@ -207,14 +206,14 @@ Knowledgetrees change that trade-off:
   injected into every run. Its cost is paid only when needed.
 - **Survives fresh starts.** A new worker, compacted session, or different model can
   reconstruct context from persistent current knowledge.
-- **Current truth wins.** The canonical state is updated rather than forcing a model
+- **Current truth wins.** The canonical answer is updated rather than forcing a model
   to infer which paragraph in a chronology is newest.
 - **Knowledge compounds.** Every reusable discovery can save a future reasoning
   loop, failed command, search, or architectural mistake.
 - **One substrate, many uses.** The same tree can carry build procedures, policy,
   architecture, plans, specs, environment facts, and rationale.
 - **Composable by design.** An agent can retrieve a general rule, local refinement,
-  current state, and rationale separately, then combine only what applies.
+  current facts, and rationale separately, then combine only what applies.
 
 The familiar stack is fragmented:
 
@@ -283,7 +282,7 @@ external authorities, evidence, source material, exports, or human-facing views.
 states the current policy directly, links to the governing source if necessary, and
 says when to check it again.
 
-### Current state is mutable; history is separate
+### Current truth is mutable; history is separate
 
 When a policy changes, rewrite its current semantic owner. Keep the old version in Git
 or explicit history when history still matters. Do not make the next agent reason
@@ -398,7 +397,7 @@ an expiry. Missing, malformed, skipped, or failed proofs make it brown. The auth
 responsible for ensuring every claim is covered; the flag cannot detect uncovered
 prose.
 
-`kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches plus `where/am/i.md`. It does not assume an ongoing linear project. Use `kt init --project [ORIENTATION]` when the scope is a repository project that also needs empty spec, plan, state, and next leaves. The optional argument supplies the exact orientation file contents. Both forms register the new root under `ask` without granting cross-project access and refuse to overwrite an existing tree.
+`kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches plus `where/am/i.md`. It does not assume an ongoing linear project. Use `kt init --project [ORIENTATION]` when the scope is a repository project that also needs empty spec and plan leaves. The optional argument supplies the exact orientation file contents. Both forms register the new root under `ask` without granting cross-project access and refuse to overwrite an existing tree.
 
 `kt info` performs fresh-session initialization in output-first order: it prints
 the canonical global procedure and exact local orientation,
@@ -478,7 +477,7 @@ why/does/production/require/two-approvals.md
 
 A release worker can assemble the pieces relevant to its situation without forcing
 every other task to ingest the entire release universe. General procedure,
-environment-specific refinement, current state, and rationale can change
+environment-specific refinement, current facts, and rationale can change
 independently and compose at the point of use.
 
 ## A self-improving documentation methodology
@@ -685,7 +684,8 @@ older descriptions or procedure content.
 1. Run `kt init [ORIENTATION]` to create `.knowledge/where/am/i.md` and the
    canonical `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches.
 2. For repositories, use `kt init --project [ORIENTATION]` so the initial tree
-   also contains current-truth spine leaves for the spec, plan, state, and next action.
+   also contains spine leaves for the spec and the plan, whose frontier lists only the
+   steps still to do.
 3. Teach agents to inventory affected owners, repair stale or contradictory answers,
    and rerun negative searches for superseded claims across guidance and installed copies.
 4. Project frequently needed answers into paths that read as natural-language
@@ -705,8 +705,8 @@ with the path participating in retrieval. Search remains a fallback.
 ### Does every fact need its own file?
 
 No. The design favors useful semantic boundaries, not maximum file count. Closely
-related material can stay together, and orientation, spec, plan, and state leaves
-are deliberate aggregation points.
+related material can stay together, and orientation, spec, and plan leaves are
+deliberate aggregation points.
 
 ### Does this mean deleting all normal documentation?
 
@@ -744,7 +744,7 @@ copies of its skill-era process or mandatory approval gates.
 The installer is covered by an isolated-home integration test. It verifies that:
 
 - reusable knowledge is installed without importing the example's illustrative
-  spec, plan, state, or next-action leaves;
+  spec or plan leaves;
 - an existing orientation, unrelated `AGENTS.md` content, and Codex configuration
   are preserved while the legacy managed block is removed;
 - repeated installation is idempotent;
@@ -856,7 +856,7 @@ time is reset for review while timeless proof markers remain unchanged. Sources 
 during coalescing are retained. Multi-file cleanup is not transactional, so inspect
 partially completed cleanup before retrying. Moves refuse overwrites and preserve
 same-filesystem hardlinks; cross-filesystem moves copy before removing the source.
-Review scope, links, orientation, current state, and relevant proofs after maintenance.
+Review scope, links, orientation, spine leaves, and relevant proofs after maintenance.
 
 Lookup reuses root policies and lazily loaded text within each invocation; it does
 not create a persistent index/cache or index private roots. This removes repeated

@@ -1,8 +1,8 @@
 ---
 status: green
-revised_at: "2026-09-27T14:38:34+10:00"
+revised_at: "2026-09-27T14:43:23+10:00"
 name: "knowledgetrees-maintenance"
-description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
+description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and the repository plan updated to its remaining steps."
 ---
 
 Maintain current truth in place within current authority. Knowledge records facts
@@ -24,7 +24,7 @@ failure at that time. Green includes proof-free leaves and does not certify curr
 prose, consistency between leaves, or proof coverage. Even `verifiable: true`
 relies on an author-reviewed coverage assertion and faithful predicates.
 
-After a behavior or policy change, build an explicit affected-owner inventory before editing: narrow implementation leaves, broader procedures and policy, the central `how/to/use/knowledgetrees.md`, repository spec/plan/state/next, orientation when its routes changed, public example, README and CLI help, startup payloads, generated copies, and installed guidance. Search both directions: use `kt_grep` and repository search for distinctive old claims, counts, tool lists, fallbacks, and limitations, and also search for the new behavior to find partial presentations. Read every relevant hit in context and compare meaning, not just matching strings. Repair all owners, refresh generated and installed guidance, then repeat the negative searches. Run tests, proofs, and instruction-sync only after that semantic pass. Do not report a change as destaled or complete while any affected owner is unchecked, contradictory, or still describes superseded behavior. This is an affected-scope change gate, not a startup inventory of unrelated roots.
+After a behavior or policy change, build an explicit affected-owner inventory before editing: narrow implementation leaves, broader procedures and policy, the central `how/to/use/knowledgetrees.md`, repository spec and plan, orientation when its routes changed, public example, README and CLI help, startup payloads, generated copies, and installed guidance. Search both directions: use `kt_grep` and repository search for distinctive old claims, counts, tool lists, fallbacks, and limitations, and also search for the new behavior to find partial presentations. Read every relevant hit in context and compare meaning, not just matching strings. Repair all owners, refresh generated and installed guidance, then repeat the negative searches. Run tests, proofs, and instruction-sync only after that semantic pass. Do not report a change as destaled or complete while any affected owner is unchecked, contradictory, or still describes superseded behavior. This is an affected-scope change gate, not a startup inventory of unrelated roots.
 
 ## Establish and orient active roots
 
@@ -45,18 +45,20 @@ contains no general knowledge-tree usage instructions (query conventions,
 traversal strategy, how to use `kt`): those are owned by the bootstrap procedure
 and hooks, not by the orientation leaf.
 
-Repository project roots also contain and maintain four current-truth leaves. Create those placeholders explicitly with `kt init --project`; neutral `kt init` does not assume them:
+Repository project roots also contain and maintain two spine leaves. Create those placeholders explicitly with `kt init --project`; neutral `kt init` does not assume them:
 
 - `what/is/the/spec.md`: governing requirements and acceptance contract; directly
   contain the cohesive answer, except when canonical authority is genuinely external.
-- `what/is/the/plan.md`: approved implementation plan, decision points, completion.
-- `what/is/the/state.md`: implemented, checked, broken, or blocked present.
-- `what/is/next.md`: ordered immediate next work.
+- `what/is/the/plan.md`: the frontier. It lists the approved steps still to do, in
+  order with the next one first, plus any blocker or open decision point on a step.
+  Remove a step as soon as it is complete; the plan never records finished work,
+  progress narration, or results. What a finished step established belongs, as
+  current truth, in its owning leaves.
 
 Create missing leaves from evidence or truthful minimal/unresolved content, never
 invent requirements or priorities. Read the active repository spine at task startup.
-Before reporting repository-task completion, refresh state and next action, removing
-superseded information. These are coordinated projections, not append-only journals.
+Before reporting repository-task completion, update the plan: remove completed steps
+and add newly planned ones. Spine leaves are coordinated projections, not append-only journals.
 A leaf is a current answer, never a log. Appending chronology, session notes, progress
 narration, tool transcripts, or stream of consciousness is tree poisoning: it mixes
 stale events into current truth and makes retrieval mislead later agents. Rewrite the
@@ -200,5 +202,5 @@ Move refuses an existing destination and preserves bytes. Same-filesystem moves
 preserve hardlink identity; cross-filesystem moves copy exclusively before removing
 the source. Removing a name leaves other hardlinks intact. No command prunes empty
 canonical branches or updates links automatically. Review leaf paths, links,
-orientation, current-state projections, and affected proofs after maintenance.
+orientation, spine leaves, and affected proofs after maintenance.
 All operations enforce source/destination access and force-private boundaries.

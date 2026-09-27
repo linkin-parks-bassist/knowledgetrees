@@ -19,10 +19,8 @@ import tomllib
 
 EXCLUDED_EXAMPLE_LEAVES = {
     Path("where/am/i.md"),
-    Path("what/is/next.md"),
     Path("what/is/the/plan.md"),
     Path("what/is/the/spec.md"),
-    Path("what/is/the/state.md"),
 }
 AGENTS_BEGIN = "<!-- BEGIN KNOWLEDGETREES BOOTSTRAP -->"
 AGENTS_END = "<!-- END KNOWLEDGETREES BOOTSTRAP -->"

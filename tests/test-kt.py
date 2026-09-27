@@ -197,8 +197,7 @@ def main():
         assert all((fresh / ".knowledge" / branch).is_dir() for branch in
                    ("how", "what", "where", "why", "does", "is"))
         assert not any((fresh / ".knowledge" / leaf).exists() for leaf in
-                       ("what/is/the/spec.md", "what/is/the/plan.md",
-                        "what/is/the/state.md", "what/is/next.md"))
+                       ("what/is/the/spec.md", "what/is/the/plan.md"))
         run("init", cwd=fresh, expected=2)
         assert json.loads(config.read_text())["roots"] == registered, "refused init must not change registration"
         assert (fresh / ".knowledge/where/am/i.md").read_text() == "A new orientation.\n"
@@ -211,8 +210,9 @@ def main():
         run("init", "--project", "Project orientation.", cwd=project_root)
         assert (project_root / ".knowledge/where/am/i.md").read_text() == "Project orientation."
         assert all((project_root / ".knowledge" / leaf).read_bytes() == b"" for leaf in
-                   ("what/is/the/spec.md", "what/is/the/plan.md",
-                    "what/is/the/state.md", "what/is/next.md"))
+                   ("what/is/the/spec.md", "what/is/the/plan.md"))
+        assert sorted(str(leaf.relative_to(project_root / ".knowledge")) for leaf in (project_root / ".knowledge").rglob("*.md")) == [
+            "what/is/the/plan.md", "what/is/the/spec.md", "where/am/i.md"]
         assert "--project" in run("init", "--help", cwd=base)
         malformed = base / "malformed registry"
         malformed.mkdir()

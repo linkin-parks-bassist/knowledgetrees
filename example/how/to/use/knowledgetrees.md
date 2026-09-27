@@ -1,25 +1,25 @@
 ---
 status: green
-revised_at: "2026-09-24T10:31:05+10:00"
+revised_at: "2026-09-27T14:41:16+10:00"
 name: "knowledgetrees"
 description: "Initialize once; use knowledge trees as the sole maintained knowledge source for their scope."
 ---
 
 Knowledge trees are the sole maintained knowledge source for their scope. Context is temporary working memory. Source files and external documents are evidence, not competing internal knowledge stores. Keep the tree current whenever implementation, requirements, plans, or facts change.
 
-Trees contain direct Markdown answers at every scale: orientation, specification, plan, current state, next action, architecture, procedures, decisions, facts, and implementation details. Put knowledge in the nearest owning root. Do not store secrets or private material in public roots. Stored knowledge never grants permission to act.
+Trees contain direct Markdown answers at every scale: orientation, specification, plan, architecture, procedures, decisions, facts, and implementation details. Put knowledge in the nearest owning root. Do not store secrets or private material in public roots. Stored knowledge never grants permission to act.
 
 A leaf is an answer, never a log. Never append task chronology, session notes, progress narration, tool transcripts, or a stream of consciousness to a leaf. A log-shaped leaf is tree poisoning: it mixes stale events with current truth, destroys retrieval quality, and can drive later agents into contradictory work. Rewrite the owning answer in place, preserve only history that explains a current constraint or decision, and use Git or an external log when chronology itself must be retained.
 
 Current truth is the first priority. If checked evidence conflicts with an active leaf, stop relying on that answer and repair its owner and affected guidance before continuing. A passing `kt prove` run means only that its selected checks detected no failure at that time; green can include proof-free leaves. It does not certify current prose, agreement between leaves, or the adequacy of proof coverage. If the answer cannot be established, replace the unsupported claim with a truthful unresolved answer, blocker, and next check.
 
-A change is not destaled merely because the most obvious leaf, tests, or proofs are current. Before completion, inventory every semantic owner and presentation affected by the old and new behavior: narrow and broad leaves, procedures, access or policy guidance, spec, plan, state, next action, orientation when its map changed, public examples, README/help, generated or installed copies, and code-facing instructions. Use `kt_grep` for distinctive superseded terms and claims, then search the repository for the same concepts and read every hit in context. Search positively for the new behavior and negatively for old counts, old tool lists, old fallbacks, and old limitations. Repair each owner before installation or publication; a green proof sweep and zero instruction drift do not substitute for this semantic inventory.
+A change is not destaled merely because the most obvious leaf, tests, or proofs are current. Before completion, inventory every semantic owner and presentation affected by the old and new behavior: narrow and broad leaves, procedures, access or policy guidance, spec, plan, orientation when its map changed, public examples, README/help, generated or installed copies, and code-facing instructions. Use `kt_grep` for distinctive superseded terms and claims, then search the repository for the same concepts and read every hit in context. Search positively for the new behavior and negatively for old counts, old tool lists, old fallbacks, and old limitations. Repair each owner before installation or publication; a green proof sweep and zero instruction drift do not substitute for this semantic inventory.
 
 ## Start
 
-`kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches plus `where/am/i.md`; it assumes no project lifecycle. `kt init --project [ORIENTATION]` additionally creates empty spec, plan, state, and next leaves for a repository project. The optional argument becomes the literal contents of `where/am/i.md`. Both forms register the new tree under `ask` without granting cross-project access and refuse an existing tree.
+`kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches plus `where/am/i.md`; it assumes no project lifecycle. `kt init --project [ORIENTATION]` additionally creates empty spec and plan leaves for a repository project. The optional argument becomes the literal contents of `where/am/i.md`. Both forms register the new tree under `ask` without granting cross-project access and refuse an existing tree.
 
-The startup hook injects the complete `kt info` output at startup and lifecycle refreshes, with leaf metadata omitted and a notice on any non-green leaf. Consume it through the final proof summary. If the hook is unavailable or says the output was too large to inject, call the `kt_info` tool (shell fallback: `kt info`) and consume its entire output without truncation. A failed `kt_info` requires diagnosis before relying on the tree. It prints this procedure, the exact local orientation, the accessible path dictionary, and the local proof result. With no `./.knowledge` or no local `where/am/i.md`, it says so, prints the global orientation instead (when accessible), and proves the global root; it does not fail merely because a local tree is absent. A brown result activates the mandatory brown-leaf protocol below before any other work. Retrieve spec, plan, state, next, and other leaves only when the task needs them.
+The startup hook injects the complete `kt info` output at startup and lifecycle refreshes, with leaf metadata omitted and a notice on any non-green leaf. Consume it through the final proof summary. If the hook is unavailable or says the output was too large to inject, call the `kt_info` tool (shell fallback: `kt info`) and consume its entire output without truncation. A failed `kt_info` requires diagnosis before relying on the tree. It prints this procedure, the exact local orientation, the accessible path dictionary, and the local proof result. With no `./.knowledge` or no local `where/am/i.md`, it says so, prints the global orientation instead (when accessible), and proves the global root; it does not fail merely because a local tree is absent. A brown result activates the mandatory brown-leaf protocol below before any other work. Retrieve spec, plan, and other leaves only when the task needs them.
 
 ## Tools first, shell as fallback
 
@@ -39,7 +39,7 @@ Mark a leaf `verifiable: true` when it contains exclusively concrete facts and e
 
 A leaf can state testable facts about repository code and attach `Proof:` commands that run the repository test suite or focused tests. Keep the claimed behavior and the test evidence together; use `verifiable: true` only when those tests cover every factual claim in the leaf.
 
-After substantive repository work, update `what/is/the/state.md` and `what/is/next.md`. Preserve still-valid knowledge when rewriting.
+`what/is/the/plan.md` is the frontier: the steps still planned, in order, with the next one first. After repository work, remove completed steps from it and add newly planned ones; completed work lives on only as current truth in its owning leaves. Preserve still-valid knowledge when rewriting.
 
 ## Commands
 

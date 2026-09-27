@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T14:21:33+10:00"
+revised_at: "2026-09-27T14:45:19+10:00"
 ---
 
 This is the project knowledge root for the `knowledgetrees` public repository maintained in this working directory.
@@ -12,9 +12,8 @@ creates skill-shaped hard links in supported harnesses for bootstrap compatibili
 The repository has been reviewed by its owner and published to the public GitHub
 remote.
 
-Use `what/is/the/spec.md` for the acceptance contract, `what/is/the/plan.md` for the
-approved workflow, `what/is/the/state.md` for checked present state, and
-`what/is/next.md` for the next action. The public `example/where/am/i.md` is deliberately empty for adopters; it is
+Use `what/is/the/spec.md` for the acceptance contract and `what/is/the/plan.md` for
+the frontier of planned steps, next first. The public `example/where/am/i.md` is deliberately empty for adopters; it is
 not an operational orientation.
 
 ## How to navigate this tree
@@ -22,16 +21,16 @@ not an operational orientation.
 - `how/` contains repository procedures: `how/to/work/on/this/repository.md`,
   `how/to/test/the/installer.md`, `how/to/test/proofs.md`, and
   `how/to/update/installed/kt/instructions.md`, and `how/to/audit/public/content/before/publishing.md`; architecture lives in `how/is/kt/structured.md`.
-- `what/` owns requirements and progress: `what/is/the/spec.md`,
-  `what/is/the/plan.md`, `what/is/the/state.md`, and `what/is/next.md`.
+- `what/` owns requirements and planned work: `what/is/the/spec.md` and
+  `what/is/the/plan.md`.
 - `where/` establishes repository scope through `where/am/i.md`.
 - `why/` explains layout through `why/is/the/example/visible.md`, and lookup latency through
   `why/is/kt/slow/on/a/miss.md`.
 
-Harness integration (startup and turn-end maintenance hooks for four CLIs, and the MCP tools) is documented in the distributable `how/to/use/knowledgetree/hooks.md` and `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`; its repository-specific state is in `what/is/the/state.md`.
+Harness integration (startup and turn-end maintenance hooks for four CLIs, and the MCP tools) is documented in the distributable `how/to/use/knowledgetree/hooks.md` and `how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md`; its repository-specific contract is in `what/is/the/spec.md`.
 
 Reusable procedures live in the global root and distributable `example/`, not in
-this repository's project-state leaves.
+this repository's spine leaves.
 
 - `does/` answers yes/no repository behavior questions through
   `does/this/repository/require/publication/approval.md`.

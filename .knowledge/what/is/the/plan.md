@@ -1,26 +1,13 @@
 ---
 status: green
-revised_at: "2026-09-24T09:33:55+10:00"
+revised_at: "2026-09-27T14:44:12+10:00"
 ---
 
-Keep the CLI, README, public `example/` guidance, installed global guidance,
-and operational `.knowledge/` aligned with the flat leaf metadata contract.
+Planned steps, next first. Remove a step when it is done; how to carry out a change is in `how/to/work/on/this/repository.md`.
 
-For each change:
+1. Start a fresh harness against a controlled brown-root fixture and confirm its first response is a prominent priority-one incident report rather than a readiness message.
+2. Restart Codex, Claude Code, OpenCode, and Copilot CLI so they load the installed 23-tool MCP server, then exercise `kt_register`, revision-guarded `kt_combine`, a normal `kt_access_request` elicitation, the one-time `kt_access_confirm` continuation after a deliberately unavailable or unrendered prompt, and the matching `kt_access_revoke` continuation for wider revocation. Confirm each knowledge-tree skill appears once from `~/.agents/skills/`. Open issue: Codex has advertised elicitation while returning `action=decline` without showing a prompt; the cause is client-side and unresolved, and the continuation keeps it from forcing a shell workflow.
+3. Observe the turn-end maintenance hook live in Codex (`Stop`), Copilot CLI (`agentStop` with `decision: block`), and OpenCode (`session.idle` follow-up prompt): the reminder arrives, the five-minute rate limit holds, and self-maintained turns are skipped.
+4. Decide whether to slim `kt info` below Claude Code's 9,500-byte hook cap.
 
-1. Repair any known stale or contradictory active knowledge first. Locate its
-   owner, check current evidence, and preserve still-valid content.
-2. Change the CLI and focused regression coverage together.
-3. Build an affected-owner inventory covering narrow and central procedures, policy/access guidance, spec/plan/state/next, README and CLI help, startup payloads, public example, generated surfaces, and installed guidance. Search positively for the new behavior and negatively for superseded counts, lists, fallbacks, and limitations; read every hit in context and repair all owners. Only then run the Python and OpenCode suites plus `git diff --check`.
-4. Run `kt prove --no-stamp` across affected roots. Any brown result is a
-   priority-one incident: immediately report it to the user, stop unrelated work,
-   diagnose and remediate the mismatch, and re-check until brown clears; ask the
-   user if safe remediation cannot be established. Continue past brown only with
-   explicit permission to ignore that specific status. Manually review expired
-   yellow leaves before relying on them.
-5. Preview installation, install authorized changes, refresh curated instruction
-   copies, and check installed bytes and proof results.
-6. Update current state and next action, then publish under the user’s current authorization, including earlier in-scope instructions.
-
-Keep repository-specific knowledge in `.knowledge/`, the public example generic,
-and the example orientation empty. Preserve access policy and archived trees.
+Deferred, not scheduled: the event-triggered expiry idea in `what/is/the/proposed/event/triggered/expiry/feature.md`.

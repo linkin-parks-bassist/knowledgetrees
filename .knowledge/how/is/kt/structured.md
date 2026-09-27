@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T14:38:54+10:00"
+revised_at: "2026-09-27T14:45:29+10:00"
 ---
 
 The CLI remains one self-contained standard-library Python executable for standalone installation. Sections separate root discovery and access, lookup and rendering, leaf maintenance, capture, proof execution, and parser construction. RootAccessView loads discovery and policies once per invocation; LookupContext lazily reads permitted leaf text once. LeafSnapshot centralizes revision and inode checks for rewrite and destructive maintenance. command_parser separates command schemas and handler dispatch from execution. All verification is exposed through kt prove. Regression suites cover access, lookup, maintenance, installation, hooks, MCP tools, timeless proof markers, and lifecycle status.
@@ -41,7 +41,7 @@ CLI/access integration tests, 2026-09-15.
 
 
 `initialize_tree` always creates the six neutral canonical branches and
-`where/am/i.md`; its parser's `--project` flag alone adds the four repository spine
+`where/am/i.md`; its parser's `--project` flag alone adds the two repository spine
 placeholders. The MCP `kt_init` tool maps `project: true` to that flag.
 
 The prove wrapper expands bare invocation into one verifier run per accessible

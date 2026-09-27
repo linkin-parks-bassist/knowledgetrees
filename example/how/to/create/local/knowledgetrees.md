@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T10:30:43+10:00"
+revised_at: "2026-09-27T14:41:17+10:00"
 ---
 
 Run `kt init [ORIENTATION]` from any directory to create a neutral local
@@ -12,10 +12,9 @@ granting access elsewhere and refuses to overwrite an existing tree.
 
 Run `kt init --project [ORIENTATION]` when initializing a repository project.
 That opt-in creates the same baseline plus empty
-`what/is/the/spec.md`, `what/is/the/plan.md`,
-`what/is/the/state.md`, and `what/is/next.md`. Replace those placeholders
+`what/is/the/spec.md` and `what/is/the/plan.md`. Replace those placeholders
 with truthful minimal or explicitly unresolved current answers rather than
-inventing requirements, progress, or priorities.
+inventing requirements or planned steps.
 
 The same neutral convention applies in any directory, including repository
 subfolders. Create narrower roots when a subsystem has useful local context;
@@ -33,7 +32,7 @@ images, caches, manifests, copied sources, and other implementation artifacts in
 their owning repositories, not in the tree. Do not initialize a nested Git
 repository inside a project tree.
 
-Store build, test, current-state, and subsystem knowledge locally; keep
+Store build, test, and subsystem knowledge locally; keep
 host-wide personal tooling knowledge in `~/.knowledge`. Read ancestor
 instructions first, commit local knowledge with related project changes under
 that repository's policy, and run `kt prove` from the project before relying on

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-18T12:22:12+10:00"
+revised_at: "2026-09-27T14:41:17+10:00"
 ---
 
 Semantic atomicity is guidance, not a maintenance rule. A reasoning agent decides in
@@ -20,5 +20,5 @@ not by a rule that favors either coarse or fine knowledge.
 
 A substantial procedure, interface table, specification, argument, or tightly
 coupled sequence can be one good leaf. Canonical orientation and repository spine
-leaves are intentional aggregation points: `where/am/i.md` orients, while spec, plan,
-state, and next provide cohesive projections of governing or current truth.
+leaves are intentional aggregation points: `where/am/i.md` orients, the spec gives the
+governing contract, and the plan gives the frontier of planned steps.

@@ -2049,8 +2049,7 @@ def initialize_tree(args):
     (root / "where/am").mkdir(parents=True)
     (root / "where/am/i.md").write_text(args.orientation or "")
     if args.project:
-        for relative in ("what/is/the/spec.md", "what/is/the/plan.md",
-                         "what/is/the/state.md", "what/is/next.md"):
+        for relative in ("what/is/the/spec.md", "what/is/the/plan.md"):
             path = root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.touch()
@@ -2107,7 +2106,7 @@ def command_parser():
     showing_info.set_defaults(handler=print_info)
     initializing = commands.add_parser("init", help="create and register a neutral local knowledge tree (ask policy)")
     initializing.add_argument("orientation", nargs="?", help="optional literal contents of where/am/i.md")
-    initializing.add_argument("--project", action="store_true", help="also create empty spec, plan, state, and next leaves")
+    initializing.add_argument("--project", action="store_true", help="also create empty spec and plan leaves")
     initializing.set_defaults(handler=initialize_tree)
     search = commands.add_parser("find", help="rank keyword matches across project and global roots", description="Search all permitted active roots. No --root option; open the root-qualified address returned by the search.")
     search.set_defaults(handler=find)

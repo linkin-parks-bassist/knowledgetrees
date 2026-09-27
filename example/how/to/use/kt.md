@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T14:20:45+10:00"
+revised_at: "2026-09-27T14:43:00+10:00"
 ---
 
 This is the shell reference for `kt`. When you have the `kt_*` tools, use them instead. Whole-leaf MCP reads return the complete answer, an optional non-green notice, and the revision hash required by `kt_rewrite`; no other metadata is shown. Neither MCP nor kt supports partial leaf reads. Ranked excerpts select candidates and are not reads. The shell is the fallback when tools are unavailable.
@@ -20,7 +20,7 @@ Accuracy and preservation remain explicit agent obligations; a turn-end hook onl
 
 ## Command and address quick reference
 
-- Create: `kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the current directory with empty canonical branches and `where/am/i.md`; it creates no project spine. `kt init --project [ORIENTATION]` additionally creates empty spec, plan, state, and next leaves. The argument, if given, is written literally. Both forms register the new tree under `ask` without a cross-project grant. Existing trees are preserved.
+- Create: `kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the current directory with empty canonical branches and `where/am/i.md`; it creates no project spine. `kt init --project [ORIENTATION]` additionally creates empty spec and plan leaves. The argument, if given, is written literally. Both forms register the new tree under `ask` without a cross-project grant. Existing trees are preserved.
 
 - Initialize: `kt info` prints the canonical global procedure and exact local
   orientation, then the accessible dictionary, then the
@@ -193,5 +193,5 @@ Move refuses an existing destination and preserves bytes. Same-filesystem moves
 preserve hardlink identity; cross-filesystem moves copy exclusively before removing
 the source. Removing a name leaves other hardlinks intact. No command prunes empty
 canonical branches or updates links automatically. Review scope, links,
-orientation, current-state projections, and affected proofs after maintenance.
+orientation, spine leaves, and affected proofs after maintenance.
 All operations enforce source/destination access and force-private boundaries.

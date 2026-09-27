@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-21T08:33:21+10:00"
+revised_at: "2026-09-27T14:45:34+10:00"
 name: "knowledgetrees-ingestion"
 description: "Use when ingesting legacy knowledge: find existing owners with kt, establish leaf existence on misses, capture absent answers, audit coverage, and retire redundant sources only when authorized."
 ---
@@ -9,7 +9,7 @@ Treat a legacy document as temporary ingestion material, not a parallel canonica
 knowledge authority. Establish its coverage boundary and inventory only enough to
 bound the work. Process small coherent sections, classifying each substantive
 statement as a requirement, decision/rationale, procedure, interface contract,
-current-state fact, failure mode, acceptance gate, or other reusable answer.
+current fact, failure mode, acceptance gate, or other reusable answer.
 
 Coverage includes every scale: function-level contracts and rationale,
 code-comment-level explanations, file contents, typedef locations, include order,

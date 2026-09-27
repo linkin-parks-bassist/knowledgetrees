@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T14:38:36+10:00"
+revised_at: "2026-09-27T14:45:19+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -22,7 +22,7 @@ also need `name` and `description` for harness discovery. Blockers, next checks,
 evidence, provenance, and review conditions belong in the answer body; root and
 path supply scope. All stored timestamps are ISO 8601 with a timezone. Unsupported
 or malformed front matter is rejected by write commands and brown in proof checks.
-The empty orientation created by neutral `kt init` remains empty until filled; only `kt init --project` creates empty spec, plan, state, and next placeholders. A leaf is a current answer, never a chronological log: task narration, session notes, progress updates, and tool transcripts are tree poisoning and must not be appended. History remains only when it explains a current constraint or decision; Git or an external log owns chronology.
+The empty orientation created by neutral `kt init` remains empty until filled; only `kt init --project` creates empty spec and plan placeholders. The plan is the frontier: it lists only the steps still planned, in order with the next first, and a step is removed once it is complete. A leaf is a current answer, never a chronological log: task narration, session notes, progress updates, and tool transcripts are tree poisoning and must not be appended. History remains only when it explains a current constraint or decision; Git or an external log owns chronology.
 
 `kt add` and `kt rewrite` accept answer bodies and generate front matter. Options `--expires-at TIMESTAMP` and `--expires-every DURATION` set freshness; `--verifiable` asserts complete proof coverage. Rewrite preserves omitted optional fields; `--no-expiry` and `--no-verifiable` clear them. `kt add`, `kt rewrite`, and `kt combine` set `revised_at` for changes. A new leaf starts green (with `checked_at` too when `--expires-every` is given), and a rewrite keeps the status and `checked_at`, so a brown leaf stays brown through a rewrite until
 an independent whole-leaf check. `kt combine` yields the worst status of its sources. `kt prove` writes the evaluated color and only ever lowers it; the sole leaf it raises is a `verifiable: true` one whose proofs all pass. Elapsed
@@ -103,7 +103,7 @@ unrelated host permissions survive installation.
 `kt init [ORIENTATION]` creates a neutral local tree with the six canonical
 branches and `where/am/i.md`, registers it under `ask` without cross-project
 access, and refuses to overwrite an existing tree. `kt init --project
-[ORIENTATION]` additionally creates empty spec, plan, state, and next leaves. `kt info` prints the canonical global procedure, exact local orientation,
+[ORIENTATION]` additionally creates empty spec and plan leaves. `kt info` prints the canonical global procedure, exact local orientation,
 accessible dictionary, and local proof result in that order; without a local
 tree or local orientation it falls back to the global orientation and proof. Startup hooks inject
 its complete output through the final proof summary. The bootstrap is once per

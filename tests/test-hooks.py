@@ -20,6 +20,7 @@ def main():
     handler_api = runpy.run_path(str(HANDLER))
     assert "knowledgetrees-maintenance skill" in handler_api["MAINTAIN"]
     assert "never append logs" in handler_api["MAINTAIN"]
+    assert "what/is/the/plan.md" in handler_api["MAINTAIN"]
     handle = handler_api["handle"]
     with tempfile.TemporaryDirectory(prefix="kt info hook test ") as temporary:
         root = Path(temporary)

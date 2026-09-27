@@ -58,7 +58,7 @@ def tool(name, title, description, properties=None, required=(), *, read_only=Fa
 
 STR = {"type": "string"}
 BOOL = {"type": "boolean"}
-ADDRESS = {"type": "string", "description": "Root-qualified leaf address returned by kt, e.g. local:what/is/next.md"}
+ADDRESS = {"type": "string", "description": "Root-qualified leaf address returned by kt, e.g. local:what/is/the/plan.md"}
 DRY_RUN = {"type": "boolean", "description": "Show the diff without writing"}
 SCOPE = {"type": "string", "enum": ["local", "global"]}
 
@@ -160,7 +160,7 @@ TOOLS = [
     tool("kt_init", "Initialize a tree",
          "Initialize a new .knowledge tree in the MCP project directory, optionally with literal orientation text. "
          "By default it creates only neutral canonical branches and where/am/i.md; project=true also creates "
-         "empty spec, plan, state, and next leaves. "
+         "empty spec and plan leaves. "
          "It also registers the new tree under ask policy, without granting cross-project access. "
          "The CLI refuses an existing tree; this never changes filesystem permissions.",
          {"orientation": {"type": "string", "description": "Optional literal contents of where/am/i.md"},

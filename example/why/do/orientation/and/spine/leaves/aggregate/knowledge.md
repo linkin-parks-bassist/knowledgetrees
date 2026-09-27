@@ -1,13 +1,13 @@
 ---
 status: green
-revised_at: "2026-09-18T12:22:12+10:00"
+revised_at: "2026-09-27T14:41:18+10:00"
 ---
 
 Orientation and spine leaves aggregate knowledge because their questions are
 inherently broad. `where/am/i.md` must contain enough scope, topology, state,
 priorities, boundaries, and entry routes to prevent broad discovery.
-`what/is/the/spec.md` must present the cohesive governing contract. Plan, state, and
-next similarly project coordinated current truth.
+`what/is/the/spec.md` must present the cohesive governing contract, and
+`what/is/the/plan.md` the ordered frontier of planned steps.
 
 These leaves may be sizeable and may repeat key facts also available through focused
 semantic paths. That controlled denormalization reduces startup and navigation cost.

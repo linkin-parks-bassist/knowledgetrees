@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T16:23:37+10:00"
+revised_at: "2026-09-27T14:45:18+10:00"
 ---
 
 Before pushing, scan every tracked file for material that must not be public, because this repository is published and its own rule is that public leaves contain no private host, customer, or owner-identifying material.
@@ -9,4 +9,4 @@ Build the pattern list locally from things that identify the owner and their pri
 
 Fix a hit at HEAD by rewriting the owning leaf with `kt rewrite` (for example `~` instead of a home path, or "a private project tree" instead of a name). Removing it from HEAD does not remove it from earlier commits: anything already pushed stays in history, and cleaning that needs a history rewrite and force-push, which requires the owner's explicit instruction. Tell the owner what remains in history.
 
-Evidence: the 2026-09-20 scan found a private project name and a home-directory path in `what/is/the/state.md`. The name arrived when another session's in-session note was merged into a leaf during staging, and the path predated the session; both were already pushed, so only HEAD was fixed. Notes written mid-session about private trees are the usual source, so scan after merging them.
+Evidence: the 2026-09-20 scan found a private project name and a home-directory path in a project spine leaf. The name arrived when another session's in-session note was merged into a leaf during staging, and the path predated the session; both were already pushed, so only HEAD was fixed. Notes written mid-session about private trees are the usual source, so scan after merging them.
