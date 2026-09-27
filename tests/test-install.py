@@ -121,13 +121,18 @@ def main() -> None:
         assert "WARNING" in installation.stdout and "WRITE" in installation.stdout
         knowledge = target_home / ".knowledge"
         hooks = json.loads(codex_hooks.read_text())
-        assert hooks["description"] == "existing hooks" and hooks["hooks"]["Stop"] == [unrelated_hook]
+        assert hooks["description"] == "existing hooks" and hooks["hooks"]["Stop"][0] == unrelated_hook
+        assert len(hooks["hooks"]["Stop"]) == 2
+        assert hooks["hooks"]["Stop"][1]["hooks"][0]["command"].endswith("codex stop")
         assert hooks["hooks"]["PreToolUse"][0]["matcher"] == "Bash"
         assert hooks["hooks"]["PreToolUse"][0]["hooks"] == [{"type": "command", "command": "unrelated-pre-check"}]
         assert hooks["hooks"]["SessionStart"][0]["matcher"] == "^(startup|resume|clear|compact)$"
         assert hooks["hooks"]["SessionStart"][0]["hooks"][0]["command"].endswith("codex start")
         claude_config = json.loads(claude_settings.read_text())
-        assert claude_config["theme"] == "dark" and claude_config["hooks"]["Stop"] == [unrelated_hook]
+        assert claude_config["theme"] == "dark" and claude_config["hooks"]["Stop"][0] == unrelated_hook
+        assert len(claude_config["hooks"]["Stop"]) == 2
+        assert claude_config["hooks"]["Stop"][1]["hooks"][0]["command"].endswith("claude stop")
+        assert "matcher" not in claude_config["hooks"]["Stop"][1]
         assert set(claude_config["hooks"]) == {"SessionStart", "Stop"}
         assert claude_config["hooks"]["SessionStart"][0]["matcher"] == "startup|resume|clear|compact"
         assert claude_config["hooks"]["SessionStart"][0]["hooks"][0]["command"].endswith("claude start")
@@ -136,7 +141,8 @@ def main() -> None:
         assert os.access(knowledge / ".tools/kt-hooks", os.X_OK)
         assert (target_home / ".config/opencode/plugins/knowledgetrees.js").read_bytes() == (REPOSITORY / "tools/kt-opencode.mjs").read_bytes()
         copilot_hooks = json.loads((target_home / ".copilot/hooks/knowledgetrees.json").read_text())
-        assert set(copilot_hooks["hooks"]) == {"sessionStart"}
+        assert set(copilot_hooks["hooks"]) == {"sessionStart", "agentStop"}
+        assert copilot_hooks["hooks"]["agentStop"][0]["args"][-2:] == ["copilot", "stop"]
         assert copilot_hooks["hooks"]["sessionStart"][0]["args"][-2:] == ["copilot", "start"]
         server = knowledge / ".tools/kt-mcp"
         assert server.read_bytes() == (REPOSITORY / "tools/kt-mcp").read_bytes() and os.access(server, os.X_OK)
@@ -216,8 +222,8 @@ def main() -> None:
 
         orientation.write_text("Local environment orientation.\n")
         rerun = run(*home_arguments, answer="")
-        assert json.loads(codex_hooks.read_text())["hooks"]["Stop"] == [unrelated_hook]
-        assert json.loads(claude_settings.read_text())["hooks"]["Stop"] == [unrelated_hook]
+        assert len(json.loads(codex_hooks.read_text())["hooks"]["Stop"]) == 2, "reinstalling does not duplicate"
+        assert len(json.loads(claude_settings.read_text())["hooks"]["Stop"]) == 2, "reinstalling does not duplicate"
         assert codex_config.read_text().count("[mcp_servers.knowledgetrees]") == 1
         assert list(json.loads(opencode_config.read_text())["mcp"]) == ["knowledgetrees"]
         assert "[n/Y]" not in rerun.stdout

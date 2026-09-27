@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T10:06:24+10:00"
+revised_at: "2026-09-27T14:38:36+10:00"
 ---
 
 Agents use `kt_rewrite` as the standard editing tool: first use `kt_read` or an exact lookup, which returns the complete answer plus its `Revision: HASH` and no other metadata, then pass that hash with the complete replacement answer. Neither MCP nor kt has partial leaf reads. Ranked excerpts are selectors, not reads, and supply no hash. The locked CLI rejects stale hashes. Use `kt_edit` only for economy when making a tiny surgical exact-match change after a whole read; the shell command below has the same whole-answer contract.
@@ -27,7 +27,7 @@ correctly; operating-system argument size limits apply.
 Successful rewrites and identical no-ops produce no stdout or stderr. Exit 0
 signals success. Neither old nor new contents are echoed. --dry-run still shows
 the diff, and failures report diagnostics with a nonzero exit status. Preserve
-still-valid knowledge and check relevant proofs before reliance. Agent guidance carries the accuracy/preservation requirement. No task-end reminder hook is installed, and rewrites do not create an extra model turn.
+still-valid knowledge and check relevant proofs before reliance. Agent guidance carries the accuracy/preservation requirement. Rewrites themselves create no extra model turn; the separate, rate-limited turn-end maintenance hook may ask for one pass.
 
 The command needs no Git repository and invokes no editor. Revision mismatch exits
 4 and leaves the file untouched; reread and merge concurrent changes. An advisory

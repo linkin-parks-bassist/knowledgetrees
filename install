@@ -253,7 +253,7 @@ def permission_consent(target_home: Path) -> bool:
     print("Folder contents may be sent to your configured model/provider.")
     print(f"Agents will also be allowed to WRITE to {target_home / '.knowledge'}/**.")
     print("The compatibility skill and four knowledge-tree procedure skills will be enabled; edits in .agents still require approval.")
-    print("Default installation adds startup knowledge-tree context; non-startup reminder hooks are disabled.")
+    print("Default installation adds startup knowledge-tree context and a turn-end maintenance reminder; each turn can cost one extra model turn.")
     while True:
         try:
             answer = input("Grant these permissions and continue installation? [n/Y] ").strip().lower()
@@ -278,7 +278,7 @@ def claude_settings_bytes(settings_path: Path, handler: Path) -> tuple[bytes, in
     original = copy.deepcopy(config)
     hooks = config.setdefault("hooks", {})
     for name, event in (("UserPromptSubmit", "prompt"), ("PostToolUse", "after"),
-                        ("PostToolUseFailure", "failed"), ("Stop", "stop")):
+                        ("PostToolUseFailure", "failed")):
         groups = hooks.get(name)
         if groups is None:
             continue
@@ -295,7 +295,7 @@ def claude_settings_bytes(settings_path: Path, handler: Path) -> tuple[bytes, in
             hooks[name] = retained
         else:
             hooks.pop(name, None)
-    for name, event, matcher in (("SessionStart", "start", "startup|resume|clear|compact"),):
+    for name, event, matcher in (("SessionStart", "start", "startup|resume|clear|compact"), ("Stop", "stop", None)):
         groups = hooks.setdefault(name, [])
         if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
             raise ValueError(f"malformed Claude Code {name} hooks")
@@ -334,7 +334,7 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
             hooks["PreToolUse"] = retained
         else:
             hooks.pop("PreToolUse", None)
-    for name, event in (("UserPromptSubmit", "prompt"), ("PostToolUse", "after"), ("Stop", "stop")):
+    for name, event in (("UserPromptSubmit", "prompt"), ("PostToolUse", "after")):
         groups = hooks.get(name)
         if groups is None:
             continue
@@ -351,7 +351,7 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
             hooks[name] = retained
         else:
             hooks.pop(name, None)
-    for name, event in (("SessionStart", "start"),):
+    for name, event in (("SessionStart", "start"), ("Stop", "stop")):
         groups = hooks.setdefault(name, [])
         if not isinstance(groups, list) or any(not isinstance(g, dict) or not isinstance(g.get("hooks", []), list) for g in groups):
             raise ValueError(f"malformed Codex {name} hooks")
@@ -365,7 +365,7 @@ def hook_installs(repository: Path, target_home: Path) -> list[tuple[Path, bytes
     codex_bytes = (current if config == original else json.dumps(config, indent=2) + "\n").encode()
     copilot = {"version": 1, "hooks": {name: [{"type": "command", "exec": "python3",
                   "args": [str(handler), "copilot", event], "timeoutSec": 5}]
-               for name, event in (("sessionStart", "start"),)}}
+               for name, event in (("sessionStart", "start"), ("agentStop", "stop"))}}
     claude_path = target_home / ".claude/settings.json"
     claude_bytes, claude_mode = claude_settings_bytes(claude_path, handler)
     return [
@@ -671,7 +671,7 @@ def main(arguments: list[str] | None = None) -> int:
     print(f"Installed {len(leaf_installs)} reusable leaves into {knowledge_root}")
     print(f"Installed kt at {kt_target}; command: {kt_command}")
     if hook_files:
-        print("Installed startup knowledge-tree context for Claude Code, Codex, OpenCode, and Copilot CLI; non-startup reminders are disabled.")
+        print("Installed startup knowledge-tree context and turn-end maintenance reminders for Claude Code, Codex, OpenCode, and Copilot CLI.")
         print("Claude Code and Codex: review/trust the new definitions with /hooks. Restart OpenCode to load its plugin.")
     if claude_mcp is not None:
         print(f"Knowledge-tree MCP server (lookup, search, edit, access approval, and more) is configured for Codex, OpenCode, and Copilot CLI; Claude Code: {claude_mcp}.")

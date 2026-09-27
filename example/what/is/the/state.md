@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-20T10:51:44+10:00"
+revised_at: "2026-09-27T14:38:35+10:00"
 ---
 
 The visible example contains the complete curated generic knowledge-tree corpus and
@@ -11,7 +11,7 @@ explains that current harness skills are hard-linked bootstraps into the canonic
 installed knowledge. A deliberately terse, metadata-complete leaf answers how many
 Dedekind-complete ordered fields there are.
 
-Startup hooks deliver the complete `kt info` output once for a fresh agent session. The compatibility skill remains an available fallback if hook delivery is unavailable; it is not invoked for each task after the procedure is loaded.
+Startup hooks deliver the complete `kt info` output once for a fresh agent session. The compatibility skill remains an available fallback if hook delivery is unavailable; it is not invoked for each task after the procedure is loaded. A turn-end hook asks for a maintenance pass, using the maintenance skill, at most once per five minutes per session and not after turns that already maintained the tree.
 
 The kt-first rule and mandatory miss resolution remain in the hook-delivered canonical procedure. Retrieval, capture,
 maintenance, and ingestion detail have direct semantic owners. Installation exposes

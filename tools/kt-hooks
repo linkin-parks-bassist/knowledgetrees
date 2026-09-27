@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small, session-isolated lookup/capture reminders for agent harness hooks."""
+"""Startup context and per-turn maintenance reminders for agent harness hooks."""
 
 import argparse
 import hashlib
@@ -23,16 +23,17 @@ FAILURE = (
     "and next check. Expected negative tests need no invented lesson or duplicate "
     "leaf. Respect scope, privacy, and permissions; never capture passwords or raw logs."
 )
-REVIEW = (
-    "Knowledge-tree capture review: before finishing, review reusable discoveries "
-    "from this work, especially failed probes and kt misses. Check kt for existing "
-    "owners; edit them with kt_edit or use kt_add to capture missing answers with actual source "
-    "evidence at the correct scope. Record unresolved questions with blocker and next "
-    "check. Ensure rewritten knowledge is accurate and no still-valid knowledge was lost. "
-    "Inspect/check eligible proofs; creation or passing proofs does not verify "
-    "a whole leaf. Do not invent discoveries or duplicate checked knowledge. If there "
-    "is nothing new to retain, say so briefly and finish. This is a one-shot reminder, "
-    "not a grant of write permissions or a mechanical certification of capture."
+MAINTAIN = (
+    "Knowledge-tree maintenance before finishing: invoke the knowledgetrees-maintenance skill "
+    "(or follow how/to/maintain/a/knowledge/tree.md) for each tree touched by the work, "
+    "direction, or decisions since your last maintenance pass. Update the leaves whose answers "
+    "changed, capture new leaf-worthy knowledge (user guidance, resolved kt misses, reusable "
+    "discoveries, decisions) at its owning scope with actual "
+    "evidence, and rewrite or remove leaves that can no longer be accurate or relevant. After "
+    "substantive repository work, refresh what/is/the/state.md and what/is/next.md. Rewrite "
+    "answers in place; never append logs, and never duplicate an existing owner. If nothing "
+    "leaf-worthy changed, say so in one line and finish. This reminder is rate-limited per "
+    "session and grants no write permissions."
 )
 
 
@@ -133,6 +134,113 @@ def startup_context(payload, limit=None, harness=None):
     return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
 
 
+def session_key(harness, payload):
+    session = payload.get("session_id") or payload.get("sessionId") or payload.get("sessionID")
+    if not isinstance(session, str) or not session:
+        raise ValueError("hook payload lacks a session id; refusing to mix sessions")
+    return hashlib.sha256(f"{harness}:{session}".encode()).hexdigest()
+
+
+# A call writes the tree when it is a kt mutation tool (any MCP prefix) or a kt shell mutation.
+TREE_WRITE = re.compile(r"(?:^|[^A-Za-z0-9])kt_(?:rewrite|edit|add|rm|mv|combine|renew|undo)(?![A-Za-z0-9_])"
+                        r"|(?:^|[^\w.-])kt\s+(?:rewrite|add|rm|mv|combine|renew)\b")
+CODE_EDITS = {"edit", "write", "multiedit", "notebookedit", "patch", "apply_patch"}
+PATCH = re.compile(r"\bapply_patch\b|\*\*\* Begin Patch")
+TRANSCRIPT_TAIL = 4 * 1024 * 1024
+
+
+def entry_turn_start(entry):
+    """True for the entry that begins a user turn in a Claude Code or Codex transcript."""
+    if entry.get("type") == "user" and not entry.get("isSidechain") and not entry.get("isMeta"):
+        content = (entry.get("message") or {}).get("content")
+        return isinstance(content, str) or (isinstance(content, list) and not any(
+            isinstance(part, dict) and part.get("type") == "tool_result" for part in content))
+    return entry.get("type") == "event_msg" and (entry.get("payload") or {}).get("type") == "task_started"
+
+
+def entry_calls(entry):
+    """(name, input text) for each tool call a transcript entry records."""
+    if entry.get("type") == "assistant" and not entry.get("isSidechain"):
+        content = (entry.get("message") or {}).get("content")
+        return [(str(part.get("name", "")), json.dumps(part.get("input", "")))
+                for part in content if isinstance(part, dict) and part.get("type") == "tool_use"] if isinstance(content, list) else []
+    payload = entry.get("payload") or {}
+    if entry.get("type") == "response_item" and payload.get("type") in ("custom_tool_call", "function_call"):
+        return [(str(payload.get("name", "")), str(payload.get("input", payload.get("arguments", ""))))]
+    return []
+
+
+def turn_calls(payload):
+    """Tool calls since the current turn began, or None when they cannot be established."""
+    tools = payload.get("tools")
+    if isinstance(tools, list):  # The OpenCode plugin reports its own per-turn calls.
+        return [(str(t.get("name", "")), json.dumps(t.get("input", ""))) for t in tools if isinstance(t, dict)]
+    path = payload.get("transcript_path") or payload.get("transcriptPath")
+    if not isinstance(path, str) or not path:
+        return None
+    # The transcript formats are unstable, so read a bounded tail and fail toward reminding.
+    with open(path, "rb") as transcript:
+        transcript.seek(0, os.SEEK_END)
+        size = transcript.tell()
+        transcript.seek(max(0, size - TRANSCRIPT_TAIL))
+        lines = transcript.read().splitlines()[1 if size > TRANSCRIPT_TAIL else 0:]
+    calls = None
+    for line in lines:
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        if entry_turn_start(entry):
+            calls = []
+        elif calls is not None:
+            calls.extend(entry_calls(entry))
+    return calls
+
+
+def maintained(calls):
+    """True when this turn already wrote the tree and edited no code afterward."""
+    wrote = False
+    for name, text in calls:
+        if name.rsplit("__", 1)[-1].lower() in CODE_EDITS or PATCH.search(text):
+            wrote = False
+        elif TREE_WRITE.search(name) or TREE_WRITE.search(text):
+            wrote = True
+    return wrote
+
+
+def maintenance(harness, payload):
+    """Request a maintenance continuation at most once per interval per session, never a loop."""
+    active = payload.get("stop_hook_active")
+    if active is True:
+        return {}  # Claude Code and Codex mark the stop that ends a hook-requested continuation.
+    key = session_key(harness, payload)
+    interval = float(os.environ.get("KT_HOOK_MAINTENANCE_INTERVAL", "300"))
+    try:
+        calls = turn_calls(payload)
+    except OSError:
+        calls = None
+    now = time.time()
+    with sqlite3.connect(state_database(), timeout=3) as connection:
+        connection.execute("DROP TABLE IF EXISTS maintenance")
+        connection.execute("CREATE TABLE IF NOT EXISTS maintenance_turns (key TEXT PRIMARY KEY, pending INTEGER, last REAL, touched REAL)")
+        connection.execute("BEGIN IMMEDIATE")
+        connection.execute("DELETE FROM maintenance_turns WHERE touched < ?", (now - 7 * 86400,))
+        row = connection.execute("SELECT pending, last FROM maintenance_turns WHERE key = ?", (key,)).fetchone()
+        pending, last = row if row else (0, 0.0)
+        remind = False
+        if active is None and pending:
+            # Copilot and OpenCode carry no continuation flag; this stop ends the requested pass.
+            pending = 0
+        elif calls and maintained(calls):
+            last = now  # The agent maintained the tree unprompted; restart the interval.
+        elif now - last >= interval:
+            remind, last, pending = True, now, int(active is None)
+        connection.execute("INSERT OR REPLACE INTO maintenance_turns VALUES (?, ?, ?, ?)", (key, pending, last, now))
+    return {"decision": "block", "reason": MAINTAIN} if remind else {}
+
+
 def handle(harness, event, payload):
     if event == "start":
         limit = int(os.environ.get("KT_HOOK_CONTEXT_LIMIT", CLAUDE_CONTEXT_LIMIT)) if harness == "claude" else None
@@ -142,13 +250,9 @@ def handle(harness, event, payload):
         return result, code
     if event == "before":
         return {}, 0  # Legacy pre-tool definitions are inert; never rewrite input.
-    session = payload.get("session_id") or payload.get("sessionId") or payload.get("sessionID")
-    if not isinstance(session, str) or not session:
-        raise ValueError("hook payload lacks a session id; refusing to mix sessions")
-    minimum = int(os.environ.get("KT_HOOK_MIN_CALLS", "10"))
-    if minimum < 1:
-        raise ValueError("KT_HOOK_MIN_CALLS must be positive")
-    key = hashlib.sha256(f"{harness}:{session}".encode()).hexdigest()
+    if event == "stop":
+        return maintenance(harness, payload), 0
+    key = session_key(harness, payload)
     database = state_database()
     now = time.time()
     message = None
@@ -184,16 +288,9 @@ def handle(harness, event, payload):
                     if broken:
                         failures += 1
                         message = FAILURE
-        elif event == "stop":
-            if not reviewing and not payload.get("stop_hook_active") and (failures or calls >= minimum):
-                message = REVIEW
-                reviewing = 1
-                calls = failures = 0
         connection.execute("UPDATE sessions SET calls = ?, failures = ?, reviewing = ?, touched = ? WHERE key = ?", (calls, failures, reviewing, now, key))
     if not message:
         return {}, 0
-    if event == "stop":
-        return {"decision": "block", "reason": message}, 0
     if harness == "codex":
         return {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": message}}, 0
     if harness == "claude":

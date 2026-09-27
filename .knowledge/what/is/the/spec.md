@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T10:31:58+10:00"
+revised_at: "2026-09-27T14:38:36+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -117,7 +117,7 @@ installing the example spine, preserves existing orientation, installs the CLI,
 hooks, and MCP server (registered with all four harnesses; `--no-mcp` skips it), removes its obsolete home AGENTS bootstrap, and hardlinks skill entry points to the
 canonical installed procedure leaves. It preserves unrelated configuration.
 OpenCode permission changes require informed `[n/Y]` consent before writes.
-Claude Code, Codex, OpenCode, and Copilot integrations provide startup context only. The installer removes its formerly managed non-startup reminder hooks while preserving unrelated hooks; no managed prompt, tool-result, failure, stop, idle, call-counter, or capture-review hook remains active. The OpenCode backend must
+Claude Code, Codex, OpenCode, and Copilot integrations provide startup context and a turn-end maintenance reminder: at turn end, Claude Code and Codex `Stop`, Copilot `agentStop`, and OpenCode `session.idle` request one continuation that invokes the maintenance skill to update affected leaves, capture new leaf-worthy knowledge including user guidance, and prune leaves that can no longer be accurate. It fires at most once per `KT_HOOK_MAINTENANCE_INTERVAL` (default five minutes) per session, and is skipped when the turn wrote the tree after its last code edit (read from the harness transcript, or the OpenCode plugin's own call tracking). Direction-only turns remain eligible. The continuation's own stop always passes, so it never loops; any hook error fails open and an unparseable transcript falls back to the rate limit. The installer removes its formerly managed prompt, tool-result, and failure hooks while preserving unrelated hooks; no failure-heuristic hook is active. The OpenCode backend must
 restart to load a changed plugin; Codex hook definitions require native trust; Claude Code definitions are reviewed with `/hooks`.
 Claude Code drops hook context past roughly 10,000 characters, so its startup
 hook sends an instruction to call the `kt_info` tool (or run `kt info`) when the output exceeds

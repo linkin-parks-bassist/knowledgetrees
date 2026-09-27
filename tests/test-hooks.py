@@ -18,8 +18,8 @@ HANDLER = REPOSITORY / "tools/kt-hooks"
 
 def main():
     handler_api = runpy.run_path(str(HANDLER))
-    assert "Ensure rewritten knowledge is accurate and no still-valid knowledge was lost." in handler_api["REVIEW"]
-    assert "lost. check." not in handler_api["REVIEW"]
+    assert "knowledgetrees-maintenance skill" in handler_api["MAINTAIN"]
+    assert "never append logs" in handler_api["MAINTAIN"]
     handle = handler_api["handle"]
     with tempfile.TemporaryDirectory(prefix="kt info hook test ") as temporary:
         root = Path(temporary)
@@ -87,7 +87,7 @@ def main():
     assert not failure("ERROR: expected output\nExit code: 0")
     with tempfile.TemporaryDirectory(prefix="kt hooks test ") as temporary:
         state = Path(temporary) / "state"
-        env = {**os.environ, "KT_HOOK_STATE_DIR": str(state), "KT_HOOK_MIN_CALLS": "3"}
+        env = {**os.environ, "KT_HOOK_STATE_DIR": str(state)}
 
         def run(harness, event, payload, expected=0):
             result = subprocess.run([sys.executable, str(HANDLER), harness, event],
@@ -95,63 +95,71 @@ def main():
             assert result.returncode == expected, (result.stdout, result.stderr)
             return json.loads(result.stdout)
 
+        # Dormant failure reminders still deduplicate receipts per session.
         for harness in ("codex", "copilot", "opencode"):
             def event(kind, **kwargs):
                 return run(harness, kind, {"session_id": "session-one", **kwargs},
                            expected=2 if harness == "copilot" and kind == "failed" else 0)
             assert event("prompt", prompt="ordinary task") == {}
-            assert event("stop") == {}
             response = event("after", tool_use_id="failed-shell", tool_response={"exit_code": 4})
             message = response.get("additionalContext", response.get("hookSpecificOutput", {}).get("additionalContext"))
             assert "check kt" in message and "kt_add" in message
             assert event("after", tool_use_id="failed-shell", tool_response={"exit_code": 4}) == {}
-            review = event("stop")
-            assert review["decision"] == "block" and "capture review" in review["reason"]
-            assert event("prompt", prompt=review["reason"], synthetic=True) == {}
-            for number in range(5):
-                event("after", tool_use_id=f"review-{number}", tool_response={"exit_code": 0})
-            assert event("stop") == {}, "review must not recursively trigger itself"
-            assert event("stop", stop_hook_active=True) == {}
-            assert event("prompt", prompt="new external task") == {}
-            assert event("stop") == {}
-            for number in range(3):
-                event("after", tool_use_id=f"new-task-{number}", tool_response={"exit_code": 0})
-            assert event("stop")["decision"] == "block"
-            assert run(harness, "stop", {"sessionID": "isolated-session"}) == {}
             errors = run(harness, "failed", {"sessionID": "error-session", "callID": "error-one"},
                          expected=2 if harness == "copilot" else 0)
             assert errors
-        # Claude Code: failures arrive as PostToolUseFailure; successes carry no exit status.
-        def claude(kind, **kwargs):
-            return run("claude", kind, {"session_id": "claude-one", **kwargs})
-        assert claude("prompt", prompt="ordinary task") == {}
-        assert claude("after", tool_use_id="ok-1", tool_response={"stdout": "ERROR: expected negative output"}) == {}
-        broken = claude("failed", tool_use_id="bad-1", error="Exit code 1", is_interrupt=False)
+        broken = run("claude", "failed", {"session_id": "claude-one", "tool_use_id": "bad-1", "error": "Exit code 1", "is_interrupt": False})
         assert broken["hookSpecificOutput"]["hookEventName"] == "PostToolUseFailure"
-        assert "check kt" in broken["hookSpecificOutput"]["additionalContext"]
-        assert claude("failed", tool_use_id="bad-1", error="Exit code 1") == {}, "receipts are deduplicated"
-        assert claude("failed", tool_use_id="stopped", error="interrupted", is_interrupt=True) == {}
-        review = claude("stop", stop_hook_active=False)
-        assert review["decision"] == "block" and "capture review" in review["reason"]
-        assert claude("stop", stop_hook_active=True) == {}
-        assert run("claude", "stop", {"session_id": "claude-quiet"}) == {}
-        assert run("claude", "failed", {}) == {}, "missing ids fail open"
-        # Stdout-only Codex transport: diagnostic failure triggers bookkeeping.
-        actual_shape = {"session_id": "stdout-transport", "tool_name": "Bash",
-                        "tool_use_id": "stdout-failure", "tool_response": "ERROR: operation failed"}
-        assert "additionalContext" in run("codex", "after", actual_shape)["hookSpecificOutput"]
-        assert run("codex", "after", actual_shape) == {}, "failure receipts are deduplicated"
-        assert run("codex", "stop", {"session_id": "stdout-transport"})["decision"] == "block"
-        assert run("codex", "stop", {"session_id": "stdout-transport"}) == {}
+        assert run("claude", "failed", {"session_id": "claude-one", "tool_use_id": "stopped", "is_interrupt": True}) == {}
+        # Reminders are rate-limited per session; the default interval is five minutes.
+        first = run("claude", "stop", {"session_id": "claude-rate", "stop_hook_active": False})
+        assert first["decision"] == "block" and "knowledgetrees-maintenance" in first["reason"]
+        assert run("claude", "stop", {"session_id": "claude-rate", "stop_hook_active": True}) == {}
+        assert run("claude", "stop", {"session_id": "claude-rate", "stop_hook_active": False}) == {}, "within the interval"
+        assert run("claude", "stop", {"session_id": "claude-other", "stop_hook_active": False})["decision"] == "block"
+        env["KT_HOOK_MAINTENANCE_INTERVAL"] = "0"
+        for harness in ("claude", "codex"):
+            for _ in range(2):
+                assert run(harness, "stop", {"session_id": f"{harness}-turns", "stop_hook_active": False})["decision"] == "block"
+                assert run(harness, "stop", {"session_id": f"{harness}-turns", "stop_hook_active": True}) == {}
+        # Without a continuation flag, stops alternate per session: turn, maintenance, turn.
+        for harness in ("copilot", "opencode"):
+            for session in ("alpha", "beta"):
+                assert run(harness, "stop", {"sessionId": session})["decision"] == "block"
+            assert run(harness, "stop", {"sessionId": "alpha"}) == {}, "maintenance must not trigger itself"
+            assert run(harness, "stop", {"sessionId": "alpha"})["decision"] == "block"
+            assert run(harness, "stop", {"sessionId": "beta"}) == {}
+        assert run("copilot", "stop", {}) == {}, "missing ids fail open instead of looping"
+        # A turn that already wrote the tree after its last code edit needs no reminder.
+        transcript = Path(temporary) / "transcript.jsonl"
+
+        def claude_turn(*names):
+            entries = [{"type": "user", "message": {"role": "user", "content": "earlier task"}},
+                       {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__knowledgetrees__kt_add", "input": {}}]}},
+                       {"type": "user", "message": {"role": "user", "content": "current task"}}]
+            for name in names:
+                entries.append({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": name, "input": {"command": "kt rewrite local:x.md HASH body" if name == "Bash" else ""}}]}})
+                entries.append({"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "content": "ok"}]}})
+            transcript.write_text("\n".join(map(json.dumps, entries)) + "\n")
+            return run("claude", "stop", {"session_id": "claude-transcript", "stop_hook_active": False, "transcript_path": str(transcript)})
+        assert claude_turn("Edit", "mcp__knowledgetrees__kt_rewrite") == {}
+        assert claude_turn("Edit", "Bash", "Read") == {}, "shell kt writes count and reads do not undo them"
+        assert claude_turn("mcp__knowledgetrees__kt_edit", "Write")["decision"] == "block", "code edits after the tree write"
+        assert claude_turn()["decision"] == "block", "direction-only turns still get a reminder"
+        assert run("claude", "stop", {"session_id": "claude-transcript", "stop_hook_active": False,
+                                      "transcript_path": str(Path(temporary) / "missing.jsonl")})["decision"] == "block"
+
+        def codex_turn(*inputs):
+            entries = [{"type": "event_msg", "payload": {"type": "task_started"}}]
+            entries += [{"type": "response_item", "payload": {"type": "custom_tool_call", "name": "exec", "input": text}} for text in inputs]
+            transcript.write_text("\n".join(map(json.dumps, entries)) + "\n")
+            return run("codex", "stop", {"session_id": "codex-transcript", "stop_hook_active": False, "transcript_path": str(transcript)})
+        assert codex_turn("*** Begin Patch", '{"method":"tools/call","params":{"name":"kt_edit"}}') == {}
+        assert codex_turn('{"name":"kt_edit"}', "apply_patch <<EOF")["decision"] == "block"
+        assert codex_turn("ls kt_editor_notes")["decision"] == "block", "only exact kt tool names count"
+        assert run("opencode", "stop", {"sessionID": "oc-tools", "tools": [{"name": "edit"}, {"name": "knowledgetrees_kt_rewrite"}]}) == {}
+        del env["KT_HOOK_MAINTENANCE_INTERVAL"]
         assert run("codex", "after", {"session_id": "silent", "tool_response": ""}) == {}
-        assert run("codex", "stop", {"session_id": "silent"}) == {}
-        # Successful work needs the configured threshold; running shell yields do not count.
-        assert run("codex", "after", {"session_id": "threshold", "tool_response": {"exit_code": None, "session_id": 123}}) == {}
-        for number in range(2):
-            run("codex", "after", {"session_id": "threshold", "tool_use_id": str(number), "tool_response": {"exit_code": 0}})
-        assert run("codex", "stop", {"session_id": "threshold"}) == {}
-        run("codex", "after", {"session_id": "threshold", "tool_use_id": "last", "tool_response": {"exit_code": 0}})
-        assert run("codex", "stop", {"session_id": "threshold"})["decision"] == "block"
         assert run("codex", "after", {}) == {}, "missing ids fail open, never mix sessions"
         with ThreadPoolExecutor(max_workers=4) as workers:
             list(workers.map(lambda number: run("codex", "after", {

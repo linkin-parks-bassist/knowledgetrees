@@ -1,13 +1,13 @@
 ---
 status: green
-revised_at: "2026-09-20T15:15:54+10:00"
+revised_at: "2026-09-27T14:21:02+10:00"
 ---
 
 From a complete repository checkout, run `./install`. Preview the targets without
 writing with `./install --dry-run`. The installer merges reusable example leaves
 into `~/.knowledge` without installing the example's illustrative spine, preserves
 an existing `where/am/i.md`, installs the unified CLI at
-`~/.knowledge/.tools/kt` (including `kt prove`), installs startup hooks for Claude Code, Codex, OpenCode, and Copilot CLI, and deploys a local MCP server registered with all four (skip it with `--no-mcp`). The installer removes its legacy managed block from `~/AGENTS.md`; if that was the whole file, it deletes the file. Other contents are preserved.
+`~/.knowledge/.tools/kt` (including `kt prove`), installs startup and turn-end maintenance hooks for Claude Code, Codex, OpenCode, and Copilot CLI (see `how/to/use/knowledgetree/hooks.md`), and deploys a local MCP server registered with all four (skip it with `--no-mcp`). The installer removes its legacy managed block from `~/AGENTS.md`; if that was the whole file, it deletes the file. Other contents are preserved.
 
 For a new root, it seeds truthful generic navigation in `where/am/i.md`; add
 verified local environment facts. Before any writes, OpenCode configuration changes

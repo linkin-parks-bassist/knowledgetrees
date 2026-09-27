@@ -639,9 +639,16 @@ characters, so above 9,500 bytes its hook sends an instruction to call the `kt_i
 `kt info` if there are no kt tools) instead; `KT_HOOK_CONTEXT_LIMIT` tunes the threshold.
 
 Claude Code and Codex use `SessionStart`; Copilot CLI uses `sessionStart`; OpenCode uses a local
-plugin to supply the same startup context. Non-startup knowledge-tree hooks are deliberately
-disabled: MCP tools provide retrieval and capture without failure heuristics, call counters, or
-task-end follow-up turns. Unrelated hooks are preserved. Review new definitions with `/hooks` (Codex
+plugin to supply the same startup context.
+
+At turn end, a maintenance hook (Claude Code and Codex `Stop`, Copilot CLI `agentStop`,
+OpenCode `session.idle`) asks the agent for one maintenance pass: invoke the
+`knowledgetrees-maintenance` skill, update affected leaves, capture new leaf-worthy knowledge
+(including user guidance), and prune leaves that can no longer be accurate, or say in one line
+that nothing changed. It fires at most once per five minutes per session
+(`KT_HOOK_MAINTENANCE_INTERVAL`), and not after a turn that already wrote the tree after its last
+code edit. The pass costs one extra model turn, never repeats itself, and any hook error lets the
+agent stop. There are no failure heuristics. Unrelated hooks are preserved. Review new definitions with `/hooks` (Codex
 skips untrusted ones), fully restart OpenCode and start a new Copilot CLI session, and note
 that hooks apply to later activity only. Update in place with `./install --hooks-only --force` (`--dry-run` previews;
 `--no-hooks` and `--no-mcp` skip parts). The handler needs only Python 3; see
@@ -893,8 +900,8 @@ operating-system argument size limits apply.
 Successful rewrites and identical no-ops produce no stdout or stderr; exit 0
 signals success. Neither body is echoed. Dry-run still shows the diff and failures
 report diagnostics.
-Agent guidance carries the accuracy and preservation requirement; no task-end
-reminder hook is installed. Mandatory proof checks remain intact.
+Agent guidance carries the accuracy and preservation requirement; the turn-end
+maintenance hook only reminds agents of it. Mandatory proof checks remain intact.
 
 After manually reviewing the complete answer from a full read, record that review
 with `kt renew ADDRESS HASH` (tool `kt_renew`). This sets `checked_at`, clears any brown, then

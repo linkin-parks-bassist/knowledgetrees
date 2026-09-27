@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T10:31:43+10:00"
+revised_at: "2026-09-27T14:38:35+10:00"
 ---
 
 Use `kt_rewrite` as the standard editing method. First read the complete leaf with `kt_read` or an exact
@@ -35,8 +35,8 @@ Successful rewrites and identical no-ops produce no stdout or stderr. Exit 0
 signals success. Neither old nor new contents are echoed. --dry-run still shows
 the diff, and failures report diagnostics with a nonzero exit status. Preserve
 still-valid knowledge and check relevant proofs before reliance. Agent guidance
-carries the accuracy/preservation requirement; no task-end reminder hook is active or
-installed and rewrites do not create an extra model turn.
+carries the accuracy/preservation requirement. Rewrites themselves create no extra
+model turn; the separate, rate-limited turn-end maintenance hook may ask for one pass.
 
 The command needs no Git repository and invokes no editor. Revision mismatch exits
 4 and leaves the file untouched; reread and merge concurrent changes. An advisory

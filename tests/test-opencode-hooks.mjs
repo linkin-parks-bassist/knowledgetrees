@@ -10,7 +10,7 @@ const temporary = await mkdtemp(join(tmpdir(), "kt-opencode-hooks-"));
 try {
   process.env.KT_GLOBAL_ROOT = join(temporary, "global");
   process.env.KT_HOOK_STATE_DIR = join(temporary, "state");
-  process.env.KT_HOOK_MIN_CALLS = "3";
+  process.env.KT_HOOK_MAINTENANCE_INTERVAL = "0";
   await mkdir(join(process.env.KT_GLOBAL_ROOT, ".tools"), { recursive: true });
   await copyFile(fileURLToPath(new URL("../tools/kt-hooks", import.meta.url)), join(process.env.KT_GLOBAL_ROOT, ".tools/kt-hooks"));
   await copyFile(fileURLToPath(new URL("../tools/kt", import.meta.url)), join(process.env.KT_GLOBAL_ROOT, ".tools/kt"));
@@ -21,7 +21,9 @@ try {
     join(process.env.KT_GLOBAL_ROOT, "how/to/use/knowledgetrees.md"));
   await mkdir(join(temporary, ".knowledge/where/am"), { recursive: true });
   await writeFile(join(temporary, ".knowledge/where/am/i.md"), "Project orientation fixture");
-  const plugin = await KnowledgeTreesPlugin({ directory: temporary, client: {} });
+  const prompts = [];
+  const client = { session: { promptAsync: async (request) => { prompts.push(request); return {}; } } };
+  const plugin = await KnowledgeTreesPlugin({ directory: temporary, client });
   assert.equal(plugin["tool.execute.before"], undefined);
   const startup = { system: ["existing harness instructions"] };
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);
@@ -39,9 +41,37 @@ try {
   await plugin["experimental.session.compacting"]({ sessionID: "one" }, compacted);
   assert.match(compacted.context[1], /initialization state/);
   assert.equal(compacted.context[0], "existing compaction context");
-  assert.equal(plugin["chat.message"], undefined);
   assert.equal(plugin["tool.execute.after"], undefined);
-  assert.equal(plugin.event, undefined);
+  await plugin["chat.message"]({ sessionID: "one", agent: "build", model: { providerID: "p", modelID: "m" } }, { parts: [] });
+  const idle = { event: { type: "session.idle", properties: { sessionID: "one" } } };
+  await plugin.event(idle);
+  assert.equal(prompts.length, 1, "a finished turn requests one maintenance pass");
+  assert.equal(prompts[0].path.id, "one");
+  assert.equal(prompts[0].body.agent, "build");
+  assert.deepEqual(prompts[0].body.model, { providerID: "p", modelID: "m" });
+  assert.match(prompts[0].body.parts[0].text, /knowledgetrees-maintenance skill/);
+  assert.equal(prompts[0].body.parts[0].synthetic, true);
+  await plugin.event(idle);
+  assert.equal(prompts.length, 1, "the maintenance pass does not trigger itself");
+  await plugin.event(idle);
+  assert.equal(prompts.length, 2, "the next turn asks again");
+  await plugin.event({ event: { type: "session.idle", properties: { sessionID: "other" } } });
+  assert.equal(prompts.length, 3, "sessions are independent");
+  assert.equal(prompts[2].body.agent, undefined);
+  // A turn that wrote the tree after its last edit already maintained it.
+  const tool = (sessionID, name) => plugin.event({ event: { type: "message.part.updated", properties: {
+    part: { type: "tool", sessionID, tool: name, state: { status: "completed", input: {} } } } } });
+  await plugin["chat.message"]({ sessionID: "three" }, { parts: [{ type: "text", text: "do the work" }] });
+  await tool("three", "edit");
+  await tool("three", "knowledgetrees_kt_rewrite");
+  await plugin.event({ event: { type: "session.idle", properties: { sessionID: "three" } } });
+  assert.equal(prompts.length, 3, "self-maintained turns get no reminder");
+  await plugin["chat.message"]({ sessionID: "three" }, { parts: [{ type: "text", text: "next task" }] });
+  await tool("three", "knowledgetrees_kt_rewrite");
+  await tool("three", "write");
+  await plugin.event({ event: { type: "session.idle", properties: { sessionID: "three" } } });
+  assert.equal(prompts.length, 4, "a new user turn with later edits is reminded");
+  await plugin.event({ event: { type: "session.deleted", properties: { info: { id: "one" } } } });
   console.log("OpenCode adapter integration checks passed");
 } finally {
   await rm(temporary, { recursive: true, force: true });

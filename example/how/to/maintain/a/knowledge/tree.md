@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T10:31:10+10:00"
+revised_at: "2026-09-27T14:38:34+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and repository state and next action refreshed."
 ---
@@ -143,9 +143,11 @@ keywords and scoped semantic inspection. Retrieve/rewrite existing owners; add a
 leaves. Capture established answers before the next unrelated tool call or completion.
 Tree hits create no duplicate leaf. Unresolved questions record blocker and next check;
 forbidden writes require a scoped handoff. Read `how/to/add/knowledge/leaves.md`
-before capture or proof creation. Startup-hook behavior is explained in
-`how/to/use/knowledgetree/hooks.md`; non-startup reminder hooks are disabled and
-agent review remains explicit. A review with no new knowledge needs no invented leaf.
+before capture or proof creation. Hook behavior is explained in
+`how/to/use/knowledgetree/hooks.md`: a turn-end hook asks for a maintenance pass with
+this procedure, at most once per five minutes per session, unless the turn already
+maintained the tree. That reminder does not replace agent
+judgment. A review with no new knowledge needs no invented leaf; say so in one line and finish.
 Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
 Leaves may declare an ISO-8601 `expires_at` or an `expires_every` duration measured
