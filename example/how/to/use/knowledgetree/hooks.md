@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T15:02:18+10:00"
+revised_at: "2026-09-27T15:07:12+10:00"
 ---
 
 Install startup context and turn-end maintenance reminders with the knowledge-tree
@@ -52,11 +52,16 @@ leaf-worthy knowledge (including user guidance) at its owning scope, and
 rewrite or remove leaves that can no longer be accurate or relevant; if nothing
 changed, say so in one line and finish.
 
-Claude Code, Codex, and Copilot receive `decision: block` with the reminder as its
-reason: blocking the stop is the only way a stop hook can give the agent another
-turn. Claude Code displays this as "Stop hook blocking error"; that label is expected
-and does not mean the hook failed. The OpenCode plugin instead sends the reminder as
-a synthetic follow-up prompt with the session's last agent and model.
+Each harness gets the reminder in the form it continues on:
+
+- **Claude Code:** `hookSpecificOutput` with `hookEventName: "Stop"` and the
+  reminder as `additionalContext`. Claude Code records it as hook context and gives
+  the agent another turn without labelling it an error. `decision: "block"` also
+  continues the agent but is shown as "Stop hook error", and `decision: "continue"`
+  is not a valid Stop output. Observed live in Claude Code transcripts.
+- **Codex and Copilot:** `decision: "block"` with the reminder as its `reason`.
+- **OpenCode:** the plugin sends the reminder as a synthetic follow-up prompt with
+  the session's last agent and model.
 
 A turn gets no reminder when either of these holds:
 
@@ -81,16 +86,16 @@ A turn gets no reminder when either of these holds:
   rate limit applies to it.
 
 A reminder costs one extra model turn. It never loops: Claude Code and Codex let the
-stop through when `stop_hook_active` is true, and harnesses without that flag record
-a pending pass per session in `~/.local/state/knowledgetrees/hooks.sqlite3` (override
-with `KT_HOOK_STATE_DIR`), so the stop that ends the maintenance pass passes. A
-missing session id, broken state store, or hook error fails open and lets the agent
-stop; an unreadable or unrecognized transcript falls back to the rate limit alone.
-Transcript formats are undocumented and may change. If OpenCode cannot deliver the
-prompt, that reminder is lost and the next idle passes. The reminder grants no write
-permission. Claude Code behavior was observed live; Codex `Stop`, Copilot
-`agentStop`, and OpenCode `session.idle` delivery are covered by protocol and adapter
-tests only.
+stop through when `stop_hook_active` is true (Claude Code sets it on the stop after a
+context continuation too), and harnesses without that flag record a pending pass per
+session in `~/.local/state/knowledgetrees/hooks.sqlite3` (override with
+`KT_HOOK_STATE_DIR`), so the stop that ends the maintenance pass passes. A missing
+session id, broken state store, or hook error fails open and lets the agent stop; an
+unreadable or unrecognized transcript falls back to the rate limit alone. Transcript
+formats are undocumented and may change. If OpenCode cannot deliver the prompt, that
+reminder is lost and the next idle passes. The reminder grants no write permission.
+Claude Code behavior was observed live; Codex `Stop`, Copilot `agentStop`, and
+OpenCode `session.idle` delivery are covered by protocol and adapter tests only.
 
 No managed hook watches prompts or tool results or applies failure heuristics. The
 shared handler retains dormant failure-reminder code, but the installed harness

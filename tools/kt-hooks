@@ -252,7 +252,12 @@ def handle(harness, event, payload):
     if event == "before":
         return {}, 0  # Legacy pre-tool definitions are inert; never rewrite input.
     if event == "stop":
-        return maintenance(harness, payload), 0
+        result = maintenance(harness, payload)
+        if harness == "claude" and result:
+            # Claude Code continues the agent on Stop additionalContext without labelling
+            # the reminder a blocking error, as `decision: block` would.
+            return {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": result["reason"]}}, 0
+        return result, 0
     key = session_key(harness, payload)
     database = state_database()
     now = time.time()

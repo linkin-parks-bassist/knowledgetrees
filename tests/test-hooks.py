@@ -112,23 +112,30 @@ def main():
         broken = run("claude", "failed", {"session_id": "claude-one", "tool_use_id": "bad-1", "error": "Exit code 1", "is_interrupt": False})
         assert broken["hookSpecificOutput"]["hookEventName"] == "PostToolUseFailure"
         assert run("claude", "failed", {"session_id": "claude-one", "tool_use_id": "stopped", "is_interrupt": True}) == {}
+        def reminded(result):
+            return result.get("decision") == "block" or "additionalContext" in result.get("hookSpecificOutput", {})
+
         # Reminders are rate-limited per session; the default interval is five minutes.
         first = run("claude", "stop", {"session_id": "claude-rate", "stop_hook_active": False})
-        assert first["decision"] == "block" and "knowledgetrees-maintenance" in first["reason"]
+        assert "decision" not in first, "Claude Code gets context, not a blocking error"
+        assert first["hookSpecificOutput"]["hookEventName"] == "Stop"
+        assert "knowledgetrees-maintenance" in first["hookSpecificOutput"]["additionalContext"]
+        codex_first = run("codex", "stop", {"session_id": "codex-rate", "stop_hook_active": False})
+        assert codex_first["decision"] == "block" and "knowledgetrees-maintenance" in codex_first["reason"]
         assert run("claude", "stop", {"session_id": "claude-rate", "stop_hook_active": True}) == {}
         assert run("claude", "stop", {"session_id": "claude-rate", "stop_hook_active": False}) == {}, "within the interval"
-        assert run("claude", "stop", {"session_id": "claude-other", "stop_hook_active": False})["decision"] == "block"
+        assert reminded(run("claude", "stop", {"session_id": "claude-other", "stop_hook_active": False}))
         env["KT_HOOK_MAINTENANCE_INTERVAL"] = "0"
         for harness in ("claude", "codex"):
             for _ in range(2):
-                assert run(harness, "stop", {"session_id": f"{harness}-turns", "stop_hook_active": False})["decision"] == "block"
+                assert reminded(run(harness, "stop", {"session_id": f"{harness}-turns", "stop_hook_active": False}))
                 assert run(harness, "stop", {"session_id": f"{harness}-turns", "stop_hook_active": True}) == {}
         # Without a continuation flag, stops alternate per session: turn, maintenance, turn.
         for harness in ("copilot", "opencode"):
             for session in ("alpha", "beta"):
-                assert run(harness, "stop", {"sessionId": session})["decision"] == "block"
+                assert reminded(run(harness, "stop", {"sessionId": session}))
             assert run(harness, "stop", {"sessionId": "alpha"}) == {}, "maintenance must not trigger itself"
-            assert run(harness, "stop", {"sessionId": "alpha"})["decision"] == "block"
+            assert reminded(run(harness, "stop", {"sessionId": "alpha"}))
             assert run(harness, "stop", {"sessionId": "beta"}) == {}
         assert run("copilot", "stop", {}) == {}, "missing ids fail open instead of looping"
         # A turn that already wrote the tree after its last code edit needs no reminder.
@@ -145,10 +152,10 @@ def main():
             return run("claude", "stop", {"session_id": "claude-transcript", "stop_hook_active": False, "transcript_path": str(transcript)})
         assert claude_turn("Edit", "mcp__knowledgetrees__kt_rewrite") == {}
         assert claude_turn("Edit", "Bash", "Read") == {}, "shell kt writes count and reads do not undo them"
-        assert claude_turn("mcp__knowledgetrees__kt_rewrite", "Write")["decision"] == "block", "code edits after the tree write"
-        assert claude_turn()["decision"] == "block", "direction-only turns still get a reminder"
-        assert run("claude", "stop", {"session_id": "claude-transcript", "stop_hook_active": False,
-                                      "transcript_path": str(Path(temporary) / "missing.jsonl")})["decision"] == "block"
+        assert reminded(claude_turn("mcp__knowledgetrees__kt_rewrite", "Write")), "code edits after the tree write"
+        assert reminded(claude_turn()), "direction-only turns still get a reminder"
+        assert reminded(run("claude", "stop", {"session_id": "claude-transcript", "stop_hook_active": False,
+                                               "transcript_path": str(Path(temporary) / "missing.jsonl")}))
 
         def codex_turn(*inputs):
             entries = [{"type": "event_msg", "payload": {"type": "task_started"}}]
@@ -156,8 +163,8 @@ def main():
             transcript.write_text("\n".join(map(json.dumps, entries)) + "\n")
             return run("codex", "stop", {"session_id": "codex-transcript", "stop_hook_active": False, "transcript_path": str(transcript)})
         assert codex_turn("*** Begin Patch", '{"method":"tools/call","params":{"name":"kt_rewrite"}}') == {}
-        assert codex_turn('{"name":"kt_rewrite"}', "apply_patch <<EOF")["decision"] == "block"
-        assert codex_turn("ls kt_rewriter_notes")["decision"] == "block", "only exact kt tool names count"
+        assert reminded(codex_turn('{"name":"kt_rewrite"}', "apply_patch <<EOF"))
+        assert reminded(codex_turn("ls kt_rewriter_notes")), "only exact kt tool names count"
         assert run("opencode", "stop", {"sessionID": "oc-tools", "tools": [{"name": "edit"}, {"name": "knowledgetrees_kt_rewrite"}]}) == {}
         del env["KT_HOOK_MAINTENANCE_INTERVAL"]
         assert run("codex", "after", {"session_id": "silent", "tool_response": ""}) == {}
