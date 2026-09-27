@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T14:50:03+10:00"
+revised_at: "2026-09-27T16:05:11+10:00"
 name: "knowledgetrees-maintenance"
 description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and the repository plan updated to its remaining steps."
 ---
@@ -9,6 +9,8 @@ Maintain current truth in place within current authority. Knowledge records fact
 and procedure; it neither grants execution permission nor resurrects superseded
 requirements. Keep one clear canonical owner per answer across composed directory
 scopes, not parallel monolithic documentation authorities.
+
+Successful `kt_rewrite` calls return the answer diff followed by `Revision: HASH`, including unchanged no-ops. Reuse that committed hash for the next rewrite without reading back the answer already in context. Dry runs return only a preview and no new revision. The CLI supplies the committed hash under the write lock via `--print-revision`; MCP remembers the supplied whole answer for renewal and undo without a post-write read. If another writer changes the leaf, the next rewrite rejects the stale hash; reread and merge then. Renewal still requires verification of the whole answer, but no redundant read after a successful rewrite.
 
 ## Current truth first
 

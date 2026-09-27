@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T14:50:03+10:00"
+revised_at: "2026-09-27T16:05:10+10:00"
 ---
 
 `kt_rewrite` is the only editing method. First read the complete leaf with `kt_read` or an exact
@@ -13,13 +13,15 @@ bytes. Stdout returns the complete content and adds a presentation-only trailing
 newline when those bytes lack one. Ranked excerpts are not full reads and do not
 supply a revision for editing.
 
+Successful `kt_rewrite` calls return the answer diff followed by `Revision: HASH`, including unchanged no-ops. Reuse that committed hash for the next rewrite without reading back the answer already in context. Dry runs return only a preview and no new revision. The CLI supplies the committed hash under the write lock via `--print-revision`; MCP remembers the supplied whole answer for renewal and undo without a post-write read. If another writer changes the leaf, the next rewrite rejects the stale hash; reread and merge then. Renewal still requires verification of the whole answer, but no redundant read after a successful rewrite.
+
 In the shell, use the canonical editing command:
 
 ```sh
 kt rewrite ROOT:PATH HASH "Complete revised answer body"
 ```
 
-HASH is a mandatory positional SHA-256 revision from the read. There is no
+HASH is a mandatory positional SHA-256 revision from a whole read or successful rewrite. There is no
 rewrite --expect option. A matching hash establishes that the leaf still has the
 read contents; it does not prove how recently it was read or that the agent reviewed
 it. Keep those contents in context and preserve still-valid knowledge when editing.
@@ -31,7 +33,7 @@ complete proof coverage, and `--no-verifiable` to clear the flag. `kt_renew`
 (`kt renew`) alone records manual `checked_at`. `--dry-run` previews the result. Quote shell
 arguments correctly; operating-system argument size limits apply.
 
-Successful rewrites and identical no-ops produce no stdout or stderr. Exit 0
+By default, shell rewrites and identical no-ops produce no stdout or stderr. With `--print-revision`, they print the committed `Revision: HASH` on stdout; dry runs never print a committed hash. Exit 0
 signals success. Neither old nor new contents are echoed. --dry-run still shows
 the diff, and failures report diagnostics with a nonzero exit status. Preserve
 still-valid knowledge and check relevant proofs before reliance. Agent guidance

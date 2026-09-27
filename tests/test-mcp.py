@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """MCP server protocol and structured-edit tests; no models."""
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -117,6 +119,15 @@ def main():
         assert not error and "+Omega line." in text and "revised_at" not in text
         assert "Omega line.\nBeta line." in leaf.read_text() and leaf.stat().st_ino == inode
         assert 'status: green' in leaf.read_text(), "a rewrite keeps the leaf's status"
+        committed = re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
+        assert committed == hashlib.sha256(leaf.read_bytes()).hexdigest()
+        error, text = tool("kt_rewrite", address=address, revision=committed, answer="Chained answer.")
+        assert not error, text
+        chained = re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
+        error, text = tool("kt_rewrite", address=address, revision=chained, answer="Chained answer.")
+        assert not error and text == f"No change.\n\nRevision: {chained}\n", text
+        error, text = tool("kt_renew", address=address)
+        assert not error, text
         error, text = tool("kt_rewrite", address=address, revision=revision, answer="Stale overwrite.")
         assert error and "stale" in text and "Stale overwrite" not in leaf.read_text()
 
@@ -604,5 +615,35 @@ def main():
     print("mcp server checks passed")
 
 
+def test_rewrite_receipt_race():
+    ns = runpy.run_path(str(SERVER))
+    state = ns["tool_rewrite"].__globals__
+    before_hash, committed_hash, external_hash = "a" * 64, "b" * 64, "c" * 64
+    current = ["Before.\n", before_hash]
+    state["read_leaf"] = lambda address: tuple(current)
+
+    def commit_then_external(address, revision, answer, dry_run=False):
+        current[:] = ["Concurrent writer.\n", external_hash]
+        return subprocess.CompletedProcess([], 0, f"Revision: {committed_hash}\n", "")
+
+    state["rewrite"] = commit_then_external
+    result = state["tool_rewrite"]({"address": "local:test.md", "revision": before_hash,
+                                    "answer": "  Supplied answer.\n"})
+    assert result.endswith(f"Revision: {committed_hash}\n")
+    assert "Concurrent writer" not in result
+    assert state["READS"]["local:test"] == "  Supplied answer.\n"
+    assert state["HISTORY"][-1]["after"] == "  Supplied answer.\n"
+    for action in (lambda: state["tool_rewrite"]({"address": "local:test.md", "revision": committed_hash,
+                                               "answer": "Clobber."}),
+                   lambda: state["seen_answer"]("local:test.md")):
+        try:
+            action()
+        except state["ToolError"]:
+            pass
+        else:
+            raise AssertionError("concurrent edit must require reread")
+
+
 if __name__ == "__main__":
+    test_rewrite_receipt_race()
     main()

@@ -42,7 +42,7 @@ does not need a shell detour.
 | --- | --- |
 | Find | `kt_lookup` (`how to …` questions), `kt_find` (ranked, optional JSON), `kt_grep` (literal or regex exact text), `kt_dict`, `kt_roots` |
 | Read | `kt_read` (a leaf's whole answer), `kt_info` (startup knowledge) |
-| Change | `kt_rewrite` (the only edit: complete answer plus read hash), `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register` |
+| Change | `kt_rewrite` (the only edit: complete answer plus read or rewrite hash), `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register` |
 | Check | `kt_renew` (confirm a yellow leaf you verified), `kt_prove`, `kt_status` (every non-green leaf, with why) |
 | Access | `kt_access_status` (what is readable and why), `kt_access_request`, `kt_access_confirm` (failed-prompt continuation), `kt_access_revoke` |
 
@@ -50,12 +50,15 @@ Tool output is lean: a whole-leaf read returns the complete answer and a final `
 line, with no front matter or timestamps; a one-line notice leads it only when yellow or brown.
 There are no partial leaf reads, ranges, paging, or truncation. Search excerpts only select a leaf
 and never yield a rewrite hash. `kt_rewrite` is the only edit method: it replaces the complete
-answer and must cite the hash obtained by that whole read. The CLI rejects stale hashes under lock.
+answer and must cite the hash obtained by a whole read or successful rewrite. The CLI rejects stale hashes under lock.
+Successful rewrites return the diff and a final `Revision: HASH`, including no-ops. Reuse it
+without rereading; only a conflict requires reading and merging concurrent changes. Dry runs
+return only a preview. The hash is captured under the CLI write lock.
 There is no partial edit, so every change reconsiders the whole leaf; a bad leaf cannot hide behind
 a surgical patch, and long leaves cost more to change. When an agent meets a yellow leaf it checks the claims against
 current evidence and calls `kt_renew`, which records that the whole leaf was verified and re-runs
 its proofs; that call is the agent's attestation, so it too is refused unless the agent read the
-leaf in this session. The same lean view is available in the shell as `kt --lean`. Read tools are annotated read-only, so harnesses can skip their prompts and keep
+leaf in this session or supplied its complete answer through a successful rewrite. The same lean view is available in the shell as `kt --lean`. Read tools are annotated read-only, so harnesses can skip their prompts and keep
 them for writes. Direct policy changes and the global permissions bypass remain terminal-only. Four prompts
 (`capture_review`, `garden`, `verify_leaf`, `revoke_access`) appear as slash commands where the
 client supports them.
@@ -888,7 +891,8 @@ Rewrite using that required positional hash:
 kt rewrite local:how/to/build.md HASH 'Complete revised answer body' --expires-every '2 weeks'
 ```
 
-There is no rewrite --expect option. If the leaf changed since the read, rewrite
+`--print-revision` prints the committed `Revision: HASH` on stdout, including no-ops;
+dry runs never return a committed revision. There is no rewrite --expect option. If the leaf changed since the read, rewrite
 exits 4 without writing; reread and merge. A matching hash confirms unchanged
 contents, rather than measuring read recency. Keep the original in context and
 preserve still-valid knowledge. Supply only the answer body; kt retains the
@@ -897,7 +901,7 @@ revision time. Contents may include literal newlines. Put evidence
 in the answer; --dry-run previews the diff. Quote shell arguments correctly;
 operating-system argument size limits apply.
 
-Successful rewrites and identical no-ops produce no stdout or stderr; exit 0
+By default, shell rewrites and identical no-ops produce no stdout or stderr; exit 0
 signals success. Neither body is echoed. Dry-run still shows the diff and failures
 report diagnostics.
 Agent guidance carries the accuracy and preservation requirement; the turn-end

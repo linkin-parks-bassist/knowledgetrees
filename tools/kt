@@ -1203,6 +1203,8 @@ def rewrite_leaf(args):
         if (not inherited and
                 replacement.strip("\r\n") == prior_body.strip("\r\n") and
                 requested == existing):
+            if getattr(args, "print_revision", False) and not args.dry_run:
+                print(f"Revision: {snapshot.digest}")
             return 0
         updated = revised_leaf(replacement, original, args)
         if inherited and STATE_RANK[inherited] > STATE_RANK[leaf_parts(updated)[0]["status"]]:
@@ -1219,6 +1221,8 @@ def rewrite_leaf(args):
         stream.truncate()
         stream.flush()
         os.fsync(stream.fileno())
+        if getattr(args, "print_revision", False):
+            print(f"Revision: {hashlib.sha256(updated.encode('utf-8')).hexdigest()}")
     return 0
 
 
@@ -2126,6 +2130,7 @@ def command_parser():
     replacing.add_argument("hash", help="required SHA-256 revision supplied by the leaf read")
     replacing.add_argument("contents", help="complete answer body; use -- before positional arguments beginning with -")
     replacing.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
+    replacing.add_argument("--print-revision", action="store_true", help="return the committed Revision hash, including no-ops; omitted for dry runs")
     lifecycle_options(replacing, clear=True)
     checking = commands.add_parser("renew", help="confirm the complete leaf is accurate: records checked_at and re-evaluates its status")
     checking.set_defaults(handler=renew_leaf)

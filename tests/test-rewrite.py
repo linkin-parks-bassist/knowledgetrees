@@ -117,6 +117,13 @@ true
         token = hashlib.sha256(current.encode()).hexdigest()
         no_op = run("rewrite", "project:how/to/test.md", token, body(current))
         assert no_op.stdout == "" and no_op.stderr == ""
+        reported = run("rewrite", "project:how/to/test.md", token, body(current), "--print-revision")
+        assert reported.stdout == f"Revision: {token}\n" and not reported.stderr
+        preview = run("rewrite", "project:how/to/test.md", token, "Preview", "--print-revision", "--dry-run")
+        assert "Revision:" not in preview.stdout and path.read_text() == current
+        reported = run("rewrite", "project:how/to/test.md", token, "Committed", "--print-revision")
+        token = hashlib.sha256(path.read_bytes()).hexdigest()
+        assert reported.stdout == f"Revision: {token}\n" and not reported.stderr
         for invalid in ("", "---\nunclosed"):
             run("rewrite", "project:how/to/test.md", token, invalid, expected=2)
         run("rewrite", "project:missing.md", token, "answer", expected=2)

@@ -36,7 +36,7 @@ INSTRUCTIONS = (
     "the leaf or proof differs from reality, remediate and re-check it, or ask the user if safe remediation cannot "
     "be established. Resume only after brown clears or the user explicitly permits ignoring that specific status; "
     "permission does not validate the leaf. Rewrite a leaf "
-    "with kt_rewrite as the standard editing tool, citing the Revision hash printed by the whole-leaf read; stale "
+    "with kt_rewrite as the standard editing tool, citing the Revision hash from a whole-leaf read or successful rewrite; stale "
     "hashes fail. Every change rewrites the whole leaf, so consider its full contents each time. A miss is not proof of absence. If a root needs approval, call "
     "kt_access_request: it asks through the harness. Release access you no longer need with "
     "kt_access_revoke. If client elicitation did not complete, ask the user in conversation; after explicit "
@@ -94,17 +94,17 @@ TOOLS = [
          {"address": ADDRESS}, ["address"], read_only=True),
     tool("kt_rewrite", "Rewrite a leaf",
          "Primary editing method: replace the complete answer body, citing the Revision hash printed by kt_read or an "
-         "exact kt_lookup. The CLI rejects a stale hash under lock. Front matter is never accepted or returned; optional "
-         "metadata is preserved. Returns a diff of the answer.",
+         "exact kt_lookup, or the previous successful kt_rewrite. The CLI rejects a stale hash under lock. Front matter is never accepted or returned; optional "
+         "metadata is preserved. Returns a diff and the committed Revision hash (also for no-ops), reusable without rereading. Dry runs return only a preview; reread and merge on conflict.",
          {"address": ADDRESS,
-          "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Revision hash from a whole-leaf read"},
+          "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Revision hash from a whole-leaf read or successful rewrite"},
           "answer": {"type": "string", "description": "Complete Markdown answer body (no front matter)"},
           "dry_run": DRY_RUN}, ["address", "revision", "answer"], destructive=True),
     tool("kt_renew", "Confirm a leaf is accurate",
          "Announce that you have verified the WHOLE leaf against current evidence and it is accurate: records the check "
          "time and re-evaluates its status (proofs included) so it turns green. Use it on a yellow leaf after "
          "checking its claims; repair the leaf with kt_rewrite instead if anything is wrong. Requires that you read the leaf "
-         "(kt_read or kt_lookup) in this session and that it has not changed since. Renew only what you verified.",
+         "(kt_read or kt_lookup), or supplied it through a successful kt_rewrite, in this session and that it has not changed since. Renew only what you verified.",
          {"address": ADDRESS}, ["address"], idempotent=True),
     tool("kt_undo", "Undo the last rewrite",
          "Restore the answer from before this session's most recent kt_rewrite of a leaf, but only if the "
@@ -124,7 +124,7 @@ TOOLS = [
          "Remove one leaf, citing the Revision hash printed by its whole read. The CLI rejects a stale hash. "
          "Use dry_run to preview; this does not prune parent directories.",
          {"address": ADDRESS,
-          "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Revision hash from a whole-leaf read"},
+          "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Revision hash from a whole-leaf read or successful rewrite"},
           "dry_run": DRY_RUN}, ["address", "revision"], destructive=True),
     tool("kt_mv", "Move a leaf",
          "Move one leaf to a new root-qualified address, citing the source Revision hash from a whole read. The CLI "
@@ -350,9 +350,8 @@ def root_scope_flags(arguments):
 
 
 def rewrite(address, revision, body, dry_run=False):
-    """Ask the CLI to replace the answer; `revision` is the leaf's current file hash, fetched just now, so the
-    CLI's own locked check guards only against a write racing this one."""
-    completed = run_kt("rewrite", *(["--dry-run"] if dry_run else []), address, revision, body)
+    """Replace the answer using the caller's revision and return the locked commit receipt."""
+    completed = run_kt("rewrite", "--print-revision", *(["--dry-run"] if dry_run else []), address, revision, body)
     if completed.returncode:
         raise ToolError((completed.stderr or completed.stdout).strip() or f"kt rewrite failed ({completed.returncode})")
     return completed
@@ -450,25 +449,28 @@ def tool_rewrite(arguments):
     revision = text_arg(arguments, "revision", limit=64)
     answer = text_arg(arguments, "answer")
     if not re.fullmatch(r"[a-f0-9]{64}", revision):
-        raise ToolError("revision must be the 64-character lowercase SHA-256 hash printed by a whole-leaf read")
+        raise ToolError("revision must be the 64-character lowercase SHA-256 hash from a whole-leaf read or successful rewrite")
     current, current_revision = read_leaf(address)
     before = body_of(current)
     if current_revision != revision:
         raise ToolError("the Revision hash is stale; kt_read the leaf again and merge before rewriting")
     try:
-        rewrite(address, revision, answer, dry_run=dry_run)
+        completed = rewrite(address, revision, answer, dry_run=dry_run)
     except ToolError as error:
         if "revision mismatch" in str(error):
             raise ToolError("the Revision hash is stale; kt_read the leaf again and merge before rewriting")
         raise
     if dry_run:
         return answer_diff(before.strip("\n") + "\n", answer.strip("\n") + "\n")
-    after_text, _after_revision = read_leaf(address)
-    after = body_of(after_text)
+    committed = re.search(r"^Revision: ([a-f0-9]{64})$", completed.stdout, re.M)
+    if not committed:
+        raise ToolError("kt rewrite did not report the committed revision")
+    # Remember only the supplied answer, never another writer's post-commit changes.
+    after = before if committed[1] == revision else body_of("---\nstatus: green\n---\n\n" + answer.strip("\r\n") + "\n")
     if after != before:
         HISTORY.append({"address": address, "before": before, "after": after})
     note_read(address, after)
-    return answer_diff(before, after)
+    return answer_diff(before, after).rstrip("\n") + f"\n\nRevision: {committed[1]}\n"
 
 
 def tool_renew(arguments):
@@ -506,7 +508,7 @@ def tool_undo(arguments):
 def revision_arg(arguments):
     revision = text_arg(arguments, "revision", limit=64)
     if not re.fullmatch(r"[a-f0-9]{64}", revision):
-        raise ToolError("revision must be the 64-character lowercase SHA-256 hash printed by a whole-leaf read")
+        raise ToolError("revision must be the 64-character lowercase SHA-256 hash from a whole-leaf read or successful rewrite")
     return revision
 
 
