@@ -13,9 +13,10 @@ SCRIPT = Path(__file__).resolve().parents[1] / "tools/kt"
 def main():
     with tempfile.TemporaryDirectory(prefix="kt test ") as directory:
         base = Path(directory)
-        project = base / "project space"
+        home = base / "home"
+        project = home / "project space"
         local = project / ".knowledge"
-        global_root = base / "global space"
+        global_root = home / ".knowledge"
         for root in (local, global_root):
             (root / "where/am").mkdir(parents=True)
             (root / "where/am/i.md").write_text("---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nTest orientation.\n")
@@ -44,7 +45,8 @@ def main():
         nested.mkdir(parents=True)
         config = base / "config.json"
         config.write_text(json.dumps({"roots": {"global": {"path": str(global_root), "access": "allow"}}}))
-        env = {**os.environ, "KT_CONFIG": str(config), "KT_GLOBAL_ROOT": str(global_root), "NO_COLOR": "1"}
+        env = {**os.environ, "HOME": str(home), "KT_CONFIG": str(config),
+               "KT_GLOBAL_ROOT": str(global_root), "NO_COLOR": "1"}
 
 
         def run(*args, expected=0, cwd=project):
@@ -178,8 +180,33 @@ def main():
         assert initialized.index("Test canonical procedure.") < initialized.index("Test orientation.")
         assert "Test specification." not in initialized
         assert "Proofs: " in initialized and "failed ·" in initialized and "brown" in initialized
+        ancestor = project / "ancestor"
+        descendant = ancestor / "child/grandchild"
+        ancestor_root = ancestor / ".knowledge"
+        (ancestor_root / "where/am").mkdir(parents=True)
+        (ancestor_root / "where/am/i.md").write_text("Ancestor orientation.\n")
+        descendant_root = descendant / ".knowledge"
+        (descendant_root / "where/am").mkdir(parents=True)
+        (descendant_root / "where/am/i.md").write_text("Descendant orientation.\n")
+        config_value = json.loads(config.read_text())
+        config_value["roots"]["ancestor"] = {"path": str(ancestor_root), "access": "allow"}
+        config.write_text(json.dumps(config_value))
+        descended = run("info", cwd=descendant)
+        global_heading = "=== global:where/am/i.md ==="
+        ancestor_heading = f"=== {ancestor_root}:where/am/i.md ==="
+        local_heading = "=== local:where/am/i.md ==="
+        assert all(heading in descended for heading in
+                   (global_heading, ancestor_heading, local_heading))
+        assert descended.index(global_heading) < descended.index(ancestor_heading) < descended.index(local_heading)
+        assert "Ancestor orientation." in descended and "Descendant orientation." in descended
+        config_value["roots"]["ancestor"]["access"] = "ask"
+        config.write_text(json.dumps(config_value))
+        restricted = run("info", cwd=descendant)
+        assert ancestor_heading not in restricted and "Ancestor orientation." not in restricted
+        assert global_heading in restricted and local_heading in restricted
         fallback = run("info", cwd=base, expected=1)  # the fixture's global root holds one brown leaf
-        assert "=== kt note: no ./.knowledge" in fallback and "=== local:where/am/i.md ===" not in fallback
+        assert "=== kt note: no accessible ancestor .knowledge orientation" in fallback
+        assert "=== local:where/am/i.md ===" not in fallback
         assert "Test canonical procedure." in fallback and "=== kt prove --global ===" in fallback
         assert "Proofs: " in fallback and "failed ·" in fallback and "brown" in fallback
         bare = base / "bare-root"

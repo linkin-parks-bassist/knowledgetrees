@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T14:45:17+10:00"
+revised_at: "2026-09-29T13:27:26+10:00"
 ---
 
 `kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the current
@@ -17,7 +17,4 @@ In either form, the optional orientation argument is written verbatim to
 root under `ask` without granting cross-project access and refuses to overwrite an
 existing root.
 
-`kt info` performs fresh-session startup: global procedure, exact local
-orientation, dictionary, and local proof result. It does not require a local tree:
-without `./.knowledge` or its `where/am/i.md`, it prints a one-line note, the
-global orientation, and the global (or partial local) proof result.
+`kt info` performs fresh-session startup: global procedure, every accessible ancestor orientation from `~` down to the working directory in descending order, dictionary, and proof result. Access is evaluated from the working directory and presentation does not add lookup roots. Without an exact local tree it proves the global root; an exact local tree without an orientation is noted and still proved. If no accessible ancestor orientation is available, it prints a one-line note and uses the global orientation.

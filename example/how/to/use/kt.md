@@ -24,10 +24,14 @@ Accuracy and preservation remain explicit agent obligations; a turn-end hook onl
 
 - Create: `kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the current directory with empty canonical branches and `where/am/i.md`; it creates no project spine. `kt init --project [ORIENTATION]` additionally creates empty spec and plan leaves. The argument, if given, is written literally. Both forms register the new tree under `ask` without a cross-project grant. Existing trees are preserved.
 
-- Initialize: `kt info` prints the canonical global procedure and exact local
-  orientation, then the accessible dictionary, then the
-  `kt prove --local` result. With no `./.knowledge` or no local `where/am/i.md` it
-  falls back to the global orientation and `kt prove --global`. It fails only when the global
+- Initialize: `kt info` prints the canonical global procedure, then every accessible
+  ancestor orientation from `~` down to the working directory in descending order,
+  then the accessible dictionary, then the proof result. Access is evaluated from
+  the working directory and inaccessible ancestor trees are skipped; this
+  presentation does not add them to lookup. With no exact local tree it runs
+  `kt prove --global`; an exact local tree without `where/am/i.md` is noted and still
+  proved. If no accessible ancestor orientation is available, it falls back to the
+  global orientation. It fails only when the global
   procedure is unreachable, access needs approval, or the final proof check is brown. Prefer the `kt_info` tool; from the shell, run it directly and consume all output;
   never pipe it through `head`, `tail`, a pager, a filter, or any command that
   truncates or partially captures it. Initialization is incomplete unless the final

@@ -403,11 +403,14 @@ prose.
 `kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches plus `where/am/i.md`. It does not assume an ongoing linear project. Use `kt init --project [ORIENTATION]` when the scope is a repository project that also needs empty spec and plan leaves. The optional argument supplies the exact orientation file contents. Both forms register the new root under `ask` without granting cross-project access and refuse to overwrite an existing tree.
 
 `kt info` performs fresh-session initialization in output-first order: it prints
-the canonical global procedure and exact local orientation,
+the canonical global procedure, then every accessible `where/am/i.md` belonging to
+a `.knowledge/` tree on the directory chain from `~` down to the working directory,
+in that descending order,
 then the accessible dictionary, then the `kt prove --local` result. With no
-`./.knowledge`, or one lacking `where/am/i.md`, it prints a one-line note, uses the
-global root's orientation instead, and proves the global root (or the partial local
-root). It still fails when the global procedure is unreachable, access policy needs
+exact local tree it proves the global root; an exact local tree lacking
+`where/am/i.md` is noted and still proved. If no accessible ancestor orientation is
+available, it prints a one-line note and uses the global root's orientation instead.
+It still fails when the global procedure is unreachable, access policy needs
 approval, or the final proof check is brown. Run it
 directly and consume its complete output. Never pipe it through `head`, `tail`, a
 pager, a filter, or any other truncating or partial-capture command; initialization
@@ -635,8 +638,9 @@ next unrelated tool call or completion—not in a later documentation pass.
 ### Startup hooks
 
 The installer runs `kt --lean info` at session start, resume, clear, and compaction and injects its
-complete output (leaf metadata omitted, a notice on any non-green leaf): the procedure, orientation, dictionary, and proof summary. With no local tree
-it falls back to the global root. Claude Code drops hook context past roughly 10,000
+complete output (leaf metadata omitted, a notice on any non-green leaf): the procedure,
+accessible ancestor orientations from `~` downward, dictionary, and proof summary.
+With no exact local tree it proves the global root. Claude Code drops hook context past roughly 10,000
 characters, so above 9,500 bytes its hook sends an instruction to call the `kt_info` tool (or run
 `kt info` if there are no kt tools) instead; `KT_HOOK_CONTEXT_LIMIT` tunes the threshold.
 
@@ -793,8 +797,11 @@ agents can retrieve small implementation facts as directly as large design answe
 
 ### Root privacy and cross-project sharing
 
-`kt` discovers the exact local tree, the user-global tree, and explicitly registered
-roots. It never searches parent directories. Output labels are `local`, `global`,
+For lookup and mutation, `kt` discovers the exact local tree, the user-global tree,
+and explicitly registered roots; it does not implicitly add parent trees to those
+operations. `kt info` alone inspects the directory chain from `~` down to the working
+directory and presents each ancestor orientation whose tree is accessible from that
+working directory. Output labels are `local`, `global`,
 or full canonical root directory paths, avoiding collisions between folder names.
 `project:` and registered names remain input aliases; new captures default their
 scope metadata to the canonical identity. Use --local (--project is an alias),

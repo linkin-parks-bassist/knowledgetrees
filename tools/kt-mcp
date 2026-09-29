@@ -64,8 +64,8 @@ SCOPE = {"type": "string", "enum": ["local", "global"]}
 
 TOOLS = [
     tool("kt_info", "Startup info",
-         "Print the startup knowledge (procedure, orientation, dictionary, proof summary), like `kt info` but through this "
-         "tool rather than the shell. Falls back to the global root when there is no local tree. Refreshes leaf status stamps.",
+         "Print the startup knowledge (procedure, accessible ancestor orientations from home down to cwd, dictionary, proof summary), like `kt info` but through this "
+         "tool rather than the shell. With no exact local tree it proves the global root. Refreshes leaf status stamps.",
          idempotent=True),
     tool("kt_lookup", "Look up by question",
          "Look something up by natural question (instead of `kt how to ...` in the shell). Start with where is, how to, "

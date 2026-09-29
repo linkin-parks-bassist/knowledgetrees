@@ -5,7 +5,11 @@ revised_at: "2026-09-24T08:06:08+10:00"
 
 Root discovery uses only the exact current-directory tree, the known global
 root, and explicitly registered roots. `kt init` registers the tree it creates
-under `ask` without granting access elsewhere. It never searches parent directories.
+under `ask` without granting access elsewhere. Lookup and mutation never search
+parent directories. The presentation-only `kt info` walk is the exception: it
+checks `.knowledge/where/am/i.md` from `~` down to the working directory and prints
+only ancestor orientations whose roots are accessible from that working directory;
+it does not add those roots to discovery.
 The private registry is ~/.knowledge/.tools/roots.json; KT_CONFIG overrides it.
 Registered roots are not indexed in advance. Registration saves root metadata,
 not approval or leaf content.

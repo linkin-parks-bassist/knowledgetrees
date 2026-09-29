@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T16:05:09+10:00"
+revised_at: "2026-09-29T13:27:13+10:00"
 ---
 
 The public repository contains the readable README, a self-contained `tools/kt`
@@ -105,9 +105,7 @@ unrelated host permissions survive installation.
 `kt init [ORIENTATION]` creates a neutral local tree with the six canonical
 branches and `where/am/i.md`, registers it under `ask` without cross-project
 access, and refuses to overwrite an existing tree. `kt init --project
-[ORIENTATION]` additionally creates empty spec and plan leaves. `kt info` prints the canonical global procedure, exact local orientation,
-accessible dictionary, and local proof result in that order; without a local
-tree or local orientation it falls back to the global orientation and proof. Startup hooks inject
+[ORIENTATION]` additionally creates empty spec and plan leaves. `kt info` prints the canonical global procedure, then every accessible ancestor orientation from `~` down to the working directory in descending order, then the accessible dictionary and proof result. Access is evaluated from the working directory and ancestor presentation does not add lookup roots. Without an exact local tree it proves the global root; an exact local tree without an orientation is noted and still proved. If no accessible ancestor orientation is available, it falls back to the global orientation. Startup hooks inject
 its complete output through the final proof summary. The bootstrap is once per
 fresh session, then kt-first retrieval and miss resolution apply throughout the
 session. The example and global instructions include lookup, capture, maintenance,

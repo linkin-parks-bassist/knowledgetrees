@@ -74,6 +74,40 @@ def local_root(cwd=None):
     return (directory if directory.name == ".knowledge" else directory / ".knowledge").resolve()
 
 
+def ancestor_orientation_roots(cwd=None, config=None):
+    """Return accessible orientation roots from the home directory down to cwd.
+
+    The exact local tree remains eligible even when cwd is outside the home directory.
+    Other ancestors are presentation-only discoveries for ``kt info``; they do not
+    become lookup roots merely because they are present on disk.
+    """
+    config = access_config() if config is None else config
+    cwd = Path(cwd or Path.cwd()).resolve()
+    directory = cwd.parent if cwd.name == ".knowledge" else cwd
+    home = Path.home().resolve()
+    directories = []
+    if directory == home or directory.is_relative_to(home):
+        current = directory
+        while True:
+            directories.append(current)
+            if current == home:
+                break
+            current = current.parent
+        directories.reverse()
+    elif local_root(cwd).is_dir():
+        directories.append(directory)
+
+    roots = []
+    for parent in directories:
+        root = (parent / ".knowledge").resolve()
+        if not root.is_dir():
+            continue
+        label = root_identity(root, cwd)
+        if resolve_root_access(root, label, cwd, config)[0] == "allow":
+            roots.append((label, root))
+    return roots
+
+
 def configured_root(name, spec, cwd=None):
     if "path" in spec:
         return Path(spec["path"]).expanduser().resolve()
@@ -2010,23 +2044,29 @@ def open_command(args):
 
 
 def print_info(args):
-    """Print startup knowledge; without a usable local root, fall back to the global root."""
+    """Print startup knowledge and accessible ancestor orientations from home downward."""
     root = local_root()
     has_root = root.is_dir()
     if has_root:
         require_root(root, "local")
-    has_orientation = has_root and (root / "where/am/i.md").is_file()
     procedure = resolve_leaf("global:how/to/use/knowledgetrees.md")
     print("=== global:how/to/use/knowledgetrees.md ===")
     contents = procedure.read_text()
     show_leaf(contents, "global:how/to/use/knowledgetrees.md")
-    if has_orientation:
-        print("=== local:where/am/i.md ===")
-        contents = (root / "where/am/i.md").read_text()
-        show_leaf(contents, "local:where/am/i.md")
-    else:
+    orientations = ancestor_orientation_roots()
+    printed = False
+    for label, orientation_root in orientations:
+        orientation = orientation_root / "where/am/i.md"
+        if not orientation.is_file():
+            print(f"=== kt note: {label} knowledge root has no where/am/i.md ===")
+            continue
+        address = f"{label}:where/am/i.md"
+        print(f"=== {address} ===")
+        show_leaf(orientation.read_text(), address)
+        printed = True
+    if not printed:
         reason = ("local knowledge root has no where/am/i.md (add one to orient this project)" if has_root
-                  else "no ./.knowledge in the current directory (kt init creates one)")
+                  else "no accessible ancestor .knowledge orientation from ~ to the current directory")
         print(f"=== kt note: {reason}; using the global root only ===")
         try:
             orientation = resolve_leaf("global:where/am/i.md")

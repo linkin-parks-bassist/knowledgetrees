@@ -30,10 +30,14 @@ test -x "$HOME/.knowledge/.tools/kt-hooks"
 
 Claude Code and Codex `SessionStart`, OpenCode system-context initialization, and
 Copilot CLI `sessionStart` run `kt --lean info` in the exact working directory and
-inject its complete output: canonical procedure, exact local orientation,
-dictionary, and proof result. Resume, clear, and compact lifecycle sources count as
-startup refreshes where the harness supports them. A missing local tree falls back
-to the global root. A genuinely failed `kt info` is reported in context and must be
+inject its complete output: canonical procedure, every accessible ancestor
+orientation from `~` down to the working directory in descending order, dictionary,
+and proof result. Inaccessible ancestor trees are skipped. Resume, clear, and
+compact lifecycle sources count as startup refreshes where the harness supports
+them. Without an exact local tree, `kt info` proves the global root; an exact local
+tree without `where/am/i.md` is noted and still proved. If no accessible ancestor
+orientation is available, it falls back to the global orientation. A genuinely
+failed `kt info` is reported in context and must be
 diagnosed before the tree is trusted.
 
 Claude Code caps injected hook context near 10,000 characters. Above 9,500 bytes

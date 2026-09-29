@@ -55,11 +55,12 @@ def main():
                 assert "Canonical procedure fixture." in whole["hookSpecificOutput"]["additionalContext"]
             small, _ = handle("claude", "start", {"source": "startup", "cwd": str(project)})
             assert "Canonical procedure fixture." in small["hookSpecificOutput"]["additionalContext"]
-            # Without a local root, `kt info` falls back to the global root instead of failing.
+            # Without an accessible ancestor orientation, `kt info` falls back to the global root.
             fallback, _ = handle("claude", "start", {"source": "startup", "cwd": str(root)})
             context = fallback["hookSpecificOutput"]["additionalContext"]
             assert "kt info failed" not in context and "Canonical procedure fixture." in context
-            assert "no ./.knowledge" in context and context.rstrip().endswith("0 failed · SUCCESS") and "0 brown" in context
+            assert "no accessible ancestor .knowledge orientation" in context
+            assert context.rstrip().endswith("0 failed · SUCCESS") and "0 brown" in context
             # A genuinely unusable `kt info` run (no global procedure) is still reported, not hidden.
             (global_root / "how/to/use/knowledgetrees.md").unlink()
             failed_info, _ = handle("codex", "start", {"source": "startup", "cwd": str(project)})
