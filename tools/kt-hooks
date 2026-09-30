@@ -18,21 +18,30 @@ FAILURE = (
     "the kt shell command only if you have no kt tools), read relevant leaves, "
     "and inspect/check eligible proofs before reliance; renew a yellow leaf only after verifying it. A kt miss is not proof of "
     "absence: check alternate terms and scoped paths. After understanding what went "
-    "wrong, capture the reusable diagnosis/fix with kt_add (or kt_rewrite its existing "
+    "wrong, advance the owning answer with kt_rewrite or establish a missing answer with kt_add, "
     "owner), before unrelated work or completion. If unresolved, record the blocker "
     "and next check. Expected negative tests need no invented lesson or duplicate "
-    "leaf. Respect scope, privacy, and permissions; never capture passwords or raw logs."
+    "Respect scope, privacy, and permissions; never store passwords or raw logs."
+)
+FRONTIER_REVIEW = (
+    "Knowledge-tree frontier review: bring each affected tree to the frontier of relevant knowledge. "
+    "Recompute affected leaves as the best direct answers now; establish missing current answers; remove "
+    "superseded facts and completed-plan history. Do not summarize the turn, preserve research chronology, "
+    "or append discoveries. The old body is material to reconsider, not a template to extend; Git owns history."
 )
 MAINTAIN = (
     "Knowledge-tree maintenance before finishing: invoke the knowledgetrees-maintenance skill "
     "(or follow how/to/maintain/a/knowledge/tree.md) for each tree touched by the work, "
-    "direction, or decisions since your last maintenance pass. Update the leaves whose answers "
-    "changed, capture new leaf-worthy knowledge (user guidance, resolved kt misses, reusable "
-    "discoveries, decisions) at its owning scope with actual "
-    "evidence, and rewrite or remove leaves that can no longer be accurate or relevant. After "
+    "direction, or decisions since your last maintenance pass. Bring each affected tree to the frontier of "
+    "relevant knowledge: recompute changed leaves as the best direct answers now, establish missing current "
+    "answers (including user guidance, resolved kt misses, reusable discoveries, and decisions) at their owning "
+    "scope with actual evidence, and remove superseded facts. Run kt_audit on affected roots and classify its "
+    "signals without rewriting mechanically; dates are legitimate in current machine state, schedules, queues, "
+    "events, and protocol identifiers. After "
     "repository work, update the frontier in what/is/the/plan.md: remove completed steps and add "
     "newly planned ones. Rewrite "
-    "answers in place; never append logs, and never duplicate an existing owner. If nothing "
+    "answers in place; do not summarize the turn or append discoveries, and never duplicate an existing owner. "
+    "The old body is material to reconsider, not a template to extend; Git owns chronology. If nothing "
     "leaf-worthy changed, say so in one line and finish. This reminder is rate-limited per "
     "session and grants no write permissions."
 )
@@ -272,7 +281,7 @@ def handle(harness, event, payload):
         calls, failures, reviewing = connection.execute("SELECT calls, failures, reviewing FROM sessions WHERE key = ?", (key,)).fetchone()
         if event == "prompt":
             prompt = payload.get("prompt", "")
-            if not payload.get("synthetic") and not str(prompt).startswith("Knowledge-tree capture review:"):
+            if not payload.get("synthetic") and not str(prompt).startswith("Knowledge-tree frontier review:"):
                 reviewing = 0
                 calls = failures = 0
         elif event in ("after", "failed"):

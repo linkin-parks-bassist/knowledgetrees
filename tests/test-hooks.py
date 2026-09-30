@@ -19,7 +19,10 @@ HANDLER = REPOSITORY / "tools/kt-hooks"
 def main():
     handler_api = runpy.run_path(str(HANDLER))
     assert "knowledgetrees-maintenance skill" in handler_api["MAINTAIN"]
-    assert "never append logs" in handler_api["MAINTAIN"]
+    assert "frontier of relevant knowledge" in handler_api["MAINTAIN"]
+    assert "old body is material to reconsider" in handler_api["MAINTAIN"]
+    assert "kt_audit" in handler_api["MAINTAIN"]
+    assert "schedules" in handler_api["MAINTAIN"]
     assert "what/is/the/plan.md" in handler_api["MAINTAIN"]
     handle = handler_api["handle"]
     with tempfile.TemporaryDirectory(prefix="kt info hook test ") as temporary:

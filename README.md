@@ -9,7 +9,10 @@ The idea is simple: store useful knowledge in meaningful filesystem paths, let
 agents fetch only the answers they need, and make ordinary work continuously improve
 the knowledge available to the next agent.
 
-**Knowledge is discovered as needed and captured as learned.**
+**The tree remembers what is true, not what happened.**
+
+Every leaf is the best direct answer now. Agents advance this knowledge frontier in
+lockstep with implementation, requirements, decisions, and established facts; Git owns chronology.
 
 Knowledge trees cover **every scale**, from code-comment-level implementation facts
 to broad architecture and complete specifications. What a function does and why,
@@ -31,26 +34,27 @@ This repository contains:
 ## Tools for agents
 
 Knowledge only compounds if using it is effortless, so `./install` gives Claude Code, Codex,
-OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 22 tools
+OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 23 tools
 that mirror the `kt` workflow. Agents are told to use them instead of the `kt` shell command
 (the shell is the fallback when the tools are unavailable). Every tool delegates to the CLI, so
 access policy, locking, and proofs behave identically.
-`kt_add`, `kt_prove`, and `kt_status` can target any approved root directly, so multi-tree work
+`kt_add`, `kt_prove`, `kt_status`, and `kt_audit` can target any approved root directly, so multi-tree work
 does not need a shell detour.
 
 | Job | Tools |
 | --- | --- |
-| Find | `kt_lookup` (`how to …` questions), `kt_find` (ranked, optional JSON), `kt_grep` (literal or regex exact text), `kt_dict`, `kt_roots` |
+| Find | `kt_lookup` (`how to …` questions), `kt_find` (ranked text plus structured results), `kt_grep` (literal or regex exact text), `kt_dict`, `kt_roots` |
 | Read | `kt_read` (a leaf's whole answer), `kt_info` (startup knowledge) |
-| Change | `kt_rewrite` (the only edit: complete answer plus read or rewrite hash), `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register` |
-| Check | `kt_renew` (confirm a yellow leaf you verified), `kt_prove`, `kt_status` (every non-green leaf, with why) |
+| Change | `kt_rewrite` (recompute a complete answer plus lifecycle metadata), `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register` |
+| Check | `kt_renew`, `kt_prove`, `kt_status` (lifecycle), `kt_audit` (structural suspects) |
 | Access | `kt_access_status` (what is readable and why), `kt_access_request`, `kt_access_confirm` (failed-prompt continuation), `kt_access_revoke` |
 
 Tool output is lean: a whole-leaf read returns the complete answer and a final `Revision:` SHA-256
 line, with no front matter or timestamps; a one-line notice leads it only when yellow or brown.
 There are no partial leaf reads, ranges, paging, or truncation. Search excerpts only select a leaf
 and never yield a rewrite hash. `kt_rewrite` is the only edit method: it replaces the complete
-answer and must cite the hash obtained by a whole read or successful rewrite. The CLI rejects stale hashes under lock.
+answer and must cite the hash obtained by a whole read or successful rewrite. The old body is
+material to reconsider, not a template to extend. The CLI rejects stale hashes under lock.
 Successful rewrites return the diff and a final `Revision: HASH`, including no-ops. Reuse it
 without rereading; only a conflict requires reading and merging concurrent changes. Dry runs
 return only a preview. The hash is captured under the CLI write lock.
@@ -60,7 +64,7 @@ current evidence and calls `kt_renew`, which records that the whole leaf was ver
 its proofs; that call is the agent's attestation, so it too is refused unless the agent read the
 leaf in this session or supplied its complete answer through a successful rewrite. The same lean view is available in the shell as `kt --lean`. Read tools are annotated read-only, so harnesses can skip their prompts and keep
 them for writes. Direct policy changes and the global permissions bypass remain terminal-only. Four prompts
-(`capture_review`, `garden`, `verify_leaf`, `revoke_access`) appear as slash commands where the
+(`frontier_review`, `garden`, `verify_leaf`, `revoke_access`) appear as slash commands where the
 client supports them.
 
 Brown is an incident, including at startup when the user supplied no task. The agent's first
@@ -77,7 +81,8 @@ Access control used to mean opening another terminal. Now, when an agent hits a 
 it calls `kt_access_request` and **your harness asks you**, through MCP elicitation:
 
 1. The prompt names the root, the project directory, and the agent's reason.
-2. You choose *this directory*, *this directory and subdirectories*, *everywhere*, or decline.
+2. When the harness supplies a stable session identity, temporary *session* access is offered;
+   otherwise choose *this directory*, *this directory and subdirectories*, *everywhere*, or decline.
 3. Only an accepted response carrying one of those scopes saves the grant. The model never sees
    or answers the prompt.
 
@@ -90,7 +95,7 @@ continuation cannot change to another root or project. A failed prompt is not a 
 two trees does not call for a persistent global permissions bypass.
 
 Access is not one-way: `kt_access_status` says why each root is readable and `kt_access_revoke`
-gives it back. Narrowing the current directory is immediate; anything wider asks you first and
+gives it back. Session and current-directory revocation are immediate; anything wider asks you first and
 uses the same one-time conversational continuation if the client cannot render that confirmation.
 Approvals are tied to a path, so `kt` drops them when their tree disappears, and a different tree
 later created there needs a fresh approval.
@@ -591,7 +596,7 @@ without loading a tree listing. Pass root labels or configured canonical root pa
 to restrict the dictionary, for example `kt dict local global`. `kt info` prints it
 once after the procedure and orientation and before the final local proof result.
 
-`kt grep PATTERN` is the exact-text counterpart to `kt find`: a literal (or, with `-E`, regular-expression) search of leaf text across the roots you may read, printing `ADDRESS:LINE: text`. Use it to find every place that states a fact before changing it. `kt status` lists yellow and brown leaves with the reason and never runs proofs or writes, which makes gardening practical.
+`kt grep PATTERN` is the exact-text counterpart to `kt find`: a literal (or, with `-E`, regular-expression) search of leaf text across the roots you may read, printing `ADDRESS:LINE: text`. Use it to find every place that states a fact before changing it. `kt status` lists yellow and brown leaves. `kt audit` flags bodies over 1,000 words as suspect and date-shaped bodies as quite-suspect. Both are read-only; audit labels are review signals, not lifecycle states or diagnoses. Dates in current machine state, schedules, queues, event records, and protocol identifiers are legitimate and require no rewrite.
 
 Question prefixes make the directories active search boundaries:
 `kt where is vivado` walks `where/is/` and returns the exact leaf if present.
@@ -609,20 +614,20 @@ shown; `0` means a candidate passed the heuristic, not that its answer was verif
 The default threshold is 60% coverage of non-grammatical query keywords; tune it
 with `--min-coverage`. Exact-path reads and explicit branch listing remain distinct.
 
-Capture a new answer in one call:
+Establish a missing current answer in one call:
 
 ```sh
 kt add "how to prepare the demo" "Run the project's documented demo command."
 ```
 
-`kt capture` works too. The full question becomes `how/to/prepare/the/demo.md`.
-Capture defaults to the session directory’s project tree, otherwise global; select `--global`,
+The full question becomes `how/to/prepare/the/demo.md`.
+Add defaults to the session directory’s project tree, otherwise global; select `--global`,
 `--project`, or `--root example` explicitly. Use the answer body for source evidence,
 `--dry-run` to preview, or `-` as the answer to read multiline Markdown from stdin.
 Existing leaves are protected: read their owner and carry its hash into rewrite,
-preserving still-valid knowledge.
+recomputing the answer from current evidence.
 New leaves receive `revised_at` and `status: green` (plus `checked_at` when `--expires-every` is given), not an invented
-proof. Capture neither executes nor manufactures proofs. Independently
+proof. Add neither executes nor manufactures proofs. Independently
 review the whole answer and check eligible proofs before relying on it.
 For unresolved answers, add `--unresolved --blocker "missing evidence" --next-check
 "specific next investigation"`. The blocker remains in the answer until it is
@@ -632,7 +637,7 @@ The agent default is **new question → `kt` first**, unless adequately checked
 knowledge is already loaded. If `kt` does not find the information, the agent must
 determine whether a leaf exists using alternate terms and scoped semantic inspection.
 Existing leaves are read or rewritten; absent leaves must be added after investigation,
-or recorded as unresolved when blocked. Capture an established answer before the
+or recorded as unresolved when blocked. Bring an established answer into the tree before the
 next unrelated tool call or completion—not in a later documentation pass.
 
 ### Startup hooks
@@ -649,8 +654,8 @@ plugin to supply the same startup context.
 
 At turn end, a maintenance hook (Claude Code and Codex `Stop`, Copilot CLI `agentStop`,
 OpenCode `session.idle`) asks the agent for one maintenance pass: invoke the
-`knowledgetrees-maintenance` skill, update affected leaves, capture new leaf-worthy knowledge
-(including user guidance), and prune leaves that can no longer be accurate, or say in one line
+`knowledgetrees-maintenance` skill, bring affected trees to the current frontier, inspect `kt_audit`
+signals, establish missing answers (including user guidance), and remove superseded knowledge, or say in one line
 that nothing changed. It fires at most once per five minutes per session
 (`KT_HOOK_MAINTENANCE_INTERVAL`), and not after a turn that already wrote the tree after its last
 code edit. The pass costs one extra model turn, never repeats itself, and any hook error lets the
@@ -675,7 +680,7 @@ duplicate. The installer retires those old Codex copies and their explicit confi
 entries. The remaining paths share one inode: there is no wrapper or second body to drift.
 
 The installer also exposes four focused skills through the shared and Claude directories:
-`knowledgetrees-lookup`, `knowledgetrees-capture`, `knowledgetrees-maintenance`,
+`knowledgetrees-lookup`, `knowledgetrees-reconcile`, `knowledgetrees-maintenance`,
 and `knowledgetrees-ingestion`. Each `SKILL.md` hardlinks to its corresponding
 canonical procedure leaf in the global KT. Their descriptions advertise when to
 use them, while the bootstrap keeps its kt-first and miss-resolution rule inline
@@ -785,7 +790,7 @@ policy compose with project state, mechanically checkable facts can revalidate
 themselves, and every useful piece of work has the opportunity to make the next
 piece of work easier.
 
-**Knowledge is discovered as needed and captured as learned.**
+**The tree remembers what is true, not what happened.**
 
 Knowledge trees cover **every scale**, from code-comment-level implementation facts
 to broad architecture and complete specifications. What a function does and why,
@@ -803,9 +808,9 @@ operations. `kt info` alone inspects the directory chain from `~` down to the wo
 directory and presents each ancestor orientation whose tree is accessible from that
 working directory. Output labels are `local`, `global`,
 or full canonical root directory paths, avoiding collisions between folder names.
-`project:` and registered names remain input aliases; new captures default their
-scope metadata to the canonical identity. Use --local (--project is an alias),
---global, or --root PATH to select capture destinations.
+`project:` and registered names remain input aliases; new answers default to the
+canonical local identity. Use --local (--project is an alias), --global, or --root
+PATH to select add destinations.
 
 `kt grants` shows why each root is readable, and `kt access ROOT revoke` gives access back.
 

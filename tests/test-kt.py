@@ -22,9 +22,9 @@ def main():
             (root / "where/am/i.md").write_text("---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nTest orientation.\n")
             (root / "how/to/add/knowledge").mkdir(parents=True)
         leaf = "how/to/add/knowledge/leaves.md"
-        content = "---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nCapture leaves immediately.\n"
+        content = "---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nMaintain answers immediately.\n"
         (global_root / leaf).write_text(content)
-        (local / leaf).write_text(content.replace("Capture", "Project: capture"))
+        (local / leaf).write_text(content.replace("Maintain answers", "Project: answer"))
         (global_root / "bad.md").write_text("---\nstatus: brown\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nLeaves are bad.\n")
         (global_root / "where/is").mkdir(parents=True)
         (global_root / "where/is/compiler.md").write_text("---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\nThe compiler is installed here.\n")
@@ -67,7 +67,7 @@ def main():
         assert run("how to do the thing") == saved
         run("add", "how to do the thing", "overwrite", expected=2)
         assert captured.read_text() == saved
-        run("capture", "why is repetition repetition useful", "Repetition.", "--global")
+        run("add", "why is repetition repetition useful", "Repetition.", "--global")
         assert (global_root / "why/is/repetition/repetition/useful.md").is_file()
         run("add", "where is multi-word tooling", "Here.", "--root", str(global_root))
         explicit = (global_root / "where/is/multi-word/tooling.md").read_text()
@@ -159,7 +159,7 @@ def main():
         assert "no_matches" in run("find", "zzzzunfindable", expected=1)
         assert run("open", "global:" + leaf) == content
         assert run("open", leaf).startswith("---")
-        assert "Project: capture" in run("open", "project:" + leaf)
+        assert "Project: answer" in run("open", "project:" + leaf)
         run("open", "project:../../outside.md", expected=2)
         assert run("open", str(global_root / leaf)) == content
         assert str(local) in run("roots") and str(global_root) in run("roots")

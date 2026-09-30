@@ -2,7 +2,7 @@
 status: green
 revised_at: "2026-09-24T09:32:02+10:00"
 name: "knowledgetrees-lookup"
-description: "Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and capture missing knowledge before continuing."
+description: "Use for new questions and failed probes: query kt first, read checked answers, determine whether missed leaves exist, and reconcile the frontier before continuing."
 ---
 
 For every new question, use `kt` before external search or host probes, unless the
@@ -16,7 +16,7 @@ The kt-first rule applies at every scale, including code-comment-level questions
 what a function does and why, what a file contains, where a typedef lives, include
 order, dependencies, invariants, and folder structure. Consult the owning tree
 before source probes for a new implementation question. A missing fine-grained
-answer creates the same investigation and capture obligation as a missing spec or
+answer creates the same investigation and reconciliation obligation as a missing spec or
 architecture answer; smallness and source visibility are not exemptions.
 
 ## Query, read, and resolve misses
@@ -70,9 +70,9 @@ unrelated projects merely because a search reveals them.
 
 An existing checked answer needs no duplicate leaf. A miss must be classified:
 existing leaf (retrieve or rewrite it), or absent leaf (add it at the correct scope).
-If no leaf exists, investigate safely, verify from primary evidence, and capture
+If no leaf exists, investigate safely, verify from primary evidence, and establish
 the answer before the next unrelated tool call or completion. Necessary verification
-and capture calls are allowed while resolving the question. Capture even small answers;
+and reconciliation calls are allowed while resolving the question. Maintain even small answers;
 do not postpone them to a documentation phase or suppress them to keep leaf count low.
 If unresolved, record a blocker and next check in the answer without
 inventing a verified conclusion. If writes are forbidden, give a scoped handoff.

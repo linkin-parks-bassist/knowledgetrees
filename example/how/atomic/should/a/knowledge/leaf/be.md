@@ -13,7 +13,7 @@ also matter. No single consideration mechanically determines the boundary.
 
 Granularity is not an eligibility threshold. One function's behavior or rationale,
 a typedef location, an include-order rule, or a file/folder role can be a complete
-useful leaf, including knowledge otherwise expressed as a code comment. Capture
+useful leaf, including knowledge otherwise expressed as a code comment. Establish
 such answers without inflating them into architecture summaries. Broad architecture
 and complete specs also belong; choose boundaries by the question and joint use,
 not by a rule that favors either coarse or fine knowledge.

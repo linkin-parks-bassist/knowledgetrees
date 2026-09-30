@@ -35,9 +35,10 @@ INSTRUCTIONS = (
     "at startup with no user task: first report the affected leaf prominently, stop unrelated work, diagnose why "
     "the leaf or proof differs from reality, remediate and re-check it, or ask the user if safe remediation cannot "
     "be established. Resume only after brown clears or the user explicitly permits ignoring that specific status; "
-    "permission does not validate the leaf. Rewrite a leaf "
-    "with kt_rewrite as the standard editing tool, citing the Revision hash from a whole-leaf read or successful rewrite; stale "
-    "hashes fail. Every change rewrites the whole leaf, so consider its full contents each time. A miss is not proof of absence. If a root needs approval, call "
+    "permission does not validate the leaf. The tree is the frontier of current knowledge, not a history: establish a missing "
+    "answer with kt_add and recompute an existing answer with kt_rewrite. The old body is material to reconsider, not a template "
+    "to extend; Git owns chronology. Cite the Revision hash from a whole-leaf read or successful rewrite; stale hashes fail. "
+    "Use kt_audit to surface structurally suspect leaves for human judgment. A miss is not proof of absence. If a root needs approval, call "
     "kt_access_request: it asks through the harness. Release access you no longer need with "
     "kt_access_revoke. If client elicitation did not complete, ask the user in conversation; after explicit "
     "authorization for the exact root and scope, finish the pending request with kt_access_confirm. Never "
@@ -76,9 +77,10 @@ TOOLS = [
          ["question"], read_only=True),
     tool("kt_find", "Broad search",
          "Ranked keyword search across all accessible roots. Returns root-qualified addresses to open with kt_read. "
-         "Set json for structured results.",
+         "Text and structured results are returned together.",
          {"terms": {"type": "string", "description": "Words or a question"},
-          "limit": {"type": "integer", "minimum": 1, "maximum": 100}, "json": BOOL}, ["terms"], read_only=True),
+          "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+          "min_coverage": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}}, ["terms"], read_only=True),
     tool("kt_grep", "Exact text search",
          "Literal (or regex) text search over leaf text in every readable root, like `kt grep`. Use it to find every "
          "place that states a fact. Output is ADDRESS:LINE: text.",
@@ -93,12 +95,17 @@ TOOLS = [
          "entitles you to kt_renew it.",
          {"address": ADDRESS}, ["address"], read_only=True),
     tool("kt_rewrite", "Rewrite a leaf",
-         "Primary editing method: replace the complete answer body, citing the Revision hash printed by kt_read or an "
-         "exact kt_lookup, or the previous successful kt_rewrite. The CLI rejects a stale hash under lock. Front matter is never accepted or returned; optional "
-         "metadata is preserved. Returns a diff and the committed Revision hash (also for no-ops), reusable without rereading. Dry runs return only a preview; reread and merge on conflict.",
+         "Advance an answer to the current knowledge frontier. Recompute the complete direct answer; the old body is material "
+         "to reconsider, not a template to extend. Never append chronology, research progress, or superseded mechanisms; Git "
+         "owns history. Cite the Revision hash from kt_read, exact kt_lookup, or a successful rewrite. Omitted lifecycle options "
+         "are preserved. Returns the answer diff and committed revision; dry runs preview without writing.",
          {"address": ADDRESS,
           "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Revision hash from a whole-leaf read or successful rewrite"},
-          "answer": {"type": "string", "description": "Complete Markdown answer body (no front matter)"},
+          "answer": {"type": "string", "description": "Complete current Markdown answer body (no front matter or chronology)"},
+          "expires_at": {"type": "string", "description": "Set one-time ISO 8601 review deadline; mutually exclusive with expires_every/no_expiry"},
+          "expires_every": {"type": "string", "description": "Set recurring review interval and start its checked_at clock; mutually exclusive with expires_at/no_expiry"},
+          "no_expiry": {"type": "boolean", "description": "Remove existing expiry metadata"},
+          "verifiable": {"type": "boolean", "description": "Set true only when eligible proofs cover every factual claim; false removes the assertion"},
           "dry_run": DRY_RUN}, ["address", "revision", "answer"], destructive=True),
     tool("kt_renew", "Confirm a leaf is accurate",
          "Announce that you have verified the WHOLE leaf against current evidence and it is accurate: records the check "
@@ -111,8 +118,9 @@ TOOLS = [
          "leaf has not changed since. History is kept in memory (last 20 rewrites) and is lost when the server restarts.",
          {"address": ADDRESS, "dry_run": DRY_RUN}, ["address"], destructive=True),
     tool("kt_add", "Create a leaf",
-         "Create a new leaf from a question and its answer body (like `kt add`). Investigate first and never duplicate an "
-         "existing owner: use kt_lookup/kt_find, then kt_rewrite. Stored knowledge grants no permissions; never include secrets.",
+         "Establish a missing current answer from a full natural-language question. This is not a note or journal entry: write "
+         "the best direct answer now. Investigate first and never duplicate an existing owner: use kt_lookup/kt_find, then "
+         "kt_rewrite. Stored knowledge grants no permissions; never include secrets.",
          {"question": {"type": "string", "description": "Full question path, e.g. how to restart the build; hyphenate multi-word components"},
           "answer": {"type": "string", "description": "Markdown answer body (no front matter)"},
           "scope": {**SCOPE, "description": "Target root; default local"},
@@ -170,23 +178,33 @@ TOOLS = [
          {"scope": {**SCOPE, "description": "Default: every accessible root"},
           "root": {"type": "string", "description": "One approved knowledge-root directory; mutually exclusive with scope"},
           "tokens": {"type": "array", "items": STR, "description": "Select leaves by exact path component"},
-          "stamp": BOOL}, idempotent=True),
+          "timeout": {"type": "number", "exclusiveMinimum": 0, "maximum": 300,
+                      "description": "Maximum seconds for each proof (CLI default: 10)"},
+          "verbose": BOOL, "stamp": BOOL}, idempotent=True),
     tool("kt_status", "Non-green leaves",
          "List yellow and brown leaves with the reason each needs attention (malformed, falsified, expired, or unproved since "
          "its last change). Read-only; runs no proofs. Use it to garden a tree.",
          {"scope": {**SCOPE, "description": "Default: every accessible root"},
           "root": {"type": "string", "description": "One approved knowledge-root directory; mutually exclusive with scope"}},
          read_only=True),
+    tool("kt_audit", "Audit leaf shape",
+         "Read-only structural audit of answer bodies. Reports leaves over 1,000 words as suspect and leaves containing "
+         "date-shaped strings as quite-suspect. These are review signals, never lifecycle states or diagnoses. Current "
+         "machine-state, scheduling, queue, event, and protocol-version leaves may legitimately contain dates and must "
+         "not be rewritten merely because they are reported.",
+         {"scope": {**SCOPE, "description": "Default: every accessible root"},
+          "root": {"type": "string", "description": "One approved root label or absolute path; mutually exclusive with scope"}},
+         read_only=True),
     tool("kt_access_status", "Root access status",
          "Say whether each root (or one root) is readable, and why: local tree, project grant, allowed everywhere, denied, "
          "or needing approval. Marks roots whose tree no longer exists. Restricted roots need kt_access_request.",
          {"root": {"type": "string", "description": "Root label or absolute path"}}, read_only=True),
     tool("kt_access_revoke", "Revoke root access",
-         "Give back access you no longer need. Scope project (default) makes the root require approval again in this project; "
-         "scope all does so everywhere, or removes the registration of a root whose tree is gone. Changes that reach beyond "
-         "this project directory ask the user first. You cannot revoke the local tree, a permissions bypass, or a session grant.",
+         "Give back access you no longer need. Scope session removes the current temporary grant; project (default) makes "
+         "the root require approval again in this project; all does so everywhere or removes a dead registration. Changes that reach beyond "
+         "this project directory ask the user first. You cannot revoke the local tree or a permissions bypass.",
          {"root": {"type": "string", "description": "Root label or absolute path"},
-          "scope": {"type": "string", "enum": ["project", "all"]},
+          "scope": {"type": "string", "enum": ["session", "project", "all"]},
           "request_id": {"type": "string", "description": "Pending ID returned when required elicitation failed"}},
          ["root"], idempotent=True),
     tool("kt_access_request", "Ask the user for root access",
@@ -195,19 +213,22 @@ TOOLS = [
          "the tool will report that client action and issue a pending request for kt_access_confirm. Never work around "
          "access policy.",
          {"root": {"type": "string", "description": "Root label or absolute path shown as restricted by kt_roots"},
-          "reason": {"type": "string", "description": "Why you need it (shown to the user, 300 characters)"}},
+          "reason": {"type": "string", "description": "Why you need it (shown to the user, 300 characters)"},
+          "preferred_scope": {"type": "string", "enum": ["session", "project", "project_and_subdirectories", "all"],
+                              "description": "Least scope that would satisfy the task; the user still chooses"}},
          ["root", "reason"]),
     tool("kt_access_confirm", "Complete authorized root access",
          "Complete a pending access request only after the user explicitly authorizes that exact root and scope in "
          "conversation. This is the MCP fallback when client elicitation was unavailable, cancelled, declined without "
          "a visible prompt, or errored. Never call it based on the agent's own decision.",
          {"request_id": {"type": "string", "description": "One-time ID returned by kt_access_request"},
-          "scope": {"type": "string", "enum": ["project", "project_and_subdirectories", "all"],
+          "scope": {"type": "string", "enum": ["session", "project", "project_and_subdirectories", "all"],
                     "description": "The exact scope the user authorized"}},
          ["request_id", "scope"]),
 ]
 
 ACCESS_CHOICES = {
+    "session": ("Allow for this agent session", "session", False),
     "project": ("Allow for this project directory only", "project", False),
     "project_and_subdirectories": ("Allow for this project and its subdirectories", "project", True),
     "all": ("Allow everywhere (all projects, persistent)", "all", False),
@@ -312,6 +333,19 @@ def int_arg(arguments, name, default=None, minimum=0, maximum=None):
     return value
 
 
+def number_arg(arguments, name, default=None, minimum=None, maximum=None):
+    value = arguments.get(name, default)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ToolError(f"{name} must be a number")
+    if minimum is not None and value <= minimum:
+        raise ToolError(f"{name} must be greater than {minimum}")
+    if maximum is not None and value > maximum:
+        raise ToolError(f"{name} must be at most {maximum}")
+    return value
+
+
 def words(arguments, name):
     value = text_arg(arguments, name, limit=4096)
     parts = value.split()
@@ -349,9 +383,10 @@ def root_scope_flags(arguments):
     return ["--root", root]
 
 
-def rewrite(address, revision, body, dry_run=False):
+def rewrite(address, revision, body, dry_run=False, lifecycle=()):
     """Replace the answer using the caller's revision and return the locked commit receipt."""
-    completed = run_kt("rewrite", "--print-revision", *(["--dry-run"] if dry_run else []), address, revision, body)
+    completed = run_kt("rewrite", "--print-revision", *(["--dry-run"] if dry_run else []),
+                       *lifecycle, address, revision, body)
     if completed.returncode:
         raise ToolError((completed.stderr or completed.stdout).strip() or f"kt rewrite failed ({completed.returncode})")
     return completed
@@ -413,12 +448,14 @@ def parse_find(output):
 
 def tool_find(arguments):
     limit = int_arg(arguments, "limit", minimum=1, maximum=100)
-    completed = run_kt("--lean", "find", *(["--limit", str(limit)] if limit else []), "--", *words(arguments, "terms"))
+    minimum = number_arg(arguments, "min_coverage", minimum=0, maximum=1)
+    flags = ["--limit", str(limit)] if limit else []
+    if minimum is not None:
+        flags += ["--min-coverage", str(minimum)]
+    completed = run_kt("--lean", "find", *flags, "--", *words(arguments, "terms"))
     text = report(completed, "kt find")
-    if arguments.get("json") is True:
-        structured = {**parse_find(completed.stdout), "exit": completed.returncode}
-        return json.dumps(structured), structured
-    return text
+    structured = {**parse_find(completed.stdout), "exit": completed.returncode}
+    return text, structured
 
 
 def tool_grep(arguments):
@@ -454,13 +491,33 @@ def tool_rewrite(arguments):
     before = body_of(current)
     if current_revision != revision:
         raise ToolError("the Revision hash is stale; kt_read the leaf again and merge before rewriting")
+    lifecycle = []
+    expiry = [name for name in ("expires_at", "expires_every", "no_expiry") if arguments.get(name) not in (None, False)]
+    if len(expiry) > 1:
+        raise ToolError("give only one of expires_at, expires_every, or no_expiry")
+    if "expires_at" in arguments:
+        lifecycle += ["--expires-at", text_arg(arguments, "expires_at", limit=4096)]
+    elif "expires_every" in arguments:
+        lifecycle += ["--expires-every", text_arg(arguments, "expires_every", limit=4096)]
+    elif arguments.get("no_expiry") is True:
+        lifecycle.append("--no-expiry")
+    elif arguments.get("no_expiry") not in (None, False):
+        raise ToolError("no_expiry must be a Boolean")
+    verifiable = arguments.get("verifiable")
+    if verifiable not in (None, True, False):
+        raise ToolError("verifiable must be a Boolean")
+    if verifiable is not None:
+        lifecycle.append("--verifiable" if verifiable else "--no-verifiable")
     try:
-        completed = rewrite(address, revision, answer, dry_run=dry_run)
+        completed = (rewrite(address, revision, answer, dry_run=dry_run, lifecycle=lifecycle)
+                     if lifecycle else rewrite(address, revision, answer, dry_run=dry_run))
     except ToolError as error:
         if "revision mismatch" in str(error):
             raise ToolError("the Revision hash is stale; kt_read the leaf again and merge before rewriting")
         raise
     if dry_run:
+        if lifecycle:
+            return completed.stdout + completed.stderr or "No change."
         return answer_diff(before.strip("\n") + "\n", answer.strip("\n") + "\n")
     committed = re.search(r"^Revision: ([a-f0-9]{64})$", completed.stdout, re.M)
     if not committed:
@@ -470,7 +527,10 @@ def tool_rewrite(arguments):
     if after != before:
         HISTORY.append({"address": address, "before": before, "after": after})
     note_read(address, after)
-    return answer_diff(before, after).rstrip("\n") + f"\n\nRevision: {committed[1]}\n"
+    change = answer_diff(before, after).rstrip("\n")
+    if lifecycle and change == "No change.":
+        change = "No answer change; lifecycle metadata changed."
+    return change + f"\n\nRevision: {committed[1]}\n"
 
 
 def tool_renew(arguments):
@@ -635,11 +695,18 @@ def tool_add(arguments):
 
 
 def tool_dict(arguments):
-    return report(run_kt("dict", *strings(arguments, "roots")), "kt dict")
+    text = report(run_kt("dict", *strings(arguments, "roots")), "kt dict")
+    return text, {"terms": [term.strip() for term in text.strip().split(",") if term.strip()]}
 
 
 def tool_roots(arguments):
-    return report(run_kt("roots"), "kt roots")
+    text = report(run_kt("roots"), "kt roots")
+    roots = []
+    for line in text.splitlines():
+        parts = line.split("\t")
+        if len(parts) == 3:
+            roots.append({"label": parts[0], "access": parts[1], "path": None if parts[2] == "(restricted)" else parts[2]})
+    return text, {"roots": roots}
 
 
 def tool_register(arguments):
@@ -660,11 +727,40 @@ def tool_prove(arguments):
     flags = root_scope_flags(arguments)
     if arguments.get("stamp") is not True:
         flags.append("--no-stamp")
+    timeout = number_arg(arguments, "timeout", minimum=0, maximum=300)
+    if timeout is not None:
+        flags += ["--timeout", str(timeout)]
+    if arguments.get("verbose") is True:
+        flags.append("--verbose")
     return report(run_kt("prove", *flags, *strings(arguments, "tokens"), timeout=300), "kt prove")
 
 
 def tool_status(arguments):
-    return report(run_kt("status", *root_scope_flags(arguments)), "kt status")
+    text = report(run_kt("status", *root_scope_flags(arguments)), "kt status")
+    rows, counts = [], {}
+    for line in text.splitlines():
+        parts = line.split("\t")
+        if len(parts) == 3:
+            rows.append({"status": parts[0], "address": parts[1], "reason": parts[2]})
+        elif line.startswith("green="):
+            counts = {name: int(value) for name, value in (item.split("=", 1) for item in line.split())}
+    return text, {"leaves": rows, "counts": counts}
+
+
+def tool_audit(arguments):
+    text = report(run_kt("audit", *root_scope_flags(arguments)), "kt audit")
+    rows, summary = [], {}
+    for line in text.splitlines():
+        parts = line.split("\t")
+        if len(parts) >= 4 and parts[0] in ("suspect", "quite-suspect"):
+            row = {"severity": parts[0], "address": parts[1]}
+            for field in parts[2:]:
+                key, _, value = field.partition("=")
+                row[key] = int(value) if key in ("words", "dates") else value.split(" | ")
+            rows.append(row)
+        elif line.startswith("scanned="):
+            summary = {name: int(value) for name, value in (item.split("=", 1) for item in line.split())}
+    return text, {"leaves": rows, "summary": summary}
 
 
 def tool_access_status(arguments):
@@ -683,7 +779,14 @@ def tool_access_status(arguments):
         notes.append("A root whose tree is gone can be removed with kt_access_revoke scope all.")
     if output.strip() == "force-private":
         notes.append("That root is unavailable and cannot be approved through the harness.")
-    return output + ("\n" + " ".join(notes) if notes else "")
+    text = output + ("\n" + " ".join(notes) if notes else "")
+    roots = []
+    for line in output.splitlines():
+        parts = line.split("\t")
+        if len(parts) == 4:
+            roots.append({"label": parts[0], "access": parts[1], "source": parts[2],
+                          "path": None if parts[3] == "(restricted)" else parts[3]})
+    return text, {"roots": roots, "force_private": output.strip() == "force-private"}
 
 
 def clean_reason(value):
@@ -744,13 +847,22 @@ def pending_access(kind, root, project, scope=None):
     return request_id
 
 
-def access_fallback(root, project, client_result):
+def access_choices(namespace, preferred=None):
+    choices = {name: value for name, value in ACCESS_CHOICES.items()
+               if name != "session" or namespace["access_session"]()}
+    if preferred in choices:
+        choices = {preferred: choices[preferred], **{name: value for name, value in choices.items() if name != preferred}}
+    return choices
+
+
+def access_fallback(root, project, client_result, choices):
     request_id = pending_access("grant", root, project)
-    return (f"{client_result} No access changed. Ask the user to authorize this exact root and one exact scope "
-            "(project, project_and_subdirectories, or all). After they explicitly authorize it in conversation, "
-            "call kt_access_confirm with:\n"
+    text = (f"{client_result} No access changed. Ask the user to authorize this exact root and one exact scope "
+            f"({', '.join(choices)}). After they explicitly authorize it in conversation, call kt_access_confirm.\n"
             f"request_id: {request_id}\nRoot awaiting approval: {root}\n"
             "Do not call kt_access_confirm without that user authorization.")
+    return text, {"changed": False, "pending": {"request_id": request_id, "root": str(root),
+                                                  "scopes": list(choices)}}
 
 
 def tool_access_request(arguments):
@@ -759,10 +871,18 @@ def tool_access_request(arguments):
     if value.startswith("-"):
         raise ToolError("root must not start with '-'")
     namespace = kt_namespace()
+    preferred = arguments.get("preferred_scope")
+    if preferred is not None:
+        preferred = text_arg(arguments, "preferred_scope", limit=100)
+        if preferred not in ACCESS_CHOICES:
+            raise ToolError("preferred_scope must be session, project, project_and_subdirectories, or all")
+    choices = access_choices(namespace, preferred)
+    if preferred == "session" and "session" not in choices:
+        raise ToolError("session access is unavailable because this harness supplied no stable session identifier")
     config, root, label, available = resolve_root(namespace, value)
     current = namespace["root_access"](root, label, config=config)
     if current == "allow":
-        return "That root is already readable; no approval is needed."
+        return "That root is already readable; no approval is needed.", {"changed": False, "access": "allow"}
     if current == "force-private":
         raise ToolError("that root is unavailable and cannot be approved through the harness")
     if current == "deny":
@@ -770,7 +890,7 @@ def tool_access_request(arguments):
                         "own terminal. Do not work around it.")
     project = str(Path.cwd().resolve())
     if not CLIENT["elicitation"]:
-        return access_fallback(root, project, "This client cannot show approval prompts.")
+        return access_fallback(root, project, "This client cannot show approval prompts.", choices)
     try:
         action, content, elicitation_error = elicit(
             f"An agent is asking to read a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
@@ -779,38 +899,42 @@ def tool_access_request(arguments):
             "It does not grant direct filesystem access. Decline to refuse.",
             {"type": "object", "required": ["decision"], "properties": {"decision": {
                 "type": "string", "title": "Grant", "description": "Where the approval applies",
-                "enum": list(ACCESS_CHOICES), "enumNames": [choice[0] for choice in ACCESS_CHOICES.values()]}}})
+                "enum": list(choices), "enumNames": [choice[0] for choice in choices.values()]}}})
     except ToolError as error:
-        return access_fallback(root, project, f"The MCP approval prompt failed ({error}).")
+        return access_fallback(root, project, f"The MCP approval prompt failed ({error}).", choices)
     if action != "accept":
         if action == "decline":
             return access_fallback(root, project, "The MCP client returned action=decline. The server cannot verify "
-                                   "that the harness displayed a prompt, so this is not recorded as a user refusal.")
+                                   "that the harness displayed a prompt, so this is not recorded as a user refusal.", choices)
         if action == "cancel":
-            return access_fallback(root, project, "The MCP client cancelled the approval request.")
+            return access_fallback(root, project, "The MCP client cancelled the approval request.", choices)
         detail = f" ({elicitation_error})" if elicitation_error else ""
-        return access_fallback(root, project, f"The MCP client failed the approval request{detail}.")
+        return access_fallback(root, project, f"The MCP client failed the approval request{detail}.", choices)
     decision = content.get("decision")
-    if decision not in ACCESS_CHOICES:
-        return access_fallback(root, project, "The MCP client returned an invalid approval response.")
+    if decision not in choices:
+        return access_fallback(root, project, "The MCP client returned an invalid approval response.", choices)
     _title, scope, subdirectories = ACCESS_CHOICES[decision]
-    namespace["apply_access_decision"](config, root, label, available, "allow", scope, project, subdirectories)
-    where = {"project": "this project directory", "project_and_subdirectories": "this project and its subdirectories",
+    namespace["apply_access_decision"](config, root, label, available, "allow", scope, project, subdirectories,
+                                       namespace["access_session"]())
+    where = {"session": "this agent session", "project": "this project directory", "project_and_subdirectories": "this project and its subdirectories",
              "all": "all projects"}[decision]
-    return f"The user approved reading that root for {where}. Retry your lookup."
+    return f"The user approved reading that root for {where}. Retry your lookup.", {
+        "changed": True, "root": str(root), "access": "allow", "scope": decision}
 
 
 def tool_access_confirm(arguments):
     request_id = text_arg(arguments, "request_id", limit=100)
     scope_name = text_arg(arguments, "scope", limit=100)
     if scope_name not in ACCESS_CHOICES:
-        raise ToolError("scope must be project, project_and_subdirectories, or all")
+        raise ToolError("scope must be session, project, project_and_subdirectories, or all")
     pending = ACCESS_REQUESTS.get(request_id)
     if pending is None:
         raise ToolError("that pending access request is unknown or has already been used; call kt_access_request again")
     if pending["kind"] != "grant":
         raise ToolError("that pending request is for revocation, not a grant")
     namespace = kt_namespace()
+    if scope_name == "session" and not namespace["access_session"]():
+        raise ToolError("session access is unavailable because this harness supplied no stable session identifier")
     config, root, label, available = resolve_root(namespace, pending["root"])
     if str(root) != pending["root"] or str(Path.cwd().resolve()) != pending["project"]:
         raise ToolError("the pending request no longer matches this root and project; call kt_access_request again")
@@ -821,25 +945,39 @@ def tool_access_confirm(arguments):
         raise ToolError("that root is denied by the user's policy; the pending request cannot override it")
     if current == "allow":
         del ACCESS_REQUESTS[request_id]
-        return "That root is already readable; the pending request is closed."
+        return "That root is already readable; the pending request is closed.", {
+            "changed": False, "access": "allow", "request_id": request_id}
     _title, scope, subdirectories = ACCESS_CHOICES[scope_name]
     namespace["apply_access_decision"](config, root, label, available, "allow", scope,
-                                       pending["project"], subdirectories)
+                                       pending["project"], subdirectories, namespace["access_session"]())
     del ACCESS_REQUESTS[request_id]
-    where = {"project": "this project directory", "project_and_subdirectories":
+    where = {"session": "this agent session", "project": "this project directory", "project_and_subdirectories":
              "this project and its subdirectories", "all": "all projects"}[scope_name]
-    return f"Completed the user's explicit authorization for {where}. Retry your lookup."
+    return f"Completed the user's explicit authorization for {where}. Retry your lookup.", {
+        "changed": True, "root": str(root), "access": "allow", "scope": scope_name,
+        "request_id": request_id}
 
 
 def tool_access_revoke(arguments):
     value = text_arg(arguments, "root", limit=4096)
     scope = arguments.get("scope", "project")
-    if value.startswith("-") or scope not in ("project", "all"):
-        raise ToolError("root must not start with '-' and scope must be project or all")
+    if value.startswith("-") or scope not in ("session", "project", "all"):
+        raise ToolError("root must not start with '-' and scope must be session, project, or all")
     namespace = kt_namespace()
     config, root, label, available = resolve_root(namespace, value)
     cwd = str(Path.cwd().resolve())
-    _policy, _source, granted_for = namespace["resolve_root_access"](root, label, cwd, config)
+    _policy, source, granted_for = namespace["resolve_root_access"](root, label, cwd, config)
+    if scope == "session":
+        session = namespace["access_session"]()
+        if not session:
+            raise ToolError("this harness supplied no stable session identifier")
+        if source != "session grant":
+            return "No session grant is active for that root; persistent access is unchanged.", {
+                "changed": False, "scope": "session"}
+        namespace["apply_access_decision"](config, root, label, available, "reset", "session", cwd,
+                                           session=session)
+        return "Removed this session's temporary access. Persistent access is unchanged.", {
+            "changed": True, "root": str(root), "scope": "session"}
     try:  # preview on a copy: validates the request and describes its effect without saving
         effect = namespace["apply_revocation"](copy.deepcopy(config), root, label, available, scope, cwd, save=False)
     except ValueError as error:
@@ -859,12 +997,14 @@ def tool_access_revoke(arguments):
                 raise ToolError("the pending revocation does not match this root, project, and scope")
             namespace["apply_revocation"](config, root, label, available, scope, cwd)
             del ACCESS_REQUESTS[request_id]
-            return effect + " Completed the user's explicit authorization."
+            return effect + " Completed the user's explicit authorization.", {
+                "changed": True, "root": str(root), "scope": scope, "request_id": request_id}
         if not CLIENT["elicitation"]:
             request_id = pending_access("revoke", root, cwd, scope)
-            return ("This change reaches beyond this project directory, and this client cannot show confirmation prompts. "
+            text = ("This change reaches beyond this project directory, and this client cannot show confirmation prompts. "
                     "Access is unchanged. Ask the user to authorize this exact revocation in conversation, then call "
                     f"kt_access_revoke again with request_id {request_id}, the same root, and scope {scope}.")
+            return text, {"changed": False, "pending": {"request_id": request_id, "root": str(root), "scope": scope}}
         try:
             action, content, elicitation_error = elicit(f"An agent asks to revoke access to a knowledge root.\n\nRoot: {namespace['root_identity'](root)}\n"
                              f"Project directory: {cwd}\nEffect: {effect}\n\nAccept to make this change; decline to leave access as it is.",
@@ -875,11 +1015,13 @@ def tool_access_revoke(arguments):
         if action != "accept" or content.get("confirm") is not True:
             detail = f": {elicitation_error}" if elicitation_error else ""
             request_id = pending_access("revoke", root, cwd, scope)
-            return (f"The MCP client did not confirm revocation ({action or 'invalid'}{detail}); access is unchanged. "
+            text = (f"The MCP client did not confirm revocation ({action or 'invalid'}{detail}); access is unchanged. "
                     "Ask the user to authorize this exact revocation in conversation, then call kt_access_revoke again "
                     f"with request_id {request_id}, the same root, and scope {scope}.")
+            return text, {"changed": False, "pending": {"request_id": request_id, "root": str(root), "scope": scope}}
     namespace["apply_revocation"](config, root, label, available, scope, cwd)
-    return effect + " Asking for it again will prompt the user."
+    return effect + " Asking for it again will prompt the user.", {
+        "changed": True, "root": str(root), "scope": scope}
 
 
 HANDLERS = {"kt_info": tool_info, "kt_lookup": tool_lookup, "kt_find": tool_find, "kt_grep": tool_grep,
@@ -887,7 +1029,8 @@ HANDLERS = {"kt_info": tool_info, "kt_lookup": tool_lookup, "kt_find": tool_find
             "kt_add": tool_add, "kt_rm": tool_rm, "kt_mv": tool_mv, "kt_combine": tool_combine,
             "kt_init": tool_init, "kt_dict": tool_dict, "kt_roots": tool_roots, "kt_register": tool_register,
             "kt_prove": tool_prove,
-            "kt_status": tool_status, "kt_access_status": tool_access_status, "kt_access_request": tool_access_request,
+            "kt_status": tool_status, "kt_audit": tool_audit,
+            "kt_access_status": tool_access_status, "kt_access_request": tool_access_request,
             "kt_access_confirm": tool_access_confirm, "kt_access_revoke": tool_access_revoke}
 
 
@@ -895,20 +1038,21 @@ HANDLERS = {"kt_info": tool_info, "kt_lookup": tool_lookup, "kt_find": tool_find
 
 def review_text():
     try:
-        return runpy.run_path(str(CLI.with_name("kt-hooks")))["REVIEW"]
+        return runpy.run_path(str(CLI.with_name("kt-hooks")))["FRONTIER_REVIEW"]
     except Exception:  # noqa: BLE001 - the hook file is optional here
-        return ("Knowledge-tree capture review: check kt for existing owners of anything reusable you learned, "
-                "capture missing answers with evidence, and record blockers for unresolved questions.")
+        return ("Knowledge-tree frontier review: recompute affected leaves as the best direct answers now, "
+                "establish missing current answers with evidence, remove superseded facts, and keep chronology in Git.")
 
 
 PROMPTS = {
-    "capture_review": ("Review this work and capture reusable knowledge", [], lambda a: review_text()),
-    "garden": ("List non-green leaves and work through them", [],
-               lambda a: "Garden the knowledge tree: call kt_status, then for each yellow or brown leaf kt_read it, "
+    "frontier_review": ("Bring affected knowledge to its current frontier", [], lambda a: review_text()),
+    "garden": ("Review non-green and structurally suspect leaves", [],
+               lambda a: "Garden the knowledge tree: call kt_status and kt_audit. For each yellow or brown leaf kt_read it, "
                          "immediately report any brown leaf before other work, check its claims against current evidence, "
-                         "diagnose and repair what is stale with kt_rewrite (never delete "
-                         "still-valid knowledge), and only when the whole leaf is verified call kt_renew. Report what "
-                         "you changed and anything you could not verify."),
+                         "diagnose and recompute the current answer with kt_rewrite, and only when the whole leaf is verified "
+                         "call kt_renew. Classify suspect audit results, but do not infer poisoning or rewrite mechanically. "
+                         "Dates are legitimate in current machine state, schedules, queues, events, and protocol identifiers. "
+                         "Git owns historical narration. Report what changed and what remains unresolved."),
     "revoke_access": ("Review and give back access this project no longer needs", [],
                       lambda a: "Call kt_access_status to see which roots this project can read and why. For each restricted "
                                 "root you do not need for the current work, call kt_access_revoke (widening changes ask the "

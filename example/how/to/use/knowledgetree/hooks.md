@@ -51,9 +51,10 @@ MCP tool names may be prefixed `mcp__knowledgetrees__kt_`.
 When an agent finishes a turn, Claude Code and Codex `Stop`, Copilot CLI
 `agentStop`, and OpenCode `session.idle` may ask for one maintenance pass: invoke the
 `knowledgetrees-maintenance` skill for each tree touched by the work, user direction,
-or decisions since the last pass, update leaves whose answers changed, capture new
-leaf-worthy knowledge (including user guidance) at its owning scope, and
-rewrite or remove leaves that can no longer be accurate or relevant; if nothing
+or decisions since the last pass, bring affected trees to the frontier of relevant
+knowledge, recompute changed answers, establish missing current answers (including
+user guidance), inspect `kt_audit` signals without treating them as diagnoses, and
+remove superseded facts; if nothing
 changed, say so in one line and finish.
 
 Each harness gets the reminder in the form it continues on:

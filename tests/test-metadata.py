@@ -194,7 +194,7 @@ print("lifecycle checks passed")
 with tempfile.TemporaryDirectory() as directory:
     project = Path(directory)
     (project / ".knowledge").mkdir()
-    run(project, "capture", "--local", "what is fresh", "A fresh answer.")
+    run(project, "add", "--local", "what is fresh", "A fresh answer.")
     fresh = project / ".knowledge/what/is/fresh.md"
     written = fresh.read_text()
     assert "status: green\n" in written, written

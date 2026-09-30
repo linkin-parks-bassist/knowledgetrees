@@ -20,19 +20,19 @@ paths/tools/devices, out-of-repository writes, and host/project-specific assumpt
 are concrete lookup events, but do not exhaust when agents should retrieve knowledge.
 They now serve as reminders of the broader default: new question -> kt first,
 unless adequately checked knowledge is already loaded. Keep that default and its
-miss-resolution/capture obligation inline in the bootstrap rather than treating
+miss-resolution/reconciliation obligation inline in the bootstrap rather than treating
 the reminder list as the only condition for retrieval.
 A trigger hidden only in a leaf the agent must first choose to read cannot reliably
 start the behavior it is meant to enforce.
 
 Concrete branch descriptions and exemplar routes in each orientation turn path
 guessing into continuation from a known starting point. Detail belongs in direct
-lookup, capture, maintenance, and ingestion answers. Gate plus checked hit means
-proceed without duplication; gate plus miss means capture after safe discovery and
+lookup, reconciliation, maintenance, and ingestion answers. Gate plus checked hit means
+proceed without duplication; gate plus miss means establish the answer after safe discovery and
 verification, before continuing.
 A failed `kt` lookup must first be classified as existing-but-unretrieved knowledge
 or an absent leaf. Only the latter requires a new leaf; existing owners are read
-or rewritten. Necessary verification/capture calls may precede resuming unrelated work.
+or rewritten. Necessary verification/reconciliation calls may precede resuming unrelated work.
 
 Treat this as an operating design, not a claim that a model's future behavior is
 mechanically proved. Evaluate fresh-session transcripts for actual descent before

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""kt grep, kt status, and the reusable access-grant function; no models."""
+"""kt grep, status, audit, and the reusable access-grant function; no models."""
 import json
 import os
 import re
@@ -95,6 +95,22 @@ def main():
         before = {p: p.read_bytes() for p in (project / ".knowledge").rglob("*.md")}
         kt("status")
         assert before == {p: p.read_bytes() for p in (project / ".knowledge").rglob("*.md")}, "status is read-only"
+
+        # audit: body-only structural signals are advisory and never alter lifecycle state.
+        long = project / ".knowledge/what/is/long.md"
+        long.write_text("---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\n" + "word " * 1001)
+        dated = project / ".knowledge/what/is/dated.md"
+        dated.write_text("---\nstatus: green\nrevised_at: '2026-09-12T12:00:00+00:00'\n---\n\n"
+                         "Current contract, reviewed on 2026-09-30 and 30 September 2026.\n")
+        audit_before = {p: p.read_bytes() for p in (project / ".knowledge").rglob("*.md")}
+        audit = kt("audit", "--local").splitlines()
+        assert audit[0].startswith("quite-suspect\tlocal:what/is/dated.md\twords=")
+        assert "dates=2" in audit[0] and "2026-09-30" in audit[0]
+        assert audit[1].startswith("suspect\tlocal:what/is/long.md\twords=1001\tdates=0")
+        assert audit[-1].endswith("suspect=1 quite-suspect=1")
+        assert "dated.md" not in kt("audit", "--global")
+        kt("audit", "--local", "--global", expected=2)
+        assert audit_before == {p: p.read_bytes() for p in (project / ".knowledge").rglob("*.md")}, "audit is read-only"
 
         # The grant function persists a confirmed decision without prompting; the CLI still needs a TTY.
         kt("access", str(private), "allow", "--scope", "project", expected=3)

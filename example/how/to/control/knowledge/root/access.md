@@ -16,15 +16,15 @@ not approval or leaf content.
 
 ## Root identities
 
-Output and default capture scope use `local` for the exact cwd/.knowledge (or cwd
+Output and default add scope use `local` for the exact cwd/.knowledge (or cwd
 itself when named .knowledge), `global` for the user-global tree, and the full
 canonical root directory path for any other root. Local takes precedence when the
 global tree is also local. Canonical paths avoid folder-name collisions.
 Use `kt_read` (shell: `kt open`) with `local:PATH`, `global:PATH`, or
 `/full/root/directory:PATH`. Quote arguments containing spaces.
-`project:` and registered names remain input aliases. New captures use --local
+`project:` and registered names remain input aliases. New answers use --local
 (--project is an alias), --global, or --root PATH. A supplied --scope overrides
-capture metadata. Existing leaves are not automatically relabeled.
+the target root. Existing leaves are not automatically relabeled.
 
 ## Ordinary policies and grants
 
@@ -55,7 +55,7 @@ Seeing and revoking grants: `kt grants [ROOT]` lists each root's effective acces
 
 Stale approvals: grants are keyed by path, so on every run `kt` drops project grants whose project directory or root no longer exists, registered roots allowed everywhere whose tree is gone, and auto-named `root-<hash>` ask registrations whose tree is gone, printing a one-line notice on stderr; a tree recreated at that path then needs a fresh approval. Deny and force-private entries and user-named ask registrations are kept because they protect or name a tree that may only be unmounted. A tree deleted and recreated between two `kt` runs is not detected.
 
-Asking through the harness: where the knowledgetrees MCP server is installed, an agent calls `kt_access_request(root, reason)`. It asks the client to display the root, project directory, reason, and three choices: this project directory, this project and subdirectories, or everywhere. Only an accepted response with a valid scope saves the grant; session scope is not offered because the server cannot know the agent's session id. Decline, cancellation, invalid replies, client errors, and clients without elicitation change nothing and return a one-time pending request instead of requiring a shell. After the user explicitly authorizes that exact root and scope in conversation, the agent calls `kt_access_confirm(request_id, scope)`. The server rejects unknown, reused, wrong-kind, changed-project, denied, and force-private requests. `kt_access_status` reports each root's effective access and source. `kt_access_revoke` narrows this project directly; wider revocation first asks through elicitation and, when that cannot complete, returns a one-time ID that is accepted only by a repeated call with the same root and scope after explicit conversational authorization. Direct policy administration and the persistent permissions bypass remain terminal-only. These checks are guardrails against an agent inventing consent, not a filesystem sandbox.
+Asking through the harness: an agent calls `kt_access_request(root, reason, preferred_scope)` with the least scope that satisfies the task. The user still chooses. When the harness supplies `KT_SESSION_ID`, `CODEX_THREAD_ID`, or `OPENCODE_SESSION_ID`, temporary session access is offered alongside project, project-with-subdirectories, and everywhere. Only an accepted response saves a grant. Decline, cancellation, invalid replies, client errors, and clients without elicitation change nothing and return a structured one-time pending request. After explicit authorization for that exact root and scope in conversation, `kt_access_confirm` completes it. `kt_access_status` returns readable text plus structured root/source data. `kt_access_revoke` removes session access directly, narrows this project directly, and asks before wider changes; failed confirmation returns a matching structured continuation. Direct policy administration and the persistent permissions bypass remain terminal-only.
 
 ## Persistent bypass
 
@@ -82,9 +82,9 @@ Force-private overrides bypass and grants. Outside exact local scope, such roots
 and registered descendants are unavailable and absent from generated root
 identities, paths, snippets, and rankings. Merely starting in a subdirectory does
 not expose a protected ancestor. The private root becomes visible/accessible only
-when it is the exact local tree. Explicit blocked reads and capture use generic
+when it is the exact local tree. Explicit blocked reads and add use generic
 errors without echoing the private path. Registered protected subtrees cannot leak
-through search, symlink aliases, rewrite, capture, or broader proof execution.
+through search, symlink aliases, rewrite, add, or broader proof execution.
 Startup loads the same
 policy and suppresses a force-private global bootstrap outside local scope.
 

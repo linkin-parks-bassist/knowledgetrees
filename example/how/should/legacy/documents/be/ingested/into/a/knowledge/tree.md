@@ -2,7 +2,7 @@
 status: green
 revised_at: "2026-09-27T14:45:34+10:00"
 name: "knowledgetrees-ingestion"
-description: "Use when ingesting legacy knowledge: find existing owners with kt, establish leaf existence on misses, capture absent answers, audit coverage, and retire redundant sources only when authorized."
+description: "Use when ingesting legacy knowledge: find existing owners with kt, establish absent answers, audit coverage, and retire redundant sources only when authorized."
 ---
 
 Treat a legacy document as temporary ingestion material, not a parallel canonical
@@ -44,7 +44,7 @@ authority, deprecation, and final coverage decisions, and continues non-overlapp
 integration while workers run. Delegation does not transfer those decisions.
 
 For changes to the procedure itself, audit each old obligation against a new direct
-answer before shortening bootstrap text. The kt-first rule and miss/capture
+answer before shortening bootstrap text. The kt-first rule and miss/reconciliation
 obligation must stay self-contained in bootstrap; detail can move to reachable
 leaves, but no rule may survive only in
 Git history or an unimported source report.

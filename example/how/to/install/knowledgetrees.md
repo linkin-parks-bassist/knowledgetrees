@@ -27,9 +27,9 @@ copies and every matching explicit `skills.config` entry. The remaining paths
 share one inode, so editing the canonical leaf cannot leave a wrapper stale.
 
 Four procedure skills are also installed in both directories:
-`knowledgetrees-lookup`, `knowledgetrees-capture`, `knowledgetrees-maintenance`,
+`knowledgetrees-lookup`, `knowledgetrees-reconcile`, `knowledgetrees-maintenance`,
 and `knowledgetrees-ingestion`. Each hardlinks to the respective retrieval,
-capture, maintenance, or ingestion leaf, with discovery metadata in that canonical
+reconciliation, maintenance, or ingestion leaf, with discovery metadata in that canonical
 leaf. The shared copies are discovered by Codex; all five names are enabled in OpenCode permissions.
 Quit and restart clients after installation or updates to refresh hooks and catalogs.
 

@@ -1,12 +1,12 @@
 ---
 status: green
 revised_at: "2026-09-27T14:50:02+10:00"
-name: "knowledgetrees-capture"
-description: "Use after kt misses or reusable discoveries: establish leaf existence, update or add scoped knowledge, and capture before the next unrelated tool call; include truthful provenance and eligible proofs."
+name: "knowledgetrees-reconcile"
+description: "Use after kt misses or reusable discoveries: bring scoped knowledge to its current frontier before continuing; include truthful provenance and eligible proofs."
 ---
 
-Capture an established reusable answer before the next unrelated tool call or
-completion; necessary verification and capture calls are part of resolving it.
+Bring the tree to an established reusable answer before the next unrelated tool call
+or completion; necessary verification and reconciliation calls are part of resolving it.
 Use `kt_find` and `kt_read` (shell: `kt find`, `kt open`) to check for an existing owner before writing.
 Prefer a question-prefix query when the answer category is known: `where is`
 for locations, `how to` for procedures, `when to` for triggers, `what is` for
@@ -15,19 +15,19 @@ sentence-derived leaf under that branch so queries exclude unrelated answer kind
 If `kt` fails to find information, determine whether the leaf exists through
 alternate keywords and scoped semantic inspection. If it exists, use or rewrite it;
 if it does not, add it at the correct scope. A lexical miss never establishes absence.
-A checked hit needs no duplicate capture. If unresolved, record the blocker and
+A checked hit needs no duplicate leaf. If unresolved, record the blocker and
 next check in the answer.
-Do not resume surrounding work with an outstanding capture obligation. The agent's
-own uncertainty remains an additional capture signal, not the only trigger.
+Do not resume surrounding work while the tree remains behind the known frontier. The
+agent's resolved uncertainty remains an additional reconciliation signal, not the only trigger.
 
-## Capture every scale of knowledge
+## Maintain every scale of knowledge
 
-Capture fine-grained implementation answers as readily as architecture and specs.
+Establish fine-grained implementation answers as readily as architecture and specs.
 Do not reject a discovered fact because it is "just a code comment", a single
 function, typedef, include-order constraint, file, or folder. Record what a function
 does and why, contracts and invariants, what a file contains, where a type lives,
 and dependency/layout details at their owning project or subsystem scope. There is
-no minimum abstraction, complexity, or answer-length threshold for capture.
+no minimum abstraction, complexity, or answer-length threshold for a current answer.
 
 Examples of complete question routes include `what does f do`, `why does f check
 its input`, `what does file z contain`, `where is typedef y declared`, `what is the
@@ -44,7 +44,7 @@ restricted material into the global tree; sanitize anything intended for publica
 Keep an existing owner in context before editing. Full reads return the complete
 answer and its revision hash; there are no partial reads. Use `kt_rewrite` as the
 standard editing method with that hash. There is no partial edit: every change rewrites the whole answer, so its full contents are reconsidered each time. Keep leaves short enough to rewrite whole.
-Preserve still-valid knowledge and reread/merge if the leaf changed.
+Re-derive the current answer, carry forward only what remains true and relevant, and reread/merge if the leaf changed.
 Use `kt_read` (shell: `kt open ROOT:PATH`) for that read and `kt_prove` (shell: `kt prove --root ROOT TOKEN`) after
 changing eligible proofs. Create a new leaf in one call with `kt_add`; the shell equivalent is:
 
@@ -52,7 +52,7 @@ changing eligible proofs. Create a new leaf in one call with `kt_add`; the shell
 kt add "how to prepare the demo" "Run the project's documented demo command."
 ```
 
-`capture` is an alias for `add`. The exact current-directory local root is the default, falling
+The exact current-directory local root is the default, falling
 back to global; choose `--global`, `--local` (`--project` is an alias), or `--root example` explicitly when
 scope matters. `--dry-run` previews without
 writing. Pass `-` as the answer to read multiline Markdown from stdin.
@@ -80,12 +80,13 @@ Write the answer first, then the context, preconditions, limits, eligible proofs
 links needed to use it. Leaves directly answer their paths rather than outsourcing
 the answer to internal monolithic documents. Link alternate routes to a canonical
 answer instead of copying it; record the conclusion and the distinction that made
-it non-obvious. A leaf is a current answer, never a log: do not append task chronology,
+it non-obvious. A leaf is a current answer, never a log. Recompute it from the evidence;
+the old body is material to reconsider, not a template to extend. Do not append task chronology,
 session notes, progress updates, tool transcripts, or stream of consciousness.
 Log-shaped leaves are tree poisoning because stale events become indistinguishable
-from current truth and retrieval sends later agents down contradictory paths. Rewrite
-the current answer in place. Retain history only when it explains a present constraint
-or decision; use Git or a purpose-built external log for chronology.
+from current truth and retrieval sends later agents down contradictory paths. Retain a
+past fact only when it answers a current question or explains a present constraint or
+decision; Git owns chronology.
 
 ## Size and provenance
 

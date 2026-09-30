@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Root privacy, persistent grants, session isolation, and capture registration."""
+"""Root privacy, persistent grants, session isolation, and add-time registration."""
 import argparse
 import io
 import json
@@ -94,18 +94,18 @@ def main():
                 child_directory = global_root / "subdir"
                 child_directory.mkdir()
                 run("open", "global:where/is/private.md", cwd=child_directory, expected=3)
-                # Capture into an unfamiliar wider tree registers it as private, without writing a leaf.
-                run("add", "what is capture", "New content", "--root", str(shared), expected=3)
+                # Adding to an unfamiliar wider tree registers it as private, without writing a leaf.
+                run("add", "what is registration", "New content", "--root", str(shared), expected=3)
                 registry = json.loads(config.read_text())
                 label = next(name for name, spec in registry["roots"].items() if spec.get("path") == str(shared))
                 assert registry["roots"][label]["access"] == "ask"
-                assert not (shared / "what/is/capture.md").exists()
+                assert not (shared / "what/is/registration.md").exists()
                 assert "confidential payload" not in config.read_text()
                 assert "confidential payload" not in run("find", "secretneedle", expected=1)
                 decision(label, "allow")
-                run("add", "what is capture", "New content", "--root", str(shared))
-                assert "New content" in run("open", label + ":what/is/capture.md")
-                run("open", label + ":what/is/capture.md", cwd=other, expected=3)
+                run("add", "what is registration", "New content", "--root", str(shared))
+                assert "New content" in run("open", label + ":what/is/registration.md")
+                run("open", label + ":what/is/registration.md", cwd=other, expected=3)
                 # No implicit parent discovery, even with a parent orientation on disk.
                 run("open", "project:what/is/local.md", cwd=nested, expected=2)
                 # A restricted registered subtree cannot leak through an allowed ancestor tree.

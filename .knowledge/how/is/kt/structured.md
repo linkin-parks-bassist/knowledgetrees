@@ -1,51 +1,32 @@
 ---
 status: green
-revised_at: "2026-09-29T13:27:13+10:00"
+revised_at: "2026-09-30T11:11:31+10:00"
 ---
 
-The CLI remains one self-contained standard-library Python executable for standalone installation. Sections separate root discovery and access, lookup and rendering, leaf maintenance, capture, proof execution, and parser construction. `ancestor_orientation_roots` is the narrow startup-only exception to exact-root discovery: it walks directory owners from `~` down to the working directory, retains only `.knowledge` roots accessible under the working directory policy, and presents their orientations without adding them to lookup or mutation roots. RootAccessView loads discovery and policies once per invocation; LookupContext lazily reads permitted leaf text once. LeafSnapshot centralizes revision and inode checks for rewrite and destructive maintenance. command_parser separates command schemas and handler dispatch from execution. All verification is exposed through kt prove. Regression suites cover access, lookup, maintenance, installation, hooks, MCP tools, timeless proof markers, and lifecycle status.
+The implementation has one semantic spine: the self-contained standard-library `tools/kt` CLI owns root discovery, access policy, leaf representation, lifecycle, revision locking, structural audit, and proof evaluation. Harness adapters translate their protocols into that spine; they do not reimplement knowledge semantics.
 
-Harness adapters are separate files so the CLI stays standalone. `tools/kt-hooks` is one Python handler shared by Claude Code, Codex, Copilot CLI, and OpenCode's plugin (`tools/kt-opencode.mjs`); installed integrations invoke its `start` event (`kt info`) and its `stop` event, whose `maintenance` function returns a `decision: block` maintenance reminder; `handle` sends it to Claude Code as Stop `hookSpecificOutput.additionalContext` instead, which continues the agent without an error label. It passes a stop with `stop_hook_active` true, then consults the per-session `maintenance_turns` SQLite row (`pending` for flagless harnesses, `last` for the rate limit). `turn_calls` extracts the turn's tool calls from a bounded transcript tail (`entry_turn_start`/`entry_calls` understand Claude Code and Codex entries) or from the OpenCode plugin's `tools` list, and `maintained` reports whether a `TREE_WRITE` call follows the last code edit. Dormant failure-reminder code is not wired to harness events. `tools/kt-mcp` is a newline-delimited JSON-RPC stdio server that owns no policy beyond the elicitation flow (a server-to-client request whose response is read inline while a tool call is in flight; other requests arriving meanwhile are queued and served afterward, and pings are answered): each tool runs the sibling `kt` in a subprocess with stdin closed and arguments after `--`. Whole reads return their revision hash; `kt_rewrite`, the only editing tool, passes that explicit hash to the locked CLI rewrite; `kt_renew` uses the remembered whole answer.
+## CLI layers
 
-`kt grep` and `kt status` walk leaves through the same `RootAccessView`/`leaves()` policy filter as `find`, so restricted roots are never read; `status` derives colors from stored metadata and `lifecycle_state` without running proofs. Effective access is computed by `resolve_root_access`, which returns the policy plus its source and the project grant that supplied it (`root_access` is its first element); `apply_revocation` narrows a grant and can preview on a copy, `grants_command` reports sources, and `prune_stale_grants` runs once per invocation from `main` to drop approvals whose tree is gone. Access changes are split into `resolve_access_root` and `apply_access_decision`: the latter persists an already-confirmed decision and never prompts, so the CLI keeps its own-terminal confirmation while another trusted front end (the MCP server's elicitation) can supply a different confirmation. `leaf_health` computes a leaf's live state and reason once for `status` and for lean rendering (`--lean`: `lean_leaf` and `show_leaf` strip front matter and lead a non-green leaf with a notice); `renew_leaf` stamps `checked_at` and then reruns `verify_proofs` restricted to that leaf through its `only` parameter with `raise_ok`. Proof parsing emits only the exact, timeless `Proof:` delimiter and never writes an outcome or timestamp. It recognizes the former `(verified|falsified at …)` forms solely as migration input: a writing proof run normalizes them without parsing their timestamp text, while `--no-stamp` preserves bytes. Every ordinary proof run keeps a leaf at the worse of its computed and stored status, so proof evaluation never raises one (a `verifiable: true` leaf whose proofs all pass is the exception). `revised_leaf` carries `status` and `checked_at` through a rewrite.
+- Root/access functions represent registered roots, effective policies, project/session grants, and forced privacy. `RootAccessView` loads one coherent view per invocation and every traversal uses it.
+- `LookupContext` lazily reads permitted leaves once. Question lookup, ranked search, exact grep, dictionary, status, and audit are read-side projections over that view.
+- Leaf functions parse flat metadata and answer bodies, compute revision snapshots, lifecycle state, structural audit signals, and proof records.
+- Mutation functions operate on complete current answers. `add_leaf` establishes a missing owner; `rewrite_leaf` advances an existing owner under a whole-read SHA-256 revision and preserves inode identity. Remove, move, combine, renew, and initialization share the same root and snapshot contracts.
+- Proof execution is exposed only through `kt prove`. Lifecycle status and structural suspicion are distinct: green/yellow/brown describes verification state; `kt audit` reports bodies over 1,000 words as `suspect` and date-shaped bodies as `quite-suspect` without writing or diagnosing them.
 
-`kt rewrite ADDRESS HASH BODY` uses a dedicated handler with a mandatory
-positional SHA-256 revision and literal inline answer Markdown. Metadata is generated from the clock
-and explicit expiry/verifiability options, preserving omitted optional fields. Full open/exact-question reads print the stored bytes' hash on stderr and the
-complete content on stdout; `write_stdout` adds a presentation-only final newline
-when needed and otherwise preserves output. Rewrite
-checks the required hash against the locked snapshot
-and retains final inode/content checks, hardlinks, access controls, review and
-proof handling. Success and no-ops are silent (exit 0); dry-run remains a diff.
-The CLI exposes rewrite as the editing command. Evidence:
-source and rewrite tests, 2026-09-18.
+The CLI has one creation route, `kt add`; the archival `capture` alias is absent. `kt rewrite` accepts the complete body plus explicit expiry/verifiability changes. The old body is input to reconsider, not a template to extend.
 
-Agent guidance carries the accuracy and valid-knowledge preservation requirement. Rewrite success or no-op creates no extra model turn; only the separate turn-end maintenance hook does.
+## MCP adapter
 
-Mutation handlers omit normal success/no-op receipts. Internal combine reuse stays
-silent. Access/permission changes retain consent disclosures but omit post-save
-receipts. Reads/searches/inspection/previews retain requested output. All non-empty
-stdout and stderr streams terminate with a newline.
+`tools/kt-mcp` is a newline-delimited JSON-RPC stdio fingertip exposing 23 typed tools. Ordinary operations run the sibling CLI with stdin closed, preserving CLI validation, access, revision, proof, and audit semantics. Read-side tools return readable text and structured content where a machine representation is useful; agents do not request a presentation format or scrape prose for access continuations.
 
+Whole reads return the complete answer plus its revision. `kt_rewrite` returns a reusable committed revision and has parity with CLI expiry and verifiability controls. Search exposes coverage parameters; proof exposes timeout and verbosity; audit, status, roots, dictionaries, and access reports provide structured results.
 
-`dictionary` walks the accessible directory trees directly with `os.walk`. At each
-Markdown leaf, the current directory supplies the penultimate segment and the leaf
-stem supplies the final segment; it does not materialize a list of full leaf paths.
-It rejects segments of at most two characters and GRAMMATICAL words before adding
-candidates to the deduplicating set, then sorts the compact set case-insensitively
-for one comma-separated output line. Registered nested-root directories are pruned
-at traversal boundaries and walked separately only when accessible, avoiding a
-per-file access-policy resolution. No leaf content is read. Optional configured root
-arguments restrict the default all-accessible-root set. Evidence: tools/kt and
-CLI/access integration tests, 2026-09-15.
+Access elicitation is the deliberate protocol-owned exception. `kt_access_request` resolves policy with CLI functions, accepts an optional least-sufficient preferred scope, and offers session scope only when the harness supplies a stable session identity. Only the user-facing elicitation or an exact explicit conversational continuation can grant access. Pending grant/revocation results carry structured request IDs. Session and exact-project revocation are direct reductions of authority; wider changes require user confirmation. Deny and force-private cannot be bypassed, and direct policy administration plus the persistent permissions bypass remain terminal-only.
 
+## Harness integration
 
-`initialize_tree` always creates the six neutral canonical branches and
-`where/am/i.md`; its parser's `--project` flag alone adds the two repository spine
-placeholders. The MCP `kt_init` tool maps `project: true` to that flag.
+`tools/kt-hooks` supplies startup knowledge and a rate-limited frontier-maintenance continuation to Claude Code, Codex, OpenCode, and Copilot CLI. Maintenance asks agents to recompute current answers, establish missing owners, inspect `kt_audit` signals, remove superseded facts, and leave chronology to Git. Transcript parsing only decides whether another maintenance turn is needed; it never edits knowledge.
 
-The prove wrapper expands bare invocation into one verifier run per accessible
-root and combines failure status. --local and --global select their canonical
-roots before delegating to the existing verifier; --root and positional-directory
-compatibility remain. Restricted registered subtrees still prevent unsafe broader
-proof traversal. Evidence: tools/kt and CLI integration tests, 2026-09-15.
+The installer deploys the CLI, MCP server, hooks, public guidance, and hardlinked skills. The reconciliation skill is `knowledgetrees-reconcile`; the retired archival skill name is removed from shared/Claude/Codex catalogs and OpenCode permissions.
+
+Regression suites cover access, lookup, mutation, lifecycle, audit, proofs, hooks, MCP schemas/results/elicitation, installation, and OpenCode integration. Repository guidance, public example, installed global guidance, and executables are synchronized and proved before completion.

@@ -84,6 +84,12 @@ def main() -> None:
         assert "not an array" in broken_hooks.read_text()
 
         codex_skill = target_home / ".codex" / "skills" / "knowledgetrees" / "SKILL.md"
+        retired_shared_skill = target_home / ".agents" / "skills" / "knowledgetrees-capture" / "SKILL.md"
+        retired_shared_skill.parent.mkdir(parents=True)
+        retired_shared_skill.write_text("Retired archival skill.\n")
+        retired_leaf = target_home / ".knowledge/what/is/the/capture/signal/for/new/knowledge.md"
+        retired_leaf.parent.mkdir(parents=True)
+        retired_leaf.write_text("Retired archival answer.\n")
         codex_config = target_home / ".codex" / "config.toml"
         codex_config.parent.mkdir(parents=True)
         codex_config.write_text(
@@ -93,7 +99,7 @@ def main() -> None:
             "enabled = false\n"
             "# BEGIN KNOWLEDGETREES SKILL\n"
             "[[skills.config]]\n"
-            f'path = "{target_home / ".codex/skills/knowledgetrees-capture/SKILL.md"}"\n'
+            f'path = "{target_home / ".codex/skills/knowledgetrees-reconcile/SKILL.md"}"\n'
             "enabled = true\n"
             "# END KNOWLEDGETREES SKILL\n"
             "[desktop]\n"
@@ -114,10 +120,13 @@ def main() -> None:
         opencode_config = target_home / ".config" / "opencode" / "opencode.json"
         opencode_config.parent.mkdir(parents=True)
         opencode_config.write_text(json.dumps({"model": "example/local-model", "permission": {
-            "skill": {"*": "deny"}, "read": {"*": "ask"}, "edit": {"*": "deny"}
+            "skill": {"*": "deny", "knowledgetrees-capture": "allow"},
+            "read": {"*": "ask"}, "edit": {"*": "deny"}
         }}))
 
-        installation = run(*home_arguments)
+        retirement_guard = run(*home_arguments, expected=2)
+        assert str(retired_leaf) in retirement_guard.stderr
+        installation = run(*home_arguments, "--force")
         assert "WARNING" in installation.stdout and "WRITE" in installation.stdout
         knowledge = target_home / ".knowledge"
         hooks = json.loads(codex_hooks.read_text())
@@ -211,6 +220,7 @@ def main() -> None:
         assert permissions["edit"]["*"] == "deny"
         assert permissions["skill"]["*"] == "deny"
         assert permissions["skill"]["knowledgetrees"] == "allow"
+        assert "knowledgetrees-capture" not in permissions["skill"]
         for name in installed_skills:
             assert permissions["skill"][name] == "allow"
         for name in (".knowledge", ".agents"):
@@ -230,11 +240,13 @@ def main() -> None:
         assert orientation.read_text().startswith("---\nstatus: green\n")
         assert orientation.read_text().endswith("Local environment orientation.\n")
         assert agents_path.read_text() == "# Existing user instructions\n"
+        assert not retired_shared_skill.exists()
+        assert not retired_leaf.exists()
         assert "/.codex/skills/knowledgetrees" not in codex_config.read_text()
         for name, relative in installed_skills.items():
             assert (target_home / ".agents/skills" / name / "SKILL.md").samefile(knowledge / relative)
 
-        capture_owner = knowledge / installed_skills["knowledgetrees-capture"]
+        reconcile_owner = knowledge / installed_skills["knowledgetrees-reconcile"]
         proof_owner = knowledge / "how/to/use/knowledgetree/hooks.md"
         proof_content = proof_owner.read_text()
         assert "\nProof:\n" in proof_content
@@ -245,22 +257,22 @@ def main() -> None:
         run(*home_arguments, expected=2)
         assert "status: brown" in proof_owner.read_text()
         proof_owner.write_text(proof_content)
-        capture_owner.write_text(capture_owner.read_text() + "\nLocal customization.\n")
-        customized = capture_owner.read_bytes()
-        inode = capture_owner.stat().st_ino
+        reconcile_owner.write_text(reconcile_owner.read_text() + "\nLocal customization.\n")
+        customized = reconcile_owner.read_bytes()
+        inode = reconcile_owner.stat().st_ino
         opencode_before = opencode_config.read_bytes()
         registry = knowledge / ".tools/roots.json"
         registry.write_text('{"roots":{"private":{"path":"/example/private","access":"ask"}},"projects":{}}')
         registered = registry.read_bytes()
         run(*home_arguments, "--hooks-only", answer="")
         assert registry.read_bytes() == registered
-        assert capture_owner.read_bytes() == customized and capture_owner.stat().st_ino == inode
+        assert reconcile_owner.read_bytes() == customized and reconcile_owner.stat().st_ino == inode
         assert opencode_config.read_bytes() == opencode_before
-        assert (target_home / ".agents/skills/knowledgetrees-capture/SKILL.md").samefile(capture_owner)
+        assert (target_home / ".agents/skills/knowledgetrees-reconcile/SKILL.md").samefile(reconcile_owner)
         run(*home_arguments, expected=2)
-        assert "Local customization" in capture_owner.read_text()
+        assert "Local customization" in reconcile_owner.read_text()
         run(*home_arguments, "--force")
-        assert "Local customization" not in capture_owner.read_text()
+        assert "Local customization" not in reconcile_owner.read_text()
         for name, relative in installed_skills.items():
             for harness in (".agents", ".claude"):
                 assert (target_home / harness / "skills" / name / "SKILL.md").samefile(knowledge / relative)

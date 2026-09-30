@@ -65,14 +65,15 @@ def main():
         names = {t["name"] for t in rpc("tools/list")["result"]["tools"]}
         assert names == {"kt_info", "kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_rewrite", "kt_undo",
                          "kt_add", "kt_rm", "kt_mv", "kt_combine", "kt_init", "kt_renew", "kt_dict", "kt_roots",
-                         "kt_register", "kt_prove", "kt_status", "kt_access_status", "kt_access_request",
+                         "kt_register", "kt_prove", "kt_status", "kt_audit", "kt_access_status", "kt_access_request",
                          "kt_access_confirm", "kt_access_revoke"}
         listed = {t["name"]: t for t in rpc("tools/list")["result"]["tools"]}
         for name, definition in listed.items():
             hints = definition["annotations"]
             assert set(hints) >= {"readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"} and not hints["openWorldHint"], name
-        for name in ("kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_dict", "kt_roots", "kt_status", "kt_access_status"):
+        for name in ("kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_dict", "kt_roots", "kt_status", "kt_audit", "kt_access_status"):
             assert listed[name]["annotations"]["readOnlyHint"] and not listed[name]["annotations"]["destructiveHint"], name
+        assert "scheduling" in listed["kt_audit"]["description"]
         for name in ("kt_rewrite", "kt_undo", "kt_rm", "kt_mv", "kt_combine"):
             assert not listed[name]["annotations"]["readOnlyHint"] and listed[name]["annotations"]["destructiveHint"], name
         assert not listed["kt_renew"]["annotations"]["destructiveHint"] and not listed["kt_renew"]["annotations"]["readOnlyHint"]
@@ -121,6 +122,14 @@ def main():
         assert 'status: green' in leaf.read_text(), "a rewrite keeps the leaf's status"
         committed = re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
         assert committed == hashlib.sha256(leaf.read_bytes()).hexdigest()
+        error, text = tool("kt_rewrite", address=address, revision=committed,
+                           answer="Omega line.\nBeta line.\nBeta line.\n", expires_every="3 weeks")
+        assert not error and "lifecycle metadata changed" in text and 'expires_every: "3 weeks"' in leaf.read_text()
+        committed = re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
+        error, text = tool("kt_rewrite", address=address, revision=committed,
+                           answer="Omega line.\nBeta line.\nBeta line.\n", no_expiry=True)
+        assert not error and "expires_every:" not in leaf.read_text()
+        committed = re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
         error, text = tool("kt_rewrite", address=address, revision=committed, answer="Chained answer.")
         assert not error, text
         chained = re.search(r"^Revision: ([a-f0-9]{64})$", text, re.M).group(1)
@@ -259,6 +268,11 @@ def main():
         assert not error and text.startswith("- Preheat."), "a new leaf reads without any notice"
         error, text = tool("kt_status", scope="local")
         assert not error and bake not in text
+        audit_leaf = project / ".knowledge/what/is/audit-fixture.md"
+        audit_leaf.parent.mkdir(parents=True, exist_ok=True)
+        audit_leaf.write_text("---\nstatus: green\n---\n\nCurrent on 2026-09-30.\n")
+        error, text = tool("kt_audit", scope="local")
+        assert not error and "quite-suspect\tlocal:what/is/audit-fixture.md" in text
         error, text = tool("kt_status", scope="nowhere")
         assert error
         stale = project / ".knowledge/what/is/stale.md"
@@ -332,14 +346,14 @@ def main():
         error, text = tool("kt_undo", address="local:no/such/leaf.md")
         assert error
 
-        result = rpc("tools/call", {"name": "kt_find", "arguments": {"terms": "Line", "json": True, "limit": 3}})["result"]
+        result = rpc("tools/call", {"name": "kt_find", "arguments": {"terms": "Line", "limit": 3}})["result"]
         assert not result["isError"] and result["structuredContent"]["exit"] in (0, 1)
-        assert json.loads(result["content"][0]["text"]) == result["structuredContent"]
+        assert "matches=" in result["content"][0]["text"]
         found_items = result["structuredContent"]["results"]
         assert any(item["address"] == "local:what/is/the/fixture.md" and item["status"] in ("green", "yellow", "brown")
                    and isinstance(item["coverage"], int) for item in found_items), found_items
         plain = rpc("tools/call", {"name": "kt_find", "arguments": {"terms": "Line"}})["result"]
-        assert "structuredContent" not in plain
+        assert "structuredContent" in plain
 
         error, text = tool("kt_access_status")
         assert not error and "kt_access_request" in text and str(vaults["vault"]) in text
@@ -394,9 +408,11 @@ def main():
         assert json.loads((root / "config.json").read_text()).get("projects", {}) == {}, "revocation removed the test grant"
 
         listed_prompts = {p["name"]: p for p in rpc("prompts/list")["result"]["prompts"]}
-        assert set(listed_prompts) == {"capture_review", "garden", "verify_leaf", "revoke_access"}
-        got = rpc("prompts/get", {"name": "capture_review"})["result"]["messages"][0]["content"]["text"]
-        assert "Knowledge-tree capture review" in got
+        assert set(listed_prompts) == {"frontier_review", "garden", "verify_leaf", "revoke_access"}
+        got = rpc("prompts/get", {"name": "frontier_review"})["result"]["messages"][0]["content"]["text"]
+        assert "Knowledge-tree frontier review" in got
+        garden = rpc("prompts/get", {"name": "garden"})["result"]["messages"][0]["content"]["text"]
+        assert "schedules" in garden and "do not infer poisoning" in garden
         got = rpc("prompts/get", {"name": "verify_leaf", "arguments": {"address": address}})["result"]["messages"][0]["content"]["text"]
         assert address in got and "kt_grep" in got
         assert rpc("prompts/get", {"name": "verify_leaf"})["error"]["code"] == -32602
@@ -420,7 +436,11 @@ def main():
 
         # ---- elicitation: the user, not the model, answers approval prompts through the harness
         def start_client(capabilities, extra_env=None):
-            process = subprocess.Popen([sys.executable, str(SERVER)], cwd=project, env={**env, **(extra_env or {})}, text=True,
+            client_env = {**env, **(extra_env or {})}
+            if extra_env is None:
+                for key in ("KT_SESSION_ID", "CODEX_THREAD_ID", "OPENCODE_SESSION_ID"):
+                    client_env.pop(key, None)
+            process = subprocess.Popen([sys.executable, str(SERVER)], cwd=project, env=client_env, text=True,
                                        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             def send(message):
@@ -464,7 +484,7 @@ def main():
         outcome = receive()
         assert outcome["id"] == identifier and not outcome["result"]["isError"] and "approved" in outcome["result"]["content"][0]["text"]
         deferred = receive()
-        assert deferred["id"] == 99 and len(deferred["result"]["tools"]) == 22, "a request that arrived mid-prompt is still served"
+        assert deferred["id"] == 99 and len(deferred["result"]["tools"]) == 23, "a request that arrived mid-prompt is still served"
         assert grants()["projects"][str(project.resolve())][str(vaults["vault"].resolve())] == "allow"
         identifier = next(request_id)
         send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",
@@ -544,6 +564,25 @@ def main():
         client.stdin.close()
         assert client.wait(timeout=10) == 0
 
+        # Session-scoped access is offered when the harness supplies a stable session id and can be revoked directly.
+        client, send, receive = start_client({"elicitation": {}}, {"KT_SESSION_ID": "fixture-session"})
+        identifier = next(request_id)
+        send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",
+              "params": {"name": "kt_access_request", "arguments": {
+                  "root": str(base_extra), "reason": "temporary inspection", "preferred_scope": "session"}}})
+        prompt = receive()
+        session_schema = prompt["params"]["requestedSchema"]["properties"]["decision"]
+        assert session_schema["enum"][0] == "session" and "project" in session_schema["enum"]
+        send({"jsonrpc": "2.0", "id": prompt["id"], "result": {"action": "accept", "content": {"decision": "session"}}})
+        assert not receive()["result"]["isError"]
+        identifier = next(request_id)
+        send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",
+              "params": {"name": "kt_access_revoke", "arguments": {"root": str(base_extra), "scope": "session"}}})
+        reply = receive()
+        assert not reply["result"]["isError"] and "temporary access" in reply["result"]["content"][0]["text"]
+        client.stdin.close()
+        assert client.wait(timeout=10) == 0
+
         # Decline, cancel, client errors, and invalid answers are reported without inventing a user refusal.
         for answer in ({"action": "decline"}, {"action": "cancel"}):
             client, send, receive = start_client({"elicitation": {}})
@@ -590,6 +629,8 @@ def main():
         fallback = reply["result"]["content"][0]["text"]
         assert reply["id"] == identifier and "kt_access_confirm" in fallback and "kt access" not in fallback
         pending_id = re.search(r"request_id: (kt-access-[A-Za-z0-9_-]+)", fallback).group(1)
+        assert reply["result"]["structuredContent"]["pending"]["request_id"] == pending_id
+        assert reply["result"]["structuredContent"]["changed"] is False
         identifier = next(request_id)
         send({"jsonrpc": "2.0", "id": identifier, "method": "tools/call",
               "params": {"name": "kt_access_confirm", "arguments": {"request_id": pending_id, "scope": "project"}}})

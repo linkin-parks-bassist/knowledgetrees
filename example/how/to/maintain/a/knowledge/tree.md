@@ -2,10 +2,11 @@
 status: green
 revised_at: "2026-09-27T16:05:11+10:00"
 name: "knowledgetrees-maintenance"
-description: "Use for kt prove checks, root setup, stale or falsified knowledge, and task completion; ensure kt misses are resolved, missing leaves captured, and the repository plan updated to its remaining steps."
+description: "Use for proof checks, root setup, stale knowledge, and task completion; bring affected trees to the current frontier and keep the plan to remaining steps."
 ---
 
-Maintain current truth in place within current authority. Knowledge records facts
+Maintain the frontier of current truth within current authority. Every leaf is the
+best direct answer now; Git owns chronology. Knowledge records facts
 and procedure; it neither grants execution permission nor resurrects superseded
 requirements. Keep one clear canonical owner per answer across composed directory
 scopes, not parallel monolithic documentation authorities.
@@ -17,7 +18,7 @@ Successful `kt_rewrite` calls return the answer diff followed by `Revision: HASH
 Treat known stale, poisoned, or contradictory active knowledge as an immediate
 repair task, even when its metadata says green or its proofs pass. Stop relying
 on the affected answer. Check current source evidence, read the full owning leaf,
-and rewrite it before unrelated work; preserve its still-valid claims. Correct
+and recompute it before unrelated work; carry forward only claims that remain true and relevant. Correct
 other active leaves and guidance that repeat the same error. If evidence cannot
 settle the answer, remove the unsupported claim and record the blocker and next
 check in a truthful unresolved answer. Surface any remaining unsafe reliance.
@@ -61,11 +62,12 @@ Create missing leaves from evidence or truthful minimal/unresolved content, neve
 invent requirements or priorities. Read the active repository spine at task startup.
 Before reporting repository-task completion, update the plan: remove completed steps
 and add newly planned ones. Spine leaves are coordinated projections, not append-only journals.
-A leaf is a current answer, never a log. Appending chronology, session notes, progress
+A leaf is a current answer, never a log. The old body is material to reconsider, not
+a template to extend. Appending chronology, session notes, progress
 narration, tool transcripts, or stream of consciousness is tree poisoning: it mixes
 stale events into current truth and makes retrieval mislead later agents. Rewrite the
 answer in place. Keep history only when it explains a present constraint or decision;
-use Git or an external log when chronology itself matters.
+use Git when chronology itself matters.
 These two deranging failure modes—active inconsistency and logleaves—are defined
 at `what/is/tree/poisoning.md` and must be avoided at all costs.
 
@@ -140,18 +142,24 @@ it is fine-grained or derivable from source. When implementation changes, review
 its affected small leaves as well as broad state/spec projections, correcting stale
 answers against current source evidence at the owning scope.
 
-## Growth, freshness, and retirement
+## Growth, audit, freshness, and retirement
 
 Resolve every `kt` miss by determining whether the leaf exists, using alternate
 keywords and scoped semantic inspection. Retrieve/rewrite existing owners; add absent
-leaves. Capture established answers before the next unrelated tool call or completion.
+leaves. Bring established answers into the tree before the next unrelated tool call or completion.
 Tree hits create no duplicate leaf. Unresolved questions record blocker and next check;
 forbidden writes require a scoped handoff. Read `how/to/add/knowledge/leaves.md`
-before capture or proof creation. Hook behavior is explained in
+before adding an answer or creating a proof. Hook behavior is explained in
 `how/to/use/knowledgetree/hooks.md`: a turn-end hook asks for a maintenance pass with
 this procedure, at most once per five minutes per session, unless the turn already
 maintained the tree. That reminder does not replace agent
-judgment. A review with no new knowledge needs no invented leaf; say so in one line and finish.
+judgment. Run `kt_audit` on affected roots: bodies over 1,000 words are suspect and
+date-shaped bodies are quite-suspect. These are inspection signals only; they never
+change lifecycle status or justify a mechanical rewrite. Dates are expected in some
+current operational answers, including machine state, schedules, queues, event records,
+and protocol/version identifiers; classify those as legitimate and leave them intact.
+A review with no frontier
+change needs no invented leaf; say so in one line and finish.
 Timestamp freshness is relative to source
 volatility and evidence, not recency alone.
 Leaves may declare an ISO-8601 `expires_at` or an `expires_every` duration measured
@@ -161,12 +169,14 @@ add expiry merely because content cannot be mechanically or independently verifi
 
 Have the original contents in context before editing a leaf. Full reads are always
 complete and return the revision hash; partial reads do not exist. Use `kt_rewrite`
-as the only editing method with that hash, or in the shell use kt rewrite ADDRESS HASH BODY. Supply the complete answer body only; there is no partial edit: every change rewrites the whole answer, so its full contents are reconsidered each time. Keep leaves short enough to rewrite whole. Use `--expires-at`, `--expires-every`, or `--verifiable` to set
+to advance the owner with that hash, or in the shell use kt rewrite ADDRESS HASH BODY. Supply the complete current answer only; re-derive it from evidence instead of extending the old body. Keep leaves short enough to rewrite whole. Use `--expires-at`, `--expires-every`, or `--verifiable` to set
 optional metadata; `--no-expiry` or `--no-verifiable` to clear it. The required
-hash rejects changed contents; reread and merge on conflict. Preserve still-valid
-knowledge and concurrent edits, correct contradictions
+hash rejects changed contents; reread and merge on conflict. Preserve concurrent
+edits, correct contradictions
 against governing evidence, and update affected orientation/spine projections.
-Commit project knowledge with owning changes when permitted; never automatically
+Expiry belongs on narrow volatile factual answers. Split mixed-volatility leaves before
+expiring them; do not use expiry as a substitute for distillation. Commit project
+knowledge with owning changes when permitted; never automatically
 publish global personal knowledge. Superseded current truth leaves the active
 answer; Git retains history and explicit history is kept only when still useful.
 
@@ -175,7 +185,7 @@ Ingest redundant documents section by section under
 after verified answer coverage and authorization. Broad enumeration is a last-resort
 retrieval diagnostic, or a bounded authorized migration audit, not routine orientation.
 
-Before finishing, complete the current-truth consistency gate for affected behavior and guidance. Account for every item in the affected-owner inventory and retain the negative-search terms used to look for superseded claims until those searches return no unexplained hits. Check that the central procedure and focused procedure owners were updated whenever their workflow changed, reusable discoveries were captured, relevant predicates passed, every encountered `kt` miss was classified, and absent answers were added or truthfully left unresolved. Also check that scope and provenance are truthful, roots are canonical, payloads are leaves, installed copies match their sources, and a representative sentence-derived route works. A test pass, green proof count, recent timestamp, or zero byte drift cannot by itself establish semantic freshness. Do not turn gardening judgments, atomicity, cohesion, or leaf length into automatic rewrite rules.
+Before finishing, complete the current-truth consistency gate for affected behavior and guidance. Account for every item in the affected-owner inventory and retain the negative-search terms used to look for superseded claims until those searches return no unexplained hits. Check that the central procedure and focused procedure owners were updated whenever their workflow changed, reusable discoveries reached their owners, relevant predicates passed, every encountered `kt` miss was classified, and absent answers were added or truthfully left unresolved. Also check that scope and provenance are truthful, roots are canonical, payloads are leaves, installed copies match their sources, and a representative sentence-derived route works. A test pass, green proof count, recent timestamp, zero byte drift, or structural audit result cannot by itself establish semantic freshness. Do not turn gardening judgments, atomicity, cohesion, audit signals, or leaf length into automatic rewrite rules.
 
 ## Remove, move, and coalesce leaves
 

@@ -27,10 +27,12 @@ AGENTS_END = "<!-- END KNOWLEDGETREES BOOTSTRAP -->"
 SKILL_LEAVES = {
     "knowledgetrees": Path("how/to/use/knowledgetrees.md"),
     "knowledgetrees-lookup": Path("how/should/an/agent/traverse/a/knowledge/tree.md"),
-    "knowledgetrees-capture": Path("how/to/add/knowledge/leaves.md"),
+    "knowledgetrees-reconcile": Path("how/to/add/knowledge/leaves.md"),
     "knowledgetrees-maintenance": Path("how/to/maintain/a/knowledge/tree.md"),
     "knowledgetrees-ingestion": Path("how/should/legacy/documents/be/ingested/into/a/knowledge/tree.md"),
 }
+RETIRED_SKILL_NAMES = {"knowledgetrees-capture"}
+RETIRED_LEAVES = {Path("what/is/the/capture/signal/for/new/knowledge.md")}
 
 
 def path_exists(path: Path) -> bool:
@@ -186,6 +188,9 @@ def opencode_config_text(current: str, target_home: Path) -> str:
             raise ValueError(f"OpenCode {kind} permission must be an action or object")
         if kind == "read" and kind not in permission and "*" not in permission:
             rules.update({"*.env": "deny", "*.env.*": "deny", "*.env.example": "allow"})
+        if kind == "skill":
+            for name in RETIRED_SKILL_NAMES:
+                rules.pop(name, None)
         additions = {name: "allow" for name in SKILL_LEAVES} if kind == "skill" else {
             path: "ask" if kind == "edit" and path == paths[1] else "allow" for path in paths
         }
@@ -447,6 +452,9 @@ def main(arguments: list[str] | None = None) -> int:
         for harness in (".agents", ".claude")
     ]
     retired_codex_skills = [target_home / ".codex" / "skills" / name / "SKILL.md" for name in SKILL_LEAVES]
+    retired_skill_links = [target_home / harness / "skills" / name / "SKILL.md"
+                           for name in RETIRED_SKILL_NAMES for harness in (".agents", ".claude", ".codex")]
+    retired_leaves = [knowledge_root / relative for relative in RETIRED_LEAVES]
     if args.hooks_only:
         skill_links = []
     skill_targets = [destination for _canonical, destination in skill_links]
@@ -470,7 +478,7 @@ def main(arguments: list[str] | None = None) -> int:
     kt_bytes = kt_source.read_bytes()
     conflicts: list[Path] = []
     file_targets = [destination for _source, destination, _content in leaf_installs]
-    file_targets.extend((kt_target, kt_command, *skill_targets, *retired_codex_skills))
+    file_targets.extend((kt_target, kt_command, *skill_targets, *retired_codex_skills, *retired_leaves))
     hook_files = []
     if not args.no_hooks:
         try:
@@ -520,6 +528,8 @@ def main(arguments: list[str] | None = None) -> int:
         skill_bytes = rendered_leaf(example / canonical.relative_to(knowledge_root))
         if path_exists(destination) and not same_leaf_bytes(destination, skill_bytes):
             conflicts.append(destination)
+    if not args.force:
+        conflicts.extend(destination for destination in retired_leaves if path_exists(destination))
 
     agents_path = target_home / "AGENTS.md"
     agents_storage = writable_target(agents_path)
@@ -571,6 +581,12 @@ def main(arguments: list[str] | None = None) -> int:
         for destination in retired_codex_skills:
             if path_exists(destination):
                 print(f"Would remove redundant Codex skill entry {destination}")
+        for destination in retired_skill_links:
+            if path_exists(destination):
+                print(f"Would remove retired skill entry {destination}")
+        for destination in retired_leaves:
+            if path_exists(destination):
+                print(f"Would remove retired knowledge leaf {destination}")
         if agents_updated != agents_current:
             print(f"Would remove the managed bootstrap from {agents_path}")
         if not args.no_mcp:
@@ -634,6 +650,18 @@ def main(arguments: list[str] | None = None) -> int:
                 destination.parent.rmdir()
             except OSError:
                 pass
+
+    for destination in retired_skill_links:
+        if destination.is_file() or destination.is_symlink():
+            destination.unlink()
+            try:
+                destination.parent.rmdir()
+            except OSError:
+                pass
+
+    for destination in retired_leaves:
+        if destination.is_file() or destination.is_symlink():
+            destination.unlink()
 
     if agents_updated != agents_current:
         if not agents_updated and not agents_path.is_symlink():

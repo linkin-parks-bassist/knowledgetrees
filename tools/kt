@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dependency-free knowledge-tree lookup, capture, rewrite, and proof verification."""
+"""Dependency-free knowledge-tree lookup, frontier maintenance, and proof verification."""
 
 import argparse
 import difflib
@@ -818,7 +818,7 @@ def find(args, branches=None, browse=False, context=None):
     print("Read complete leaf: kt open ROOT:<path> (local, global, or canonical root path)")
     print("Check relevant proofs before relying on claims; search scores are not confidence.")
     if not adequate:
-        print("Check alternate terms and scoped paths; if no leaf exists, investigate and capture the answer.")
+        print("Check alternate terms and scoped paths; if no leaf exists, investigate and establish the answer.")
     return 0 if adequate else 1
 
 
@@ -923,28 +923,8 @@ def show_leaf(text, address):
 
 def status_command(args):
     """List leaves that are not green, with the reason, without running proofs."""
-    selected = [flag for flag in (args.local, args.global_root, args.root is not None) if flag]
-    if len(selected) > 1:
-        raise ValueError("select only one of --local, --global, or --root")
     context = LookupContext()
-    if args.local:
-        root = local_root()
-        if not root.is_dir():
-            raise AccessRequired("kt: no local knowledge root in the current directory")
-        require_root(root, "local")
-        roots_to_scan = [("local", root)]
-    elif args.global_root:
-        root = global_knowledge_root()
-        require_root(root, "global")
-        roots_to_scan = [("global", root)]
-    elif args.root is not None:
-        root = Path(args.root).expanduser().resolve()
-        require_root(root)
-        roots_to_scan = [(root_identity(root), root)]
-    else:
-        roots_to_scan = context.access.allowed_roots()
-        if not roots_to_scan:
-            raise AccessRequired("kt: no accessible knowledge roots; review kt access policies")
+    roots_to_scan = selected_leaf_roots(args, context)
     now = datetime.now(timezone.utc)
     counts = {state: 0 for state in LEAF_STATES}
     rows = []
@@ -972,6 +952,84 @@ def status_command(args):
     for _, address, state, reason in sorted(rows):
         print(f"{state}\t{address}\t{reason}")
     print(" ".join(f"{state}={counts[state]}" for state in LEAF_STATES))
+    return 0
+
+
+AUDIT_WORD_LIMIT = 1000
+MONTHS = (
+    "January|February|March|April|May|June|July|August|September|October|November|December|"
+    "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec"
+)
+DATE_SHAPES = re.compile(
+    rf"(?<!\d)\d{{4}}[-/]\d{{1,2}}[-/]\d{{1,2}}(?!\d)|"
+    rf"\b(?:{MONTHS})\s+\d{{1,2}}(?:st|nd|rd|th)?,?\s+\d{{4}}\b|"
+    rf"\b\d{{1,2}}(?:st|nd|rd|th)?\s+(?:{MONTHS})\s+\d{{4}}\b",
+    re.IGNORECASE,
+)
+BODY_WORDS = re.compile(r"[^\W_]+(?:[-'’][^\W_]+)*", re.UNICODE)
+
+
+def selected_leaf_roots(args, context):
+    """Resolve the common local/global/root selection used by leaf-wide inspections."""
+    selected = [flag for flag in (args.local, args.global_root, args.root is not None) if flag]
+    if len(selected) > 1:
+        raise ValueError("select only one of --local, --global, or --root")
+    if args.local:
+        root = local_root()
+        if not root.is_dir():
+            raise AccessRequired("kt: no local knowledge root in the current directory")
+        require_root(root, "local")
+        return [("local", root)]
+    if args.global_root:
+        root = global_knowledge_root()
+        require_root(root, "global")
+        return [("global", root)]
+    if args.root is not None:
+        config = access_config()
+        root, label, _ = resolve_access_root(config, args.root)
+        require_root(root, label)
+        return [(root_identity(root), root)]
+    roots_to_scan = context.access.allowed_roots()
+    if not roots_to_scan:
+        raise AccessRequired("kt: no accessible knowledge roots; review kt access policies")
+    return roots_to_scan
+
+
+def audit_command(args):
+    """Surface cheap structural signs of log-shaped leaves without judging correctness."""
+    context = LookupContext()
+    rows = []
+    scanned = 0
+    seen = set()
+    for label, root in selected_leaf_roots(args, context):
+        for path in leaves(root, context.access):
+            canonical = path.resolve()
+            if canonical in seen:
+                continue
+            seen.add(canonical)
+            try:
+                text, _metadata, body = context.read(path)
+            except (OSError, UnicodeError):
+                continue
+            if not text.strip():
+                continue
+            scanned += 1
+            word_count = len(BODY_WORDS.findall(body))
+            dates = DATE_SHAPES.findall(body)
+            if not dates and word_count <= AUDIT_WORD_LIMIT:
+                continue
+            severity = "quite-suspect" if dates else "suspect"
+            examples = list(dict.fromkeys(match.group(0) for match in DATE_SHAPES.finditer(body)))[:3]
+            address = f"{label}:{path.relative_to(root).as_posix()}"
+            fields = [severity, address, f"words={word_count}", f"dates={len(dates)}"]
+            if examples:
+                fields.append("examples=" + " | ".join(examples))
+            rows.append((severity != "quite-suspect", address, "\t".join(fields)))
+    for _rank, _address, row in sorted(rows):
+        print(row)
+    suspect = sum(row.startswith("suspect\t") for _, _, row in rows)
+    quite = len(rows) - suspect
+    print(f"scanned={scanned} suspect={suspect} quite-suspect={quite}")
     return 0
 
 
@@ -1395,8 +1453,8 @@ def combine_leaves(args):
 
 
 
-def capture(args):
-    """Create only: existing owners (including hardlinked skills) are never replaced."""
+def add_leaf(args):
+    """Establish a missing current answer; existing owners are never replaced."""
     if any(c in args.question for c in ("/", "\\", "_")) or any(
             ord(c) < 32 for c in args.question):
         raise ValueError("supply a natural-language question; use hyphens, not slashes or underscores")
@@ -1414,7 +1472,7 @@ def capture(args):
             raise ValueError("no project knowledge root; establish one or select --root")
     else:
         if not available:
-            raise AccessRequired("kt: no accessible knowledge root for capture")
+            raise AccessRequired("kt: no accessible knowledge root for add")
         label, root = available[0]
     if not args.dry_run and root.is_dir() and not any(isinstance(spec.get("path"), str) and Path(spec["path"]).expanduser().resolve() == root.resolve() for spec in access_config()["roots"].values()):
         register_root(root)
@@ -1424,7 +1482,7 @@ def capture(args):
     # Reject symlink roots/ancestors before any directory or file mutation.
     for ancestor in (root, *root.parents):
         if ancestor.is_symlink():
-            raise ValueError(f"symlink in capture root: {ancestor}")
+            raise ValueError(f"symlink in add root: {ancestor}")
     path = root.joinpath(*components).with_suffix(".md")
     require_leaf_root(path)
     for ancestor in path.relative_to(root).parents:
@@ -2127,7 +2185,7 @@ def roots_command(args):
             else:
                 print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
         if not PRETTY:
-            print("commands: info | init | find | grep | QUESTION | open | dict | add | rewrite | check | status | rm | mv | combine | prove | roots | grants | register | access | permissions; --help; --pretty")
+            print("commands: info | init | find | grep | QUESTION | open | dict | add | rewrite | renew | status | audit | rm | mv | combine | prove | roots | grants | register | access | permissions; --help; --pretty")
             return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
@@ -2191,8 +2249,8 @@ def command_parser():
     combining.add_argument("-o", "--output", required=True, help="destination Markdown leaf address")
     combining.add_argument("--expect", help="destination SHA-256 required when replacing an existing leaf")
     combining.add_argument("--dry-run", action="store_true")
-    adding = commands.add_parser("capture", aliases=["add"], help="create a question-derived leaf in one call")
-    adding.set_defaults(handler=capture)
+    adding = commands.add_parser("add", help="establish a missing current answer in one call")
+    adding.set_defaults(handler=add_leaf)
     adding.add_argument("question", help="quoted full question; preserve multi-word components with hyphens")
     adding.add_argument("answer", help="Markdown answer, or - to read stdin")
     scope = adding.add_mutually_exclusive_group()
@@ -2217,6 +2275,11 @@ def command_parser():
     statusing.add_argument("--local", action="store_true")
     statusing.add_argument("--global", dest="global_root", action="store_true")
     statusing.add_argument("--root", help="one accessible knowledge-root directory")
+    auditing = commands.add_parser("audit", help="flag structurally suspect leaf bodies without changing lifecycle status")
+    auditing.set_defaults(handler=audit_command)
+    auditing.add_argument("--local", action="store_true")
+    auditing.add_argument("--global", dest="global_root", action="store_true")
+    auditing.add_argument("--root", help="one accessible knowledge-root label or directory")
     commands.add_parser("roots", help="show root policies without reading their contents")
     register = commands.add_parser("register", help="register an existing root as private (ask)")
     register.set_defaults(handler=register_command)
