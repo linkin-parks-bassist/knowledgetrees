@@ -34,8 +34,10 @@ Accuracy and preservation remain explicit agent obligations; a turn-end hook onl
   global orientation. It fails only when the global
   procedure is unreachable, access needs approval, or the final proof check is brown. Prefer the `kt_info` tool; from the shell, run it directly and consume all output;
   never pipe it through `head`, `tail`, a pager, a filter, or any command that
-  truncates or partially captures it. Initialization is incomplete unless the final
-  proof summary is displayed.
+  truncates or partially captures it. Direct initialization is incomplete unless
+  the final proof summary is displayed. `kt info --no-prove` omits proof execution for startup-context
+  adapters; those adapters must explicitly direct the agent to run `kt_prove` for
+  the local root (`kt prove --local` in the shell) before other work.
 - Dictionary: `kt dict` prints every useful segment occurring in the final two positions of leaf paths across all
   accessible roots on one sorted, comma-separated line. It reads path names, not
   leaf bodies, and never prints complete paths. Repeated segments appear once;

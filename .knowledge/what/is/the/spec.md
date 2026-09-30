@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-30T11:30:33+10:00"
+revised_at: "2026-09-30T11:52:04+10:00"
 ---
 
 The repository ships a public, self-contained knowledge-tree system: `tools/kt`, `tools/kt-mcp`, harness hooks/adapters, an installer, regression tests, a private operational `.knowledge/` tree, and a distributable `example/` tree. The example orientation stays empty for adopters. Public content contains no private host, customer, or owner-identifying material.
@@ -19,7 +19,7 @@ Green, yellow, and brown describe verification lifecycle only. Brown is a priori
 
 The CLI is the semantic spine for discovery, access, lookup, exact whole reads, ranked search, grep, dictionary, add, complete rewrite, undo, renew, remove, move, combine, init, registration, proof, status, audit, and permissions. `kt add` is the sole creation command; the archival `capture` alias is absent. A miss requires establishing whether an owner exists, then advancing it or adding an investigated current answer before unrelated work.
 
-Every mutation honors canonical root identity, access policy, revision locking, and force-private. `kt init` creates a neutral six-branch tree and orientation; `--project` also creates empty spec and plan leaves. `kt info` injects the canonical procedure, accessible ancestor orientations, dictionary, and proof summary without turning ancestors into lookup roots.
+Every mutation honors canonical root identity, access policy, revision locking, and force-private. `kt init` creates a neutral six-branch tree and orientation; `--project` also creates empty spec and plan leaves. Direct `kt info` prints the canonical procedure, accessible ancestor orientations, dictionary, and proof summary without turning ancestors into lookup roots. `kt info --no-prove` supplies the same startup knowledge without executing proof commands.
 
 ## MCP and access
 
@@ -29,7 +29,7 @@ Access defaults to least authority. Registered wider roots default to ask; deny 
 
 ## Maintenance and integration
 
-Startup hooks supply `kt info`. Rate-limited turn-end hooks ask agents to bring each touched tree to the frontier: reconcile affected owners, establish missing answers, inspect status and audit signals, remove stale material, and update the remaining-work plan. The continuation never edits knowledge itself and fails open.
+Startup hooks supply proof-free `kt info --no-prove` context and require the agent to run `kt_prove` for the exact local root before other work. Hooks never execute arbitrary project proof commands. Rate-limited turn-end hooks ask agents to bring each touched tree to the frontier: reconcile affected owners, establish missing answers, inspect status and audit signals, remove stale material, and update the remaining-work plan. The continuation never edits knowledge itself and fails open.
 
 The installer merges public guidance without overwriting orientation or project spine, deploys the CLI/MCP/hooks, preserves unrelated configuration, and creates hardlinked skills. The maintenance vocabulary is reconciliation/frontier advancement; the retired `knowledgetrees-capture` skill is removed. OpenCode permission changes require informed consent.
 

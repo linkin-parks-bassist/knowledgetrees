@@ -565,7 +565,8 @@ Run the installer from a clone:
 The installer is knowledge-first. It safely merges the reusable leaves from
 `example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
 kt CLI with built-in proof verification under `~/.knowledge/.tools/`, and installs
-startup hooks that inject `kt info` for Claude Code, Codex, OpenCode, and Copilot CLI, plus a local MCP server registered with all four (`--no-mcp` skips it). It removes
+startup hooks that inject proof-free `kt info --no-prove` context and require an
+agent-side local proof check for Claude Code, Codex, OpenCode, and Copilot CLI, plus a local MCP server registered with all four (`--no-mcp` skips it). It removes
 its old managed block from `~/AGENTS.md` and deletes that file if nothing else is
 in it. The loaded procedure remains
 active across messages and tasks; it is not reinvoked on every turn. The installer
@@ -642,10 +643,11 @@ next unrelated tool call or completion—not in a later documentation pass.
 
 ### Startup hooks
 
-The installer runs `kt --lean info` at session start, resume, clear, and compaction and injects its
-complete output (leaf metadata omitted, a notice on any non-green leaf): the procedure,
-accessible ancestor orientations from `~` downward, dictionary, and proof summary.
-With no exact local tree it proves the global root. Claude Code drops hook context past roughly 10,000
+The installer runs `kt --lean info --no-prove` at session start, resume, clear, and compaction and injects its
+proof-free output: the procedure, accessible ancestor orientations from `~` downward,
+and dictionary. It then instructs the agent to run `kt_prove` for the exact local root
+(`kt prove --local` as the shell fallback), or the global root when no exact local tree
+exists. Startup hooks never execute project proof commands. Claude Code drops hook context past roughly 10,000
 characters, so above 9,500 bytes its hook sends an instruction to call the `kt_info` tool (or run
 `kt info` if there are no kt tools) instead; `KT_HOOK_CONTEXT_LIMIT` tunes the threshold.
 

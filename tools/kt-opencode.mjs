@@ -26,7 +26,7 @@ export const KnowledgeTreesPlugin = async ({ client, directory }) => {
     child.stdin.on("error", () => {});
     child.stdin.end(JSON.stringify(payload));
   });
-  // Both harnesses receive the complete kt info output from the shared handler.
+  // Both harnesses receive complete proof-free kt info context from the shared handler.
   const startup = await run("start", { source: "startup", cwd: directory });
   const bootstrap = startup.additionalContext;
   return {

@@ -2136,6 +2136,8 @@ def print_info(args):
             show_leaf(contents, "global:where/am/i.md")
     print("=== kt dict ===")
     dictionary(argparse.Namespace(roots=[]))
+    if args.no_prove:
+        return 0
     scope = "--local" if has_root else "--global"
     print(f"=== kt prove {scope} ===")
     return prove([scope])
@@ -2204,7 +2206,9 @@ def command_parser():
     parser.add_argument("--lean", action="store_true", help="show leaf bodies without metadata; a notice leads only non-green leaves (used by agent tools)")
     parser.add_argument("--dangerously-skip-permissions", action="store_true", help="persistently bypass ask/deny after user confirmation; force-private remains enforced")
     commands = parser.add_subparsers(dest="command")
-    showing_info = commands.add_parser("info", help="prove and load the local startup knowledge")
+    showing_info = commands.add_parser("info", help="load startup knowledge and normally prove its local scope")
+    showing_info.add_argument("--no-prove", action="store_true",
+                              help="load startup knowledge without executing leaf proof commands")
     showing_info.set_defaults(handler=print_info)
     initializing = commands.add_parser("init", help="create and register a neutral local knowledge tree (ask policy)")
     initializing.add_argument("orientation", nargs="?", help="optional literal contents of where/am/i.md")

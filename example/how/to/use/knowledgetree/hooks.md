@@ -29,13 +29,15 @@ test -x "$HOME/.knowledge/.tools/kt-hooks"
 ## Startup behavior
 
 Claude Code and Codex `SessionStart`, OpenCode system-context initialization, and
-Copilot CLI `sessionStart` run `kt --lean info` in the exact working directory and
-inject its complete output: canonical procedure, every accessible ancestor
-orientation from `~` down to the working directory in descending order, dictionary,
-and proof result. Inaccessible ancestor trees are skipped. Resume, clear, and
+Copilot CLI `sessionStart` run `kt --lean info --no-prove` in the exact working directory and
+inject its complete proof-free output: canonical procedure, every accessible ancestor
+orientation from `~` down to the working directory in descending order, and dictionary.
+The context instructs the agent to run `kt_prove` for the exact local root (shell
+fallback: `kt prove --local`), or the global root when no exact local tree exists,
+before other work. Proof commands therefore run visibly through normal agent tooling,
+never as arbitrary project code inside the startup hook. Inaccessible ancestor trees are skipped. Resume, clear, and
 compact lifecycle sources count as startup refreshes where the harness supports
-them. Without an exact local tree, `kt info` proves the global root; an exact local
-tree without `where/am/i.md` is noted and still proved. If no accessible ancestor
+them. An exact local tree without `where/am/i.md` is noted. If no accessible ancestor
 orientation is available, it falls back to the global orientation. A genuinely
 failed `kt info` is reported in context and must be
 diagnosed before the tree is trusted.

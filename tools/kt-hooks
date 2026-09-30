@@ -120,10 +120,11 @@ def startup_context(payload, limit=None, harness=None):
         return {}, 0
     cli = Path(os.environ.get("KT_INFO_CLI", str(Path(__file__).resolve().with_name("kt"))))
     cwd = payload.get("cwd") or os.getcwd()
-    info = subprocess.run([sys.executable, str(cli), "--lean", "info"], cwd=cwd,
+    info = subprocess.run([sys.executable, str(cli), "--lean", "info", "--no-prove"], cwd=cwd,
                           text=True, capture_output=True)
-    context = ("Knowledge-tree startup: `kt info` output follows (leaf metadata omitted; a notice marks any non-green leaf). "
-               "Consume it through the final proof summary.\n")
+    context = ("Knowledge-tree startup: proof-free `kt info --no-prove` output follows "
+               "(leaf metadata omitted; a notice marks any already non-green leaf). Consume it completely, "
+               "then perform the required agent-side proof check below.\n")
     if harness == "codex":
         context += ("Codex tool names may be prefixed `mcp__knowledgetrees__kt_` (for example "
                     "`mcp__knowledgetrees__kt_lookup`); check the full tool registry before treating "
@@ -131,6 +132,12 @@ def startup_context(payload, limit=None, harness=None):
     if info.returncode:
         context += f"kt info failed (exit {info.returncode}); diagnose before relying on this tree.\n"
     output = info.stdout + info.stderr
+    proof_scope = "local" if (Path(cwd) / ".knowledge").is_dir() else "global"
+    proof_instruction = (
+        f"\nKnowledge-tree proof check required: the startup hook does not execute project proof commands. "
+        f"Before other work, invoke kt_prove with scope=\"{proof_scope}\" (shell fallback: "
+        f"`kt prove --{proof_scope}`), consume its complete result, and apply the mandatory brown-leaf protocol.\n"
+    )
     if limit is not None and len((context + output).encode()) > limit:
         context = (f"Knowledge-tree startup: `kt info` produced {len(output.encode())} bytes, more than this "
                    f"harness will inject from a hook (about {limit}).")
@@ -140,7 +147,7 @@ def startup_context(payload, limit=None, harness=None):
         context += (f" Call the {tool_name} tool now (or run `kt info` in the shell if you have no kt tools), unfiltered and "
                     "untruncated, and consume its complete output through the final proof summary before other work.")
         return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
-    context += output
+    context += output + proof_instruction
     return {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}, 0
 
 

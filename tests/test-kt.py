@@ -180,6 +180,9 @@ def main():
         assert initialized.index("Test canonical procedure.") < initialized.index("Test orientation.")
         assert "Test specification." not in initialized
         assert "Proofs: " in initialized and "failed ·" in initialized and "brown" in initialized
+        unproved = run("info", "--no-prove")
+        assert "=== kt dict ===" in unproved and "=== kt prove" not in unproved
+        assert "Proofs: " not in unproved
         ancestor = project / "ancestor"
         descendant = ancestor / "child/grandchild"
         ancestor_root = ancestor / ".knowledge"

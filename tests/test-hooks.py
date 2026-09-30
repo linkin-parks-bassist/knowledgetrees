@@ -34,6 +34,13 @@ def main():
         project = root / "project"
         (project / ".knowledge/where/am").mkdir(parents=True)
         (project / ".knowledge/where/am/i.md").write_text("Project orientation fixture.\n")
+        proof_marker = root / "startup-proof-ran"
+        proof_leaf = project / ".knowledge/what/is/startup-proof.md"
+        proof_leaf.parent.mkdir(parents=True)
+        proof_leaf.write_text(
+            '---\nstatus: green\nrevised_at: "2026-09-30T00:00:00+00:00"\n---\n\n'
+            f'Proof:\n\n```sh\ntouch "{proof_marker}"\n```\n'
+        )
         with patch.dict(os.environ, {"KT_INFO_CLI": str(REPOSITORY / "tools/kt"),
                                   "KT_GLOBAL_ROOT": str(global_root),
                                   "KT_CONFIG": str(root / "config.json")}):
@@ -46,7 +53,10 @@ def main():
                                if harness in ("codex", "claude") else result["additionalContext"])
                     assert "Canonical procedure fixture." in context
                     assert "Project orientation fixture." in context
-                    assert context.rstrip().endswith("0 failed · SUCCESS") and "0 brown" in context
+                    assert "the startup hook does not execute project proof commands" in context
+                    assert 'kt_prove with scope="local"' in context
+                    assert "Proofs: " not in context
+                    assert not proof_marker.exists(), "startup hooks must never execute project proofs"
             # Claude Code drops hook context past ~10,000 characters, so oversized `kt info` output is
             # replaced by an instruction to run it directly; other harnesses keep the full text.
             with patch.dict(os.environ, {"KT_HOOK_CONTEXT_LIMIT": "200"}):
@@ -63,7 +73,9 @@ def main():
             context = fallback["hookSpecificOutput"]["additionalContext"]
             assert "kt info failed" not in context and "Canonical procedure fixture." in context
             assert "no accessible ancestor .knowledge orientation" in context
-            assert context.rstrip().endswith("0 failed · SUCCESS") and "0 brown" in context
+            assert "the startup hook does not execute project proof commands" in context
+            assert 'kt_prove with scope="global"' in context
+            assert "Proofs: " not in context
             # A genuinely unusable `kt info` run (no global procedure) is still reported, not hidden.
             (global_root / "how/to/use/knowledgetrees.md").unlink()
             failed_info, _ = handle("codex", "start", {"source": "startup", "cwd": str(project)})
