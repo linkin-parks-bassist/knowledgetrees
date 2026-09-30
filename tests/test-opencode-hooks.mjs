@@ -28,9 +28,10 @@ try {
   const startup = { system: ["existing harness instructions"] };
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);
   assert.equal(startup.system[0], "existing harness instructions");
-  assert.match(startup.system[1], /Knowledge-tree startup: `kt info` output follows/);
+  assert.match(startup.system[1], /Knowledge-tree startup: proof-free `kt info --no-prove` output follows/);
   assert.match(startup.system[1], /Project orientation fixture/);
-  assert.match(startup.system[1], /final proof summary/);
+  assert.match(startup.system[1], /Before other work, invoke kt_prove with scope="local"/);
+  assert.doesNotMatch(startup.system[1], /\nLeaves: \d+ total/);
   assert.match(startup.system[1], /global:how\/to\/use\/knowledgetrees.md/);
   await plugin["experimental.chat.system.transform"]({ sessionID: "one" }, startup);
   assert.equal(startup.system.length, 2, "no duplicate bootstrap blocks in assembled context");

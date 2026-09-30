@@ -3,6 +3,7 @@
 
 import hashlib
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import subprocess
 import tempfile
@@ -121,10 +122,13 @@ with tempfile.TemporaryDirectory(prefix="proof-marker-test-") as temporary:
 with tempfile.TemporaryDirectory(prefix="leaf-state-test-") as temporary:
     root = Path(temporary) / ".knowledge"
     root.mkdir()
+    checked_now = datetime.now(timezone.utc)
+    current_check = checked_now.isoformat()
+    expired_check = (checked_now - timedelta(weeks=3)).isoformat()
     (root / "green.md").write_text(
-        "---\nstatus: green\nrevised_at: '2026-09-17T00:00:00+10:00'\nchecked_at: '2026-09-17T00:00:00+10:00'\nexpires_every: '2 weeks'\n---\n\nCurrent.\n")
+        f"---\nstatus: green\nrevised_at: '{current_check}'\nchecked_at: '{current_check}'\nexpires_every: '2 weeks'\n---\n\nCurrent.\n")
     (root / "expired.md").write_text(
-        "---\nstatus: green\nrevised_at: '2026-08-01T00:00:00+10:00'\nchecked_at: '2026-08-01T00:00:00+10:00'\nexpires_every: 'two weeks'\n---\n\nOld.\n")
+        f"---\nstatus: green\nrevised_at: '{expired_check}'\nchecked_at: '{expired_check}'\nexpires_every: 'two weeks'\n---\n\nOld.\n")
     (root / "default-green.md").write_text("A non-verifiable plan is green by default.\n")
     (root / "explicit-yellow.md").write_text("---\nstatus: yellow\nexpires_every: '2 weeks'\n---\n\nNeeds review.\n")
     result = run(root, "--no-stamp")

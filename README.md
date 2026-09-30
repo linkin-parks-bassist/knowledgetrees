@@ -1,333 +1,175 @@
 # Knowledgetrees
 
-Knowledgetrees are a stateful, self-growing, self-healing filesystem for
-agent knowledge. They aim to replace the split between skills, documentation, code
-comments, project memory, plans, specifications, working policy, and operational
-notes with one canonical, agent-navigable substrate.
-
-The idea is simple: store useful knowledge in meaningful filesystem paths, let
-agents fetch only the answers they need, and make ordinary work continuously improve
-the knowledge available to the next agent.
+Knowledgetrees give agents a maintained filesystem of current answers. Store
+knowledge in paths that read as questions, retrieve the answers needed for the
+work, and advance those answers as implementation, requirements, decisions, and
+facts change.
 
 **The tree remembers what is true, not what happened.**
 
-Every leaf is the best direct answer now. Agents advance this knowledge frontier in
-lockstep with implementation, requirements, decisions, and established facts; Git owns chronology.
+A leaf contains the best direct answer now. Rewrites reconsider the whole answer
+and remove superseded material; Git owns chronology. The tree is the sole
+maintained knowledge source for its scope. Code and external documents supply
+evidence, while READMEs, manuals, and other presentations can be derived from it.
 
-Knowledge trees cover **every scale**, from code-comment-level implementation facts
-to broad architecture and complete specifications. What a function does and why,
-what a file contains, where a typedef lives, include order, dependencies, invariants,
-and repository folder structure all belong in the owning tree. No useful answer is
-too fine-grained. Leaves hold the answer itself with checked source evidence, so
-agents can retrieve small implementation facts as directly as large design answers.
+Knowledge trees cover every scale: function contracts and rationale, typedefs,
+include order, dependencies, build procedures, architecture, policy, complete
+specifications, and plans. No useful answer is too fine-grained. A fresh agent can
+retrieve that knowledge without reconstructing it from previous conversations.
 
+This repository ships a standard-library Python CLI, a 23-tool MCP server, startup
+and maintenance adapters for **Claude Code, Codex, OpenCode, and Copilot CLI**, an
+installer, regression tests, and reusable guidance in [`example/`](example/).
 
-This repository contains:
+## Install and start a tree
 
-- a visible, self-describing public corpus in [`example/`](example/where/am/i.md);
-- the knowledge-first [`install`](install) script;
-- the proof engine built into [`kt`](tools/kt), accessed through `kt prove`;
-- startup hooks for Claude Code, Codex, OpenCode, and Copilot CLI ([`kt-hooks`](tools/kt-hooks), [`kt-opencode.mjs`](tools/kt-opencode.mjs)) and a local MCP server ([`kt-mcp`](tools/kt-mcp)); and
-- selected planning and specification practices distilled into semantic leaves,
-  without inheriting an inflexible skill-driven workflow.
+From a complete clone, preview installation and then install:
 
-## Tools for agents
+```bash
+./install --dry-run
+./install
+```
 
-Knowledge only compounds if using it is effortless, so `./install` gives Claude Code, Codex,
-OpenCode, and Copilot CLI a local [MCP](https://modelcontextprotocol.io) server with 23 tools
-that mirror the `kt` workflow. Agents are told to use them instead of the `kt` shell command
-(the shell is the fallback when the tools are unavailable). Every tool delegates to the CLI, so
-access policy, locking, and proofs behave identically.
-`kt_add`, `kt_prove`, `kt_status`, and `kt_audit` can target any approved root directly, so multi-tree work
-does not need a shell detour.
+The installer merges reusable guidance into `~/.knowledge`, installs the CLI and
+MCP server under `~/.knowledge/.tools/`, and links `kt` into `~/.local/bin`. Add
+`~/.local/bin` to your `PATH` if needed. It installs startup and turn-end hooks and
+registers the MCP server with all four harnesses. If the Claude CLI is absent, it
+prints the manual registration command.
 
-| Job | Tools |
+Existing orientations, unrelated configuration, other MCP servers, and existing
+`knowledgetrees` registrations are preserved. The example's illustrative spec and
+plan are excluded. Differing managed files require explicit `--force`; inspect
+the differences first. Even with `--force`, an existing orientation is preserved.
+The installer removes its legacy managed `~/AGENTS.md` block and preserves any
+other contents.
+
+Before changing OpenCode permissions, the installer asks for informed `[n/Y]`
+consent. It discloses automatic reads of `~/.knowledge/**` and `~/.agents/**`,
+automatic writes to `~/.knowledge/**`, and possible exposure of retrieved content
+to the configured model provider. Edits to `~/.agents/**` remain approval-gated.
+Declining or EOF cancels before installation changes.
+
+| Option | Effect |
 | --- | --- |
-| Find | `kt_lookup` (`how to …` questions), `kt_find` (ranked text plus structured results), `kt_grep` (literal or regex exact text), `kt_dict`, `kt_roots` |
-| Read | `kt_read` (a leaf's whole answer), `kt_info` (startup knowledge) |
-| Change | `kt_rewrite` (recompute a complete answer plus lifecycle metadata), `kt_undo`, `kt_add`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register` |
-| Check | `kt_renew`, `kt_prove`, `kt_status` (lifecycle), `kt_audit` (structural suspects) |
-| Access | `kt_access_status` (what is readable and why), `kt_access_request`, `kt_access_confirm` (failed-prompt continuation), `kt_access_revoke` |
+| `--dry-run` | Preview targets and conflicts without writing |
+| `--force` | Replace differing managed files, preserving orientation |
+| `--hooks-only` | Refresh CLI, hooks, and MCP infrastructure in an existing installation without replacing leaves or skills |
+| `--no-hooks` | Skip hook installation; existing hooks remain |
+| `--no-mcp` | Skip MCP deployment and registration |
+| `--home PATH` | Select a target home directory |
 
-Tool output is lean: a whole-leaf read returns the complete answer and a final `Revision:` SHA-256
-line, with no front matter or timestamps; a one-line notice leads it only when yellow or brown.
-There are no partial leaf reads, ranges, paging, or truncation. Search excerpts only select a leaf
-and never yield a rewrite hash. `kt_rewrite` is the only edit method: it replaces the complete
-answer and must cite the hash obtained by a whole read or successful rewrite. The old body is
-material to reconsider, not a template to extend. The CLI rejects stale hashes under lock.
-Successful rewrites return the diff and a final `Revision: HASH`, including no-ops. Reuse it
-without rereading; only a conflict requires reading and merging concurrent changes. Dry runs
-return only a preview. The hash is captured under the CLI write lock.
-There is no partial edit, so every change reconsiders the whole leaf; a bad leaf cannot hide behind
-a surgical patch, and long leaves cost more to change. When an agent meets a yellow leaf it checks the claims against
-current evidence and calls `kt_renew`, which records that the whole leaf was verified and re-runs
-its proofs; that call is the agent's attestation, so it too is refused unless the agent read the
-leaf in this session or supplied its complete answer through a successful rewrite. The same lean view is available in the shell as `kt --lean`. Read tools are annotated read-only, so harnesses can skip their prompts and keep
-them for writes. Direct policy changes and the global permissions bypass remain terminal-only. Four prompts
-(`frontier_review`, `garden`, `verify_leaf`, `revoke_access`) appear as slash commands where the
-client supports them.
+Restart your harness after installation or upgrades so it loads the new tools,
+hooks, and skill catalog. See [installation details](example/how/to/install/knowledgetrees.md).
 
-Brown is an incident, including at startup when the user supplied no task. The agent's first
-response must prominently identify the brown leaf and make reconciliation priority one; a neutral
-readiness response is noncompliant. Until brown clears, the agent may only diagnose why the leaf or
-proof no longer matches reality, choose and perform the safest remediation (normally correcting the
-leaf or proof), and re-check it. If safe remediation cannot be established, the agent asks the user
-for guidance. Only explicit user permission to ignore that specific brown status allows other work
-to resume, and that permission does not validate or green the leaf.
+In the directory whose knowledge you want to maintain:
 
-### Approving access without leaving the harness
+```bash
+kt init
+# Alternatively, for a repository with a spec and remaining-work plan:
+# kt init --project
+```
 
-Access control used to mean opening another terminal. Now, when an agent hits a restricted root,
-it calls `kt_access_request` and **your harness asks you**, through MCP elicitation:
+Choose one form. Both create `.knowledge/` with empty `how/`, `what/`, `where/`,
+`why/`, `does/`, and `is/` branches plus `where/am/i.md`. The project form also
+creates empty `what/is/the/spec.md` and `what/is/the/plan.md`. An optional
+`ORIENTATION` argument becomes the literal orientation contents. Initialization
+refuses an existing tree and registers the new root under `ask`, without granting
+cross-project access.
 
-1. The prompt names the root, the project directory, and the agent's reason.
-2. When the harness supplies a stable session identity, temporary *session* access is offered;
-   otherwise choose *this directory*, *this directory and subdirectories*, *everywhere*, or decline.
-3. Only an accepted response carrying one of those scopes saves the grant. The model never sees
-   or answers the prompt.
+Fill the orientation with the scope, purpose, topology, boundaries, and actual
+semantic routes of your environment. Describe what each branch holds. Keep the
+specification as the acceptance contract and the plan as **remaining steps, next
+first**; remove completed steps immediately. Add verified answers as work exposes
+a need for them, and attach proofs where a fact is cheap and safe to check.
 
-Some clients advertise elicitation but can return decline, cancel, or an error without displaying
-a prompt. The server reports that client action without claiming the user declined, does not cache
-it as a refusal, and returns a one-time pending request. If you explicitly authorize that exact root
-and scope in conversation, the agent completes it with `kt_access_confirm`; no shell detour is needed.
-An unknown or reused request ID is rejected, denied and force-private policy still wins, and the
-continuation cannot change to another root or project. A failed prompt is not a veto, and access to
-two trees does not call for a persistent global permissions bypass.
+## Questions become paths
 
-Access is not one-way: `kt_access_status` says why each root is readable and `kt_access_revoke`
-gives it back. Session and current-directory revocation are immediate; anything wider asks you first and
-uses the same one-time conversational continuation if the client cannot render that confirmation.
-Approvals are tied to a path, so `kt` drops them when their tree disappears, and a different tree
-later created there needs a fresh approval.
-
-Denied and force-private roots are never prompted for, and a client that cannot prompt gets the
-same pending MCP continuation. This guards against an agent inventing its own access decision;
-it is not a sandbox. The CLI still requires interactive confirmation, and the real
-boundary is what your harness lets an agent run. Details, including safeguards and what is
-verified, are in [the design leaf](example/how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md).
-
-Registration merges into each harness's own MCP configuration (Claude Code via
-`claude mcp add`), leaves other servers and any existing `knowledgetrees` entry alone, and is
-skipped with `--no-mcp`. Restart each harness afterwards.
-
-## Two roots, two jobs
-
-This repository intentionally contains two different semantic trees:
-
-| Path | Role |
-| --- | --- |
-| [`.knowledge/`](.knowledge/where/am/i.md) | The real operational knowledge root for developing and publishing this repository. It contains this project's requirements, plan, and procedures. |
-| [`example/`](example/where/am/i.md) | The visible distributable example. It contains public, reusable knowledge-tree methodology and illustrative planning/specification leaves. |
-
-They are not mirrors. Repository-specific facts belong only in `.knowledge/`.
-Reusable public example knowledge belongs only in `example/`. Agents working on
-this repository orient through `.knowledge/` first.
-
-### Make the example yours
-
-[`example/where/am/i.md`](example/where/am/i.md) is intentionally empty. Fill it in
-with an orientation to your own local environment: what scope the tree covers, the
-repository or workspace purpose, important topology, active priorities, relevant
-tools, operational boundaries, and the semantic routes an agent should try first.
-Write enough that a fresh agent can orient without recursively inventorying the
-workspace.
-
-Describe what each branch holds and include real leaf paths, not just a branch
-list. Route planning to `how/to/make/a/plan.md`, for example, and clarification to
-`when/to/ask/clarification.md`.
-
-Keep the orientation current and useful, but do not put passwords, tokens, private
-keys, or other secrets in it. If the tree will be published, also remove personal or
-organization-specific details that should not become public.
-
-## A filesystem that doubles as an ontology
-
-A knowledgetree is usually a `.knowledge/` directory. Its paths are not arbitrary
-folders: they are meaningful questions and concepts. The structure itself helps an
-agent retrieve the answer.
+A tree's paths express what an agent is asking:
 
 ```text
 .knowledge/
-├── where/
-│   └── am/
-│       └── i.md
-├── what/
-│   └── is/
-│       ├── the/
-│       │   ├── spec.md
-│       │   └── plan.md
-│       └── a/
-│           └── knowledge/
-│               └── tree.md
-├── how/
-│   └── to/
-│       ├── check/
-│       │   └── knowledgetree/
-│       │       └── proofs.md
-│       └── make/
-│           └── a/
-│               └── plan.md
-├── when/
-│   └── to/
-│       └── ask/
-│           └── clarification.md
-├── does/
-│   └── kt/prove/verify/an/entire/leaf.md
-├── is/
-│   └── a/knowledge/tree/a/source/of/authorization.md
-└── why/
-    └── is/
-        └── a/
-            └── knowledge/
-                └── tree/
-                    └── not/
-                        └── an/
-                            └── index.md
+├── where/am/i.md
+├── what/is/the/spec.md
+├── what/is/the/plan.md
+├── how/to/build/the/project.md
+├── when/to/ask/clarification.md
+├── why/does/the/parser/reject/empty/input.md
+├── does/the/installer/preserve/configuration.md
+└── is/the/cache/shared.md
 ```
 
-If an agent needs to know how to make a plan, it can predict
-`how/to/make/a/plan.md`. If it needs to understand why a knowledge tree is not an
-index, it can descend through `why/is/a/knowledge/tree/not/an/index.md`. LLMs are
-fundamentally language models. With knowledgetrees, if an agent has a question,
-*the question itself can point directly at the answer*. The path is already half
-the retrieval query. This is not merely documentation stored in folders: every
-branch narrows what the agent is asking, and the leaf directly answers the question.
+The last five paths illustrate answers you might establish in your own tree.
+Each leaf directly answers its question, with evidence, qualifications, and links
+where useful. A pointer such as “the answer is in a large internal document” does
+not replace the answer.
 
-An agent does not need to word a question exactly like the answer's path. In early
-use, nearby semantic components give agents enough structure to choose a likely
-branch and narrow in quickly when the first guess is not exact.
-
-Further testing is required to see how this behaves at larger scales. As long as
-branches remain meaningfully discriminating, each path choice reduces the search
-space without loading the whole corpus.
-
-## Why it matters
-
-Agent context is expensive, fragile, and temporary. Useful knowledge is commonly
-scattered across giant instruction files, README pages, skill blobs, chat history,
-plans, notes, and source comments. Agents repeatedly load too much, miss the right
-thing, or rediscover facts that another run already worked out.
-
-Knowledgetrees change that trade-off:
-
-- **Less prompt bloat.** Detailed knowledge can exist in abundance without being
-  injected into every run. Its cost is paid only when needed.
-- **Survives fresh starts.** A new worker, compacted session, or different model can
-  reconstruct context from persistent current knowledge.
-- **Current truth wins.** The canonical answer is updated rather than forcing a model
-  to infer which paragraph in a chronology is newest.
-- **Knowledge compounds.** Every reusable discovery can save a future reasoning
-  loop, failed command, search, or architectural mistake.
-- **One substrate, many uses.** The same tree can carry build procedures, policy,
-  architecture, plans, specs, environment facts, and rationale.
-- **Composable by design.** An agent can retrieve a general rule, local refinement,
-  current facts, and rationale separately, then combine only what applies.
-
-The familiar stack is fragmented:
-
-| Traditional surface | Typical role |
+| Question | Branch |
 | --- | --- |
-| `AGENTS.md` | Global instructions and project quirks |
-| `skills/` | Procedures the model must remember to select |
-| `docs/` | Linear presentations with buried answers |
-| code comments | Design rationale tied to where the implementation happens to live |
-| `plans/` and `specs/` | Current intent, often duplicated elsewhere |
-| notes and chat history | Discoveries mixed with obsolete chronology |
+| Where is …? | `where/is/` |
+| What is …? | `what/is/` |
+| How to …? | `how/to/` |
+| When to …? | `when/to/` |
+| Why does/is …? | `why/does/` or `why/is/` |
+| Does …? / Is …? | `does/` or `is/`, with a qualified yes/no answer |
 
-A Knowledgetree gives those concerns one distributed, versionable semantic
-environment. The agent asks a question, retrieves the current answer, follows
-related leaves only when necessary, and preserves better knowledge when it learns
-something reusable.
+Exact question paths return whole answers. Otherwise, `kt` consumes matching
+path words, ranks remaining keywords within that branch, and widens one parent
+at a time when matches are weak. Retrieval is lexical, not a semantic model; the
+default threshold is 60% meaningful-keyword coverage. A successful match is a
+candidate, not a correctness certificate. A miss does not establish absence.
 
-Store knowledge. Generate presentations. Do not make every future agent reread the
-presentation to recover the knowledge.
+Agents use **new question → kt first**, unless adequately checked knowledge is
+already loaded. On a miss, they retry useful terms and inspect plausible paths to
+find an existing owner. They then read or repair that owner, or investigate and
+establish an absent answer before unrelated work. A blocked answer records its
+blocker and next check. This prevents duplicate owners and repeated rediscovery.
 
-### Even code comments
+Leaves can be short or substantial. Choose boundaries by how answers are used,
+owned, and reviewed; orientation, spec, and plan deliberately aggregate related
+knowledge. General procedure, project policy, local facts, and rationale can be
+retrieved separately and composed for the task.
 
-Skills. Documentation. Code comments. The same knowledge, trapped in three
-different retrieval conventions. Why should an agent have to discover the right
-source file and scroll to the right comment to understand a design decision?
+## Tools for agents
 
-With `why/does/this/function/do/that.md`, the question itself becomes the retrieval
-route. Constraints, rejected alternatives, invariants, and strange-looking choices
-become maintained knowledge—with provenance, scope, and executable proofs wherever
-the facts are mechanically verifiable. The code shows what happens; the tree
-explains why.
+When MCP tools are available, agents use them in preference to the shell. The
+server delegates knowledge semantics to the CLI, keeping access, revisions,
+lifecycle, and proofs consistent. MCP names may carry a harness prefix such as
+`mcp__knowledgetrees__kt_lookup`.
 
-Comments can be stored separately to code, and retrieved as needed - keeping the
-codebase itself compact, saving precious tokens, while (arguably) leaving the code
-even *more* accessible... to agents.
+| Job | Tools |
+| --- | --- |
+| Find | `kt_lookup`, `kt_find`, `kt_grep`, `kt_dict`, `kt_roots` |
+| Read | `kt_read`, `kt_info` |
+| Change | `kt_add`, `kt_rewrite`, `kt_undo`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register` |
+| Check | `kt_renew`, `kt_prove`, `kt_status`, `kt_audit` |
+| Access | `kt_access_status`, `kt_access_request`, `kt_access_confirm`, `kt_access_revoke` |
 
-## Agent testimonials
+`kt_add`, `kt_prove`, `kt_status`, and `kt_audit` can target an approved root
+directly. Useful discovery, inspection, and access results include structured
+content. Four MCP prompts—`frontier_review`, `garden`, `verify_leaf`, and
+`revoke_access`—appear as slash commands where supported.
 
-*Mid-diagnosis:*
+A whole-leaf MCP read returns the complete answer and `Revision: HASH`, hiding
+front matter and timestamps. Only yellow or brown leaves carry a leading notice.
+There are no partial reads, ranges, paging, or truncation. Search excerpts select
+candidates; they are not reads and supply no rewrite hash.
 
-> Thought: 5.6s
->
-> The knowledge tree has very accurate context.
+`kt_rewrite` replaces the complete answer using the SHA-256 revision from a whole
+read or successful rewrite. It can also set or clear expiry and verifiability
+metadata. The old answer is material to reconsider, not a template to extend.
+Stale revisions fail under the write lock. Successful rewrites return a diff and
+committed `Revision: HASH`, including no-ops; reuse it for the next rewrite
+without rereading. A conflict requires a fresh read and merge. Dry runs return
+only a preview.
 
-*After a `kt` lookup:*
+`kt_renew` attests that the **whole answer** was checked against current evidence
+and reruns its proofs. It requires a whole read or successful rewrite in that MCP
+session, with no intervening change. A known hash alone is not that attestation.
+See [MCP design and limits](example/how/to/expose/structured/knowledge-tree/edits/across/local/agent/harnesses.md).
 
-> Thought: 13.4s
->
-> Good — kt has all the info I need.
+## Verification and maintenance
 
-*After reading project leaves:*
-
-> Thought: 25.6s
->
-> Now I've got the KT context.
-
-## What makes it different
-
-This is not a search system bolted onto documentation. The tree itself is the
-primary agent-facing knowledge representation. Documents can still exist as
-external authorities, evidence, source material, exports, or human-facing views.
-
-### The tree contains answers, not just pointers
-
-“The refund policy is in `customer-guide.pdf`” is weak knowledge. A useful leaf
-states the current policy directly, links to the governing source if necessary, and
-says when to check it again.
-
-### Current truth is mutable; history is separate
-
-When a policy changes, rewrite its current semantic owner. Keep the old version in Git
-or explicit history when history still matters. Do not make the next agent reason
-over incompatible versions and guess which governs.
-
-### Knowledge is federated
-
-A user-wide tree can carry reusable tooling and host knowledge; a project tree can
-carry local policy and architecture; a subsystem can carry narrower context. The
-nearest applicable knowledge is consulted before broader knowledge.
-
-Knowledge trees can live in **any directory**. A repository should have a repo-wide
-`.knowledge/`, and subfolders can—and should, when they have their own useful
-context—have narrower trees too: `frontend/.knowledge/`, `backend/.knowledge/`, or
-even `backend/payments/.knowledge/`. This is another dimension of compositionality:
-directory scope selects relevant knowledge before semantic paths narrow the question.
-An agent working on payments gets payment-specific answers at its fingertips,
-without polluting its context with unrelated frontend knowledge. Broader roots still
-supply shared facts; narrower roots own their local refinements.
-
-### Growth is ordinary maintenance
-
-When an agent has to determine something, it asks whether a future agent would have
-to rediscover the answer. If so, verifying and preserving it is part of finishing
-the work—not a documentation chore deferred until later.
-
-Correctness comes first. If current evidence contradicts an active leaf, repair its
-owning answer and affected guidance before relying on the tree or finishing the
-task. A zero-exit `kt prove` run says only that its selected leaves had no
-brown-level failure detected at that time. Yellow expiry warnings may remain;
-green can include leaves with no proofs. The verifier cannot certify current
-prose, agreement between leaves, proof coverage, or a predicate's adequacy.
-
-### Concrete facts can reconnect themselves to reality
-
-Agents are encouraged to attach small executable proofs to factual claims that are
-immediately and mechanically verifiable:
+Executable proofs connect concrete claims to current evidence:
 
 ````markdown
 The repository has a local orientation leaf.
@@ -339,596 +181,264 @@ test -f .knowledge/where/am/i.md
 ```
 ````
 
-The goal is not to turn every sentence into code. Proofs are for single, immediately
-checkable true-or-false assertions—not requirements, instructions, opinions, plans,
-or compound conclusions.
+Use the exact timeless `Proof:` marker and a small, bounded, read-only predicate
+that returns zero exactly when the preceding claim is true. Proofs are for
+concrete assertions, not policy, plans, instructions, or opinions. Repository
+behavior can be backed by focused regression tests. Proof execution does not
+certify unproved prose, agreement between leaves, or adequate coverage.
 
-Use `kt prove` for access-controlled proof verification across all accessible
-roots. Use `kt prove --local` for only the exact current-directory tree,
-`kt prove --global` for only global knowledge, or `--root ROOT` for another exact
-accessible tree. The proof engine is
-built into kt; no separate verifier process or installation is needed.
-`kt prove --help` lists options. Before installation, run `tools/kt prove`
-from the checkout. Explicit roots require the same access approval as retrieval.
-
-Every proof run prints aligned leaf and proof summaries:
-
-```text
-Leaves: 28 total · 28 green · 0 yellow · 0 brown
-Proofs:  1 total ·  1 valid · 0 failed · SUCCESS
-```
-
-The result is `FAIL` when a leaf is brown or a proof fails. Brown leaf
-paths follow on standard error. Yellow paths are read from leaves when needed. Leaves are green by default, including specs,
-plans, procedures, opinions, and other content that is not mechanically verifiable.
-A new leaf starts green, and adding or editing a leaf keeps its status; elapsed `expires_at` or
-`expires_every` freshness makes a leaf yellow and unusable until re-verification. Brown means
-falsified, malformed, or proof-failing; it makes the tree busted and activates the mandatory
-brown-incident response above.
-A proof run only ever lowers a status. Raising one takes a manual whole-leaf review
-(`kt renew`), except that a `verifiable: true` leaf whose proofs all pass is green.
-Agents should add expiry metadata to facts likely to change, while leaving durable
-or non-verifiable knowledge green unless there is a concrete reason for review.
-Normal proof evaluation writes `status: green|yellow|brown` in flat front matter.
-`revised_at` records the last content change; `kt renew ADDRESS HASH`
-(tool `kt_renew`) records `checked_at` after manual review. Optional `expires_at` and `expires_every` set
-freshness limits, and `verifiable: true` asserts complete proof coverage.
-Metadata timestamps use ISO 8601 with a timezone. Proof markers carry no timestamp
-or outcome. Unsupported front matter makes a leaf
-brown; `--no-stamp` writes nothing.
-
-For example, `kt` can emit this front matter; supply only the answer body to
-`kt add` or `kt rewrite`:
-
-```yaml
----
-status: green
-revised_at: "2026-09-20T09:00:00+10:00"
-checked_at: "2026-09-20T09:10:00+10:00"
-expires_every: 2 weeks
----
-```
-
-`checked_at`, expiry, and `verifiable` are optional. Keep origins, caveats,
-blockers, and next checks in the answer, not in front matter.
-`kt add` and `kt rewrite` take answer bodies and generate front matter. Use
-`--expires-at TIMESTAMP` or `--expires-every DURATION` to set freshness, and
-`--verifiable` after reviewing complete proof coverage. On rewrite, omitted
-options preserve existing expiry and verifiability; `--no-expiry` and
-`--no-verifiable` clear them. Use `kt renew ADDRESS HASH` for manual review time.
-
-A leaf containing only concrete facts whose every claim is covered by eligible proofs
-should declare `verifiable: true` after that coverage has been reviewed.
-It must contain at least one eligible proof. If every proof runs and passes,
-`kt prove` clears sticky falsification and auto-greens the leaf, including after
-an expiry. Missing, malformed, skipped, or failed proofs make it brown. The author is
-responsible for ensuring every claim is covered; the flag cannot detect uncovered
-prose.
-
-`kt init [ORIENTATION]` creates a neutral `.knowledge/` tree in the working directory with empty `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches plus `where/am/i.md`. It does not assume an ongoing linear project. Use `kt init --project [ORIENTATION]` when the scope is a repository project that also needs empty spec and plan leaves. The optional argument supplies the exact orientation file contents. Both forms register the new root under `ask` without granting cross-project access and refuse to overwrite an existing tree.
-
-`kt info` performs fresh-session initialization in output-first order: it prints
-the canonical global procedure, then every accessible `where/am/i.md` belonging to
-a `.knowledge/` tree on the directory chain from `~` down to the working directory,
-in that descending order,
-then the accessible dictionary, then the `kt prove --local` result. With no
-exact local tree it proves the global root; an exact local tree lacking
-`where/am/i.md` is noted and still proved. If no accessible ancestor orientation is
-available, it prints a one-line note and uses the global root's orientation instead.
-It still fails when the global procedure is unreachable, access policy needs
-approval, or the final proof check is brown. Run it
-directly and consume its complete output. Never pipe it through `head`, `tail`, a
-pager, a filter, or any other truncating or partial-capture command; initialization
-is incomplete unless its final proof summary is displayed.
-
-**Agents run the verifier before relying on proof-backed knowledge.** They check the
-local root during bootstrap and when entering a new project scope, then relevant semantic
-slices before consequential use. A broken proof is a stop-and-repair signal: inspect
-the evidence, correct or remove the stale assertion or faulty predicate, and rerun
-the check before using that knowledge.
-
-This gives the schema a layer of executable provability: eligible facts reconnect
-to reality instead of remaining unchecked prose. A passing verifier establishes
-that the marked predicates passed—not that every unproved statement is true.
-
-The marker is always the exact timeless delimiter `Proof:`. Proof runs never rewrite
-it or store per-proof outcomes or timestamps. A failure sets the leaf's lifecycle
-status to brown; the current run's summary and diagnostics report the outcome.
-For compatibility, a writing `kt prove` accepts legacy `(verified|falsified at …)`
-markers and silently normalizes them to `Proof:` after evaluation. `--no-stamp`
-accepts the same legacy input without changing bytes; legacy timestamp text is not
-parsed or treated as freshness evidence.
-Unflagged leaves require independent review to clear falsification:
-even if every proof later passes, the leaf remains falsified. Passing every proof is
-necessary but not sufficient for an unflagged leaf. A reviewed `verifiable: true`
-declaration asserts complete coverage; only then may all passing proofs clear
-falsification. Manual whole-leaf review is recorded by `kt renew ADDRESS HASH`
-as `checked_at`; only that time anchors recurring expiry. The verifier cannot independently
-infer whether every statement is covered. Use `--no-stamp` for a read-only check.
-
-To check the public example, first approve its root for this project (or ask an agent to do so with that exact scope):
-
-```bash
-tools/kt access "$PWD/example" allow --scope project
-```
-
-Then run every marked proof in that tree with:
-
-```bash
-tools/kt prove --root example
-```
-
-Run a semantic slice by passing exact path-component tokens:
-
-```bash
-tools/kt prove --root example knowledge-tree proofs
-```
-
-Multiple tokens select their disjunction. Use `--verbose` for per-leaf diagnostics.
-
-The operating loop is:
-
-```text
-lookup → discover → verify → record → use
-```
-
-## Policy, procedure, and state compose naturally
-
-Instead of one giant deployment manual, independent concerns can remain
-independently owned:
-
-```text
-how/to/release/software.md
-how/to/release/the/web-app.md
-how/to/verify/a/release.md
-what/is/the/current/release/channel.md
-where/is/the/staging/environment.md
-why/does/production/require/two-approvals.md
-```
-
-A release worker can assemble the pieces relevant to its situation without forcing
-every other task to ingest the entire release universe. General procedure,
-environment-specific refinement, current facts, and rationale can change
-independently and compose at the point of use.
-
-## A self-improving documentation methodology
-
-Traditional documentation decays because writing it is a separate activity. A
-knowledgetree makes maintenance part of normal agent work.
-
-| Traditional pattern | Knowledgetree pattern |
+| State | Meaning and required action |
 | --- | --- |
-| Agent searches documents | Agent follows the semantic tree to the current answer |
-| Agent discovers a missing fact | Agent verifies and records it at the right scope |
-| Documents become stale | Agents repair affected owners as soon as evidence changes; proofs and expiry catch only some drift |
-| Documentation is linear | Knowledge is addressed by question and assembled on demand |
-| One giant guide | Focused answers plus deliberate orientation and spine projections |
-| Skills are separate blobs | Procedures share a namespace with their facts and policies |
+| Green | No current lifecycle warning; check evidence and scope before reliance. Proof-free leaves can be green. |
+| Yellow | Review is due; verify the whole answer, repair if needed, and renew before use. |
+| Brown | A falsification, failed or malformed proof, or invalid metadata requires a priority-one incident response. |
 
-After behavior changes, agents inventory every affected owner and presentation, then search both
-for the new behavior and for superseded counts, tool lists, fallbacks, and limitations. Tests,
-green proofs, recent timestamps, and zero installed-byte drift support that semantic review; none
-of them proves by itself that all related leaves and documentation are current.
+**Brown stops unrelated work, including at startup.** The agent first prominently
+reports the affected leaf, then diagnoses the mismatch, chooses the safest
+remediation, repairs the answer or proof, independently reviews the whole answer,
+renews when required, and rechecks. If safe remediation cannot be established, it
+asks the user for guidance. Only explicit permission to ignore that specific
+brown status permits other work; it does not validate or green the leaf.
 
-The long-term effect is cumulative: what one agent learns becomes part of the
-environment in which the next agent thinks.
+Nonempty leaves use flat Markdown front matter. `revised_at` records content
+changes; `checked_at` records manual whole-answer review. Optional `expires_at`
+or `expires_every` sets a review boundary for volatile claims. Do not add arbitrary
+expiry to durable architecture, rationale, specifications, or plans. Supply answer
+bodies to add/rewrite; the tools manage metadata.
 
-## Deliberately ordinary machinery
+A normal CLI proof run stamps lifecycle status and only lowers it. MCP
+`kt_prove` is read-only unless `stamp: true`; CLI `--no-stamp` also preserves
+bytes. Manual renewal is the way back up, with one reviewed exception:
+`verifiable: true` asserts that the leaf contains only concrete facts and every
+claim is covered by its proofs. Such a leaf needs at least one proof; all proofs
+running and passing auto-green it, including sticky falsification. Missing,
+malformed, skipped, or failed proofs make it brown. The author must verify
+coverage; the engine cannot detect an uncovered sentence.
 
-The mechanism does not require a vector database, graph store, ontology language,
-memory server, or new agent protocol. It starts with files, directories, Markdown,
-links, normal version control, and ordinary tooling.
+`kt status` lists non-green leaves without executing proofs. `kt audit` separately
+flags bodies over 1,000 words as `suspect` and date-shaped bodies as
+`quite-suspect`. Audit is read-only: these are review signals, not diagnoses or
+lifecycle states. Dates in current schedules, queues, events, machine state, and
+protocol identifiers may be legitimate.
 
-- **Versionable.** Code and knowledge can change atomically in the same commit.
-- **Human-readable.** Any leaf opens in an ordinary editor.
-- **Extensible.** Routing models, embeddings, proof schedulers, and gardening agents
-  can be added later without changing the basic abstraction.
+Maintenance happens alongside ordinary work. If checked evidence contradicts a
+leaf, repair its owner and affected guidance before relying on it. After a
+behavior change, inventory narrow and broad owners, specifications, plans,
+orientation, public examples, README/help, hooks, and generated or installed
+copies. Search for both the new behavior and superseded claims, read relevant
+hits, and reconcile them. Tests, green proofs, and matching installed bytes
+support this semantic review; none substitutes for it.
 
-### Hard obligations
+## Startup and turn-end hooks
 
-- Use applicable knowledgetrees during ordinary agent work.
-- Keep paths semantic and traversable.
-- Store useful answers, not merely directions to internal documents.
-- Maintain current truth instead of relying on chronology.
-- Preserve reusable discoveries immediately.
-- Verify eligible base facts proportionately.
-- Keep knowledge separate from execution authority.
+Startup hooks inject **proof-free** `kt --lean info --no-prove` output: the
+canonical procedure, accessible ancestor orientations from `~` down to the
+working directory, and the path dictionary. They direct the agent to call
+`kt_prove` for the exact local root before other work, or global when no exact
+local tree exists. Project proof commands run through agent tooling, never inside
+the startup hook. Direct `kt info` still includes the proof result; consume its
+complete output.
 
-### Contextual judgments
+| Harness | Startup | Maintenance |
+| --- | --- | --- |
+| Claude Code | `SessionStart` | `Stop` |
+| Codex | `SessionStart` | `Stop` |
+| OpenCode | System-context plugin | `session.idle` |
+| Copilot CLI | `sessionStart` | `agentStop` |
 
-- Whether a topic needs one leaf or several.
-- Whether a leaf should be short or substantial.
-- Whether to split or consolidate related material.
-- How much controlled repetition belongs in orientation.
-- Whether direct reading, listing, or search is the cheapest retrieval method.
-- How a mature tree should be reorganized as it grows.
+Resume, clear, and compaction refresh startup context where supported. Above
+9,500 bytes, Claude Code receives an instruction to call `kt_info` directly
+instead of oversized injected context; `KT_HOOK_CONTEXT_LIMIT` tunes that
+threshold. Accessible ancestor orientations provide context without adding those
+trees as lookup roots or widening access.
 
-Rigor belongs in the obligations. Flexibility belongs in the organization.
+The turn-end hook asks for one frontier-maintenance pass, at most once per five
+minutes per session (`KT_HOOK_MAINTENANCE_INTERVAL`, default 300 seconds). Where
+transcript support exists, it skips turns that already maintained the tree after
+the last edit; Copilot uses the rate limit alone. The continuation asks the agent
+to reconcile affected answers, establish missing owners, review status and audit
+signals, and remove completed plan steps. It never edits knowledge itself, grants
+no authority, prevents reminder loops, and fails open on hook errors.
 
-## Install
+Claude Code maintenance delivery has been observed live. Fresh-harness checks of
+the installed MCP/access flows and startup brown response, plus live maintenance
+delivery in Codex, Copilot CLI, and OpenCode, remain validation work. Protocol and
+adapter tests do not establish that a running client loaded the installed build.
+See [hook contracts and limits](example/how/to/use/knowledgetree/hooks.md).
 
-The installer asks `[n/Y]` before configuring OpenCode permissions. The warning
-discloses automatic reads of `~/.knowledge/**` and `~/.agents/**`, automatic writes
-to `~/.knowledge/**`, and that read contents may reach the configured model
-provider. Edits to `~/.agents/**` still require approval. Declining cancels before
-any installation changes; an existing matching configuration needs no new grant.
+### Why skills appear after installation
 
-New installations get a navigation starter in `where/am/i.md`; add your verified
-local environment facts and concrete routes. Existing orientations are preserved.
+The installer creates a bootstrap `knowledgetrees` skill and four focused skills:
+`knowledgetrees-lookup`, `knowledgetrees-reconcile`,
+`knowledgetrees-maintenance`, and `knowledgetrees-ingestion`. Their `SKILL.md`
+files in `~/.agents/skills/` and `~/.claude/skills/` are hard links to canonical
+procedure leaves in the global tree. There is one maintained body, with skill
+entries for discovery and fallback when hooks are unavailable. Hard links require
+the destinations to share a filesystem.
 
-Run the installer from a clone:
+Codex discovers the shared `.agents` catalog. The installer removes redundant
+legacy `.codex` copies/config entries and the retired `knowledgetrees-capture`
+skill. Restart clients to refresh discovery after an upgrade.
+
+## Root privacy and access
+
+Lookup and mutation discover the exact current-directory `.knowledge/`, the
+global root, and explicitly registered roots. Parent trees are not implicitly
+lookup roots. Trees can live at repository or subsystem scope; register broader
+roots and obtain access when needed. `kt info` alone presents accessible ancestor
+orientations.
+
+Use returned root-qualified addresses: `local:PATH`, `global:PATH`, or a full
+canonical root directory followed by `:PATH`. `project:` and registered names
+remain input aliases. Registration does not grant access. Wider roots default to
+`ask`; ordinary restricted roots withhold leaf content. `force-private` also
+hides root identity outside exact local scope and overrides grants and bypass.
+
+When access is needed, `kt_access_request` names the resolved root, project,
+reason, and available scopes in a harness elicitation prompt. Temporary session
+scope is offered only with a stable harness session identity; other choices cover
+the current directory, its descendants, or everywhere. The user chooses; the
+agent does not answer the prompt.
+
+Some clients return decline, cancel, or an error without showing a prompt. The
+server reports the client action, changes nothing, and returns a bound one-time
+pending request. It does not assume the user refused. Explicit conversational
+authorization for that exact root and scope lets the agent complete it through
+`kt_access_confirm`. A direct, unambiguous instruction such as “read and grant
+yourself access to the shared tree” supplies authorization once kt resolves the
+named root. Unless broader access was requested, use the least sufficient scope,
+normally project, without repeated clarification. Ambiguous roots or scopes need
+clarification. A failed prompt alone grants nothing, and an actual user refusal
+must be respected.
+
+Pending requests cannot switch roots or projects or be reused. Deny and
+force-private cannot be overridden through these MCP tools. `kt_access_status`
+explains effective access; `kt_access_revoke` removes session or current-project
+access directly and asks before wider changes. Stale approvals are pruned when a
+tree disappears, so a replacement needs fresh authorization.
+
+Direct policy administration and the persistent permissions bypass remain
+terminal-only. For example:
 
 ```bash
-./install
+kt register shared /path/to/shared/.knowledge
+kt access shared allow --scope project
+kt grants
+kt access shared revoke --scope project
 ```
 
-The installer is knowledge-first. It safely merges the reusable leaves from
-`example/` into `~/.knowledge`, preserves an existing `where/am/i.md`, installs the
-kt CLI with built-in proof verification under `~/.knowledge/.tools/`, and installs
-startup hooks that inject proof-free `kt info --no-prove` context and require an
-agent-side local proof check for Claude Code, Codex, OpenCode, and Copilot CLI, plus a local MCP server registered with all four (`--no-mcp` skips it). It removes
-its old managed block from `~/AGENTS.md` and deletes that file if nothing else is
-in it. The loaded procedure remains
-active across messages and tasks; it is not reinvoked on every turn. The installer
-refuses to overwrite differing knowledge unless `--force` is supplied explicitly.
-Preview its work with `./install --dry-run`.
+The terminal prompts for access changes. A user can inspect/reset bypass with
+`kt permissions` / `kt permissions --reset`, or enable it with
+`kt --dangerously-skip-permissions`. It bypasses ordinary ask/deny, preserves
+force-private, and grants no broader filesystem or harness permissions. Malformed
+configuration fails closed. See [access policy](example/how/to/control/knowledge/root/access.md).
 
-Installation also puts `kt` in `~/.local/bin` (add that directory to your `PATH`
-if needed). Use `kt find leaves` or `kt find "how to add knowledge leaves"` for
-ranked keyword results, `kt open global:how/to/add/knowledge/leaves.md` to read a
-complete leaf, and `kt prove --no-stamp leaves` to check relevant proofs.
-`kt roots` shows the active scopes. Default output is compact plain text for
-agents. Non-exact searches use one summary and one tab-separated line per result:
-leaf address, lexical coverage (with `weak` below threshold), leaf status, and
-an excerpt of at most 160 characters. Use `kt --pretty find leaves`
-or `kt where is vivado --pretty` for the expanded human layout and terminal colors.
-Exact answers and `kt open` preserve complete content in both modes; when stored
-content lacks a final newline, the CLI adds one to its presentation so the shell
-prompt starts cleanly. Search ranking and exit statuses are unchanged. Search is lexical, not a semantic model;
-scores rank matches, and a miss does not prove knowledge is absent.
+**Stored knowledge never grants permission to act.** Root access governs kt's
+retrieval and mutation, not the surrounding filesystem or execution authority.
 
-`kt dict` prints the sorted unique vocabulary from the final two segments of leaf paths across
-accessible roots on one comma-separated line. It reads no leaf bodies, emits no
-complete paths, and prints each useful segment once. Segments of at most two
-characters, purely numeric segments, and a broad dictionary-only stop list of
-grammatical, relational, generic action/state, and knowledge-tree container words
-are omitted, so an agent can see terms such as `obtain` and `sudo-authorization`
-without loading a tree listing. Pass root labels or configured canonical root paths
-to restrict the dictionary, for example `kt dict local global`. `kt info` prints it
-once after the procedure and orientation and before the final local proof result.
+## Shell reference
 
-`kt grep PATTERN` is the exact-text counterpart to `kt find`: a literal (or, with `-E`, regular-expression) search of leaf text across the roots you may read, printing `ADDRESS:LINE: text`. Use it to find every place that states a fact before changing it. `kt status` lists yellow and brown leaves. `kt audit` flags bodies over 1,000 words as suspect and date-shaped bodies as quite-suspect. Both are read-only; audit labels are review signals, not lifecycle states or diagnoses. Dates in current machine state, schedules, queues, event records, and protocol identifiers are legitimate and require no rewrite.
+The shell is the fallback when MCP tools are unavailable. Common operations:
 
-Question prefixes make the directories active search boundaries:
-`kt where is vivado` walks `where/is/` and returns the exact leaf if present.
-Otherwise, it walks matching directory words until the first mismatch and ranks
-the remaining keywords only among that branch's descendants. Weak matches cause
-it to climb one parent and search wider. `kt how to _` lists a procedure branch.
-Use `does/` and `is/` for direct yes/no questions, such as
-`kt does kt prove verify an entire leaf` or `kt is a knowledge tree a source of authorization`.
-Those answers start with yes/no and give qualifications where needed.
-Use `where/is/` for locations, `how/to/` for procedures, `when/to/` for triggers,
-`what/is/` for definitions/state, and `why/does/` or `why/is/` for rationale.
-`kt find` remains the deliberately broad search interface.
-Keyword lookups exit `1` for empty or weak-only results, even when suggestions are
-shown; `0` means a candidate passed the heuristic, not that its answer was verified.
-The default threshold is 60% coverage of non-grammatical query keywords; tune it
-with `--min-coverage`. Exact-path reads and explicit branch listing remain distinct.
-
-Establish a missing current answer in one call:
-
-```sh
-kt add "how to prepare the demo" "Run the project's documented demo command."
+```bash
+kt how to make a plan
+kt how to _
+kt find 'rewrite knowledge leaf'
+kt --lean open global:how/to/rewrite/a/knowledge/leaf.md
+kt grep 'superseded wording'
+kt dict local global
+kt prove --local --no-stamp
+kt status --local
+kt audit --local
 ```
 
-The full question becomes `how/to/prepare/the/demo.md`.
-Add defaults to the session directory’s project tree, otherwise global; select `--global`,
-`--project`, or `--root example` explicitly. Use the answer body for source evidence,
-`--dry-run` to preview, or `-` as the answer to read multiline Markdown from stdin.
-Existing leaves are protected: read their owner and carry its hash into rewrite,
-recomputing the answer from current evidence.
-New leaves receive `revised_at` and `status: green` (plus `checked_at` when `--expires-every` is given), not an invented
-proof. Add neither executes nor manufactures proofs. Independently
-review the whole answer and check eligible proofs before relying on it.
-For unresolved answers, add `--unresolved --blocker "missing evidence" --next-check
-"specific next investigation"`. The blocker remains in the answer until it is
-resolved; a green proof result does not resolve an unanswered question.
+Whole reads and exact question hits print the complete leaf on stdout and its
+`Revision: HASH` on stderr. `--lean` hides metadata; `--pretty` expands search
+presentation. Ranked excerpts are selectors only. Search is lexical, and empty
+or weak-only results exit 1. Proof runs always print leaf/proof summaries; exit 0
+means no selected leaf is brown, even if yellow leaves remain. Explicit proof
+roots must be approved knowledge-tree directories, not their containing projects.
 
-The agent default is **new question → `kt` first**, unless adequately checked
-knowledge is already loaded. If `kt` does not find the information, the agent must
-determine whether a leaf exists using alternate terms and scoped semantic inspection.
-Existing leaves are read or rewritten; absent leaves must be added after investigation,
-or recorded as unresolved when blocked. Bring an established answer into the tree before the
-next unrelated tool call or completion—not in a later documentation pass.
+Create an absent owner or rewrite an existing one with its read revision:
 
-### Startup hooks
+```bash
+kt add 'how to prepare the demo' 'Run the documented demo command.' --local
+kt rewrite local:how/to/prepare/the/demo.md HASH 'Complete current answer body' --print-revision
+kt renew local:how/to/prepare/the/demo.md HASH
+```
 
-The installer runs `kt --lean info --no-prove` at session start, resume, clear, and compaction and injects its
-proof-free output: the procedure, accessible ancestor orientations from `~` downward,
-and dictionary. It then instructs the agent to run `kt_prove` for the exact local root
-(`kt prove --local` as the shell fallback), or the global root when no exact local tree
-exists. Startup hooks never execute project proof commands. Claude Code drops hook context past roughly 10,000
-characters, so above 9,500 bytes its hook sends an instruction to call the `kt_info` tool (or run
-`kt info` if there are no kt tools) instead; `KT_HOOK_CONTEXT_LIMIT` tunes the threshold.
+Use the committed revision returned by rewrite for renewal or another rewrite.
+A stale rewrite exits 4 without writing. Omitted lifecycle options preserve
+metadata; `--expires-at`, `--expires-every`, `--no-expiry`, `--verifiable`, and
+`--no-verifiable` change it explicitly. Rewrite preserves hardlinks and does not
+execute proofs or clear sticky falsification. Add refuses an existing owner and
+neither manufactures nor runs proofs. Use `-` for a multiline answer on stdin;
+blocked answers can use `--unresolved`, `--blocker`, and `--next-check`.
 
-Claude Code and Codex use `SessionStart`; Copilot CLI uses `sessionStart`; OpenCode uses a local
-plugin to supply the same startup context.
+Remove/move require `--expect HASH`. Combine joins ordered answer bodies and
+removes sources after saving; an existing destination also requires its revision.
+Cleanup across multiple files is not transactional, so inspect partial completion
+before retrying. Review scope, links, orientation, plan, and proofs after changes.
 
-At turn end, a maintenance hook (Claude Code and Codex `Stop`, Copilot CLI `agentStop`,
-OpenCode `session.idle`) asks the agent for one maintenance pass: invoke the
-`knowledgetrees-maintenance` skill, bring affected trees to the current frontier, inspect `kt_audit`
-signals, establish missing answers (including user guidance), and remove superseded knowledge, or say in one line
-that nothing changed. It fires at most once per five minutes per session
-(`KT_HOOK_MAINTENANCE_INTERVAL`), and not after a turn that already wrote the tree after its last
-code edit. The pass costs one extra model turn, never repeats itself, and any hook error lets the
-agent stop. There are no failure heuristics. Unrelated hooks are preserved. Review new definitions with `/hooks` (Codex
-skips untrusted ones), fully restart OpenCode and start a new Copilot CLI session, and note
-that hooks apply to later activity only. Update in place with `./install --hooks-only --force` (`--dry-run` previews;
-`--no-hooks` and `--no-mcp` skip parts). The handler needs only Python 3; see
-[the hook procedure](example/how/to/use/knowledgetree/hooks.md) for contracts and limits. This
-targets local Copilot CLI, not its cloud jobs or VS Code.
+Successful CLI mutations are normally silent; check their exit status.
+`--print-revision`, dry-run previews, reads, searches, proof summaries, policy
+inspection, and required consent prompts deliberately return output. MCP rewrite
+returns its diff and committed revision. See the complete
+[CLI reference](example/how/to/use/kt.md).
 
-### Why did skills appear after installation?
+## Repository layout and checks
 
-After installation, Codex and other harnesses may appear to contain a
-`knowledgetrees` skill. Startup hooks deliver the procedure; the installer retains
-a skill-shaped entry as compatibility plumbing and an explicit fallback, not as
-another knowledge store. After installing the canonical procedure at
-`~/.knowledge/how/to/use/knowledgetrees.md`, the installer creates
-`~/.agents/skills/knowledgetrees/SKILL.md` and
-`~/.claude/skills/knowledgetrees/SKILL.md` as hard links to that same file. Codex
-discovers the shared `.agents` catalog, so a second `.codex` copy would appear as a
-duplicate. The installer retires those old Codex copies and their explicit config
-entries. The remaining paths share one inode: there is no wrapper or second body to drift.
+| Path | Role |
+| --- | --- |
+| [`tools/kt`](tools/kt) | Root/access, retrieval, complete-answer mutation, lifecycle, audit, and proof semantics |
+| [`tools/kt-mcp`](tools/kt-mcp) | Typed stdio MCP adapter over the CLI |
+| [`tools/kt-hooks`](tools/kt-hooks), [`tools/kt-opencode.mjs`](tools/kt-opencode.mjs) | Harness startup and maintenance adapters |
+| [`install`](install) | Knowledge-first deployment and configuration merge |
+| [`example/`](example/) | Public reusable methodology and illustrative planning/specification leaves |
+| `.knowledge/` | Operational project requirements, remaining plan, and repository procedures |
+| [`tests/`](tests/) | Isolated regression suites |
 
-The installer also exposes four focused skills through the shared and Claude directories:
-`knowledgetrees-lookup`, `knowledgetrees-reconcile`, `knowledgetrees-maintenance`,
-and `knowledgetrees-ingestion`. Each `SKILL.md` hardlinks to its corresponding
-canonical procedure leaf in the global KT. Their descriptions advertise when to
-use them, while the bootstrap keeps its kt-first and miss-resolution rule inline
-and remains once per fresh session. Detailed knowledge is still stored and
-maintained in the tree.
+The operational tree and public example have distinct scopes. Repository state
+belongs in `.knowledge/`; reusable distributable guidance belongs in `example/`.
+The public [`example/where/am/i.md`](example/where/am/i.md) is deliberately empty
+for adopters and is not this project's orientation.
 
-Quit and restart Claude Code, OpenCode, Codex, and Copilot CLI after installation or an upgrade so their
-startup-loaded skill catalogs refresh; an already-running conversation may retain
-older descriptions or procedure content.
+Run all regression suites from the checkout:
 
-## A minimal adoption path
+```bash
+for suite in tests/test-*.py; do
+    python3 -B "$suite" || exit
+done
+node tests/test-opencode-hooks.mjs
+```
 
-1. Run `kt init [ORIENTATION]` to create `.knowledge/where/am/i.md` and the
-   canonical `how/`, `what/`, `where/`, `why/`, `does/`, and `is/` branches.
-2. For repositories, use `kt init --project [ORIENTATION]` so the initial tree
-   also contains spine leaves for the spec and the plan, whose frontier lists only the
-   steps still to do.
-3. Teach agents to inventory affected owners, repair stale or contradictory answers,
-   and rerun negative searches for superseded claims across guidance and installed copies.
-4. Project frequently needed answers into paths that read as natural-language
-   questions.
-5. Add proofs only where a concrete fact is cheap and safe to check.
-6. Garden ambiguous branches, duplication, and fragmentation when
-   actual use exposes friction.
+The suites cover retrieval, access and privacy, grants and bypass, rewrite and
+other leaf mutations, metadata and lifecycle, proof evaluation, structural audit,
+MCP schemas/results/elicitation, hooks, and isolated-home installation. Installer
+checks cover preservation, idempotence, conflict refusal, hardlink identity, and
+configuration merges. Use `kt_prove` for approved local/example roots and inspect
+audit signals as part of semantic review. Code and its owning project knowledge
+change together; green tests alone do not establish a current tree.
 
 ## Common questions
 
-### Is this just RAG with folders?
+**Is this RAG with folders?** The primary artifact is the maintained answer, with
+the question path participating in retrieval. It does not require a vector
+database, graph store, or persistent index. Large-scale retrieval effectiveness
+still needs testing.
 
-No. RAG usually treats documents as the primary corpus and retrieves chunks from
-them. A knowledgetree makes the maintained semantic answer the primary artifact,
-with the path participating in retrieval. Search remains a fallback.
+**Must all ordinary documentation disappear?** External governing documents,
+evidence, published manuals, and human deliverables can remain. The tree owns the
+maintained internal answers; presentations can be generated from them.
 
-### Does every fact need its own file?
-
-No. The design favors useful semantic boundaries, not maximum file count. Closely
-related material can stay together, and orientation, spec, and plan leaves are
-deliberate aggregation points.
-
-### Does this mean deleting all normal documentation?
-
-No. External governing documents, published manuals, and human deliverables may
-remain important. The internal agent-facing source of reusable knowledge should be
-structured as knowledge first. Human presentations can be generated or frozen when
-needed.
-
-### Does a knowledgetree replace task management?
-
-No. It provides knowledge continuity. Work still needs bounded objectives,
-authority, ownership, acceptance criteria, and runtime lifecycle.
-
-### What happens when a proof fails?
-
-Treat it as a priority-one brown incident. First, immediately tell the user which leaf failed—even
-when this is the startup check and the user supplied no work. Stop all unrelated work. Determine
-whether the fact is stale, the predicate is broken, or the check could not run; then choose the
-safest remediation, normally correcting the leaf or proof, and re-check it. If the cause or safe
-repair cannot be established, ask the user for guidance. Resume other work only after brown clears
-or the user explicitly permits ignoring that specific status. A failed implementation check does
-not automatically rewrite a requirement.
+**Does it replace task management?** It provides knowledge continuity. Work still
+needs objectives, ownership, authority, acceptance criteria, and a runtime
+lifecycle. The plan represents the remaining frontier, not a task history.
 
 ## Methodology provenance
 
-The visible `example/` tree is adapted from a working global knowledgetree. Host paths,
-personal facts, private state, and local experiment history have deliberately been
-excluded. The planning, specification, update, and clarification leaves distill
-generally useful ideas from the MIT-licensed
-[Superpowers](https://github.com/obra/superpowers) 6.3.0 methodology; they are not
-copies of its skill-era process or mandatory approval gates.
-
-## Installer guarantees
-
-The installer is covered by an isolated-home integration test. It verifies that:
-
-- reusable knowledge is installed without importing the example's illustrative
-  spec or plan leaves;
-- an existing orientation, unrelated `AGENTS.md` content, and Codex configuration
-  are preserved while the legacy managed block is removed;
-- repeated installation is idempotent;
-- differing knowledge is rejected before overwrite unless `--force` is explicit;
-- built-in verification through `kt prove` runs successfully;
-- each compatibility `SKILL.md` path (`.agents`, `.claude`) has the same
-  device and inode as the canonical installed procedure;
-- Claude Code and Codex hook settings are merged without disturbing unrelated keys,
-  hooks, or file mode, and malformed configuration is refused before any write; and
-- the MCP server is deployed and registered with each harness while existing
-  entries and other servers are preserved.
-
-Run the checks with:
-
-```bash
-python3 -B tests/test-install.py   # installer
-python3 -B tests/test-hooks.py     # shared hook handler
-python3 -B tests/test-mcp.py       # MCP server
-python3 -B tests/test-grep-status.py # kt grep, kt status, access-grant function
-python3 -B tests/test-grants.py      # grant sources, revocation, stale-approval pruning
-node tests/test-opencode-hooks.mjs # OpenCode plugin
-```
-
-## The proposal in one sentence
-
-Make the filesystem remember what agents learn.
-
-A knowledgetree is a distributed, stateful knowledge environment in which
-paths encode meaning, agents discover current answers on demand, procedures and
-policy compose with project state, mechanically checkable facts can revalidate
-themselves, and every useful piece of work has the opportunity to make the next
-piece of work easier.
-
-**The tree remembers what is true, not what happened.**
-
-Knowledge trees cover **every scale**, from code-comment-level implementation facts
-to broad architecture and complete specifications. What a function does and why,
-what a file contains, where a typedef lives, include order, dependencies, invariants,
-and repository folder structure all belong in the owning tree. No useful answer is
-too fine-grained. Leaves hold the answer itself with checked source evidence, so
-agents can retrieve small implementation facts as directly as large design answers.
-
-
-### Root privacy and cross-project sharing
-
-For lookup and mutation, `kt` discovers the exact local tree, the user-global tree,
-and explicitly registered roots; it does not implicitly add parent trees to those
-operations. `kt info` alone inspects the directory chain from `~` down to the working
-directory and presents each ancestor orientation whose tree is accessible from that
-working directory. Output labels are `local`, `global`,
-or full canonical root directory paths, avoiding collisions between folder names.
-`project:` and registered names remain input aliases; new answers default to the
-canonical local identity. Use --local (--project is an alias), --global, or --root
-PATH to select add destinations.
-
-`kt grants` shows why each root is readable, and `kt access ROOT revoke` gives access back.
-
-Wider roots default to ask. Ordinary ask/deny policies withhold leaf content;
-force-private also hides the root identity entirely outside exact local scope.
-The registry lives at ~/.knowledge/.tools/roots.json and installer upgrades preserve it.
-
-```sh
-kt register shared /path/to/shared/.knowledge
-kt access global allow --scope all
-kt access shared allow --scope project
-```
-
-Access changes use an interactive [y/N] prompt: y or yes approves; Enter declines.
-Project grants cover the exact cwd; --subdirectories explicitly includes descendants.
---scope session requires a shared session ID. Reset/revoke at the chosen scope.
-
-To persistently bypass ordinary ask/deny restrictions, enable once in your terminal:
-
-```sh
-kt --dangerously-skip-permissions
-kt permissions          # inspect
-kt permissions --reset  # disable; preserve existing policies and grants
-```
-
-Force-private overrides bypass and grants:
-
-```sh
-kt access /path/to/private/.knowledge force-private
-```
-
-Such a root is omitted from generated root identities, leaf paths, snippets, and
-rankings, and cannot be read or mutated unless it is the exact local tree.
-Starting in a subdirectory does not expose its ancestor tree. Registered protected
-subtrees cannot leak through search, symlinks, maintenance, or proof checks.
-The shared startup loader suppresses force-private global procedure injection outside
-local scope. Remove/replace the
-exception with kt access ROOT reset --scope all or a different root-wide policy.
-Bypass neither discovers new roots nor grants broader host/harness permissions.
-Malformed configuration fails closed even when bypass is enabled.
-
-### Active leaf maintenance
-
-Read a revision with `kt open ROOT:PATH`. It prints the leaf and its revision hash.
-Use that hash for removal or movement:
-
-```sh
-kt rm local:what/is/old.md --expect HASH --dry-run
-kt mv local:what/is/old.md local:what/is/new.md --expect HASH
-kt combine local:what/is/first.md local:what/is/second.md -o local:what/is/cohesive.md
-```
-
-Combine coalesces in input order and removes sources after saving successfully.
-An existing destination requires --expect HASH; if it is an input, it is retained.
-Dry-run changes nothing. Source answer bodies, including unresolved blockers and
-next checks, survive. A brown source keeps the combined leaf brown; manual check
-time is reset for review while timeless proof markers remain unchanged. Sources changed
-during coalescing are retained. Multi-file cleanup is not transactional, so inspect
-partially completed cleanup before retrying. Moves refuse overwrites and preserve
-same-filesystem hardlinks; cross-filesystem moves copy before removing the source.
-Review scope, links, orientation, spine leaves, and relevant proofs after maintenance.
-
-Lookup reuses root policies and lazily loaded text within each invocation; it does
-not create a persistent index/cache or index private roots. This removes repeated
-policy/discovery work on misses while keeping new invocations fresh.
-
-## Success output policy
-
-Under normal operation, silence = success and success = silence, following kt
-prove. Successful create/rewrite/check/remove/move/combine/register operations and
-identical no-ops emit no stdout or stderr; check exit 0. Access/permissions changes
-retain required consent prompts and disclosures, without post-save receipts.
-Reads, searches, help, policy inspection, dry-run previews and explicitly verbose
-proof checks return the requested information. Failures retain diagnostics and
-nonzero exit statuses; silence alone is not sufficient without checking status.
-Every non-empty stdout or stderr stream ends with a newline.
-Accuracy/preservation reminders belong in the one-shot review hook.
-
-### Rewriting an existing answer
-
-Every full leaf read (`kt open` or an exact question) automatically prints its
-SHA-256 hash as `Revision: HASH` on stderr. Stdout contains the complete leaf and
-adds a presentation-only trailing newline when the stored bytes lack one. The
-revision still hashes the stored bytes, so the read brings both contents and
-revision into context without an extra call.
-
-Rewrite using that required positional hash:
-
-```sh
-kt rewrite local:how/to/build.md HASH 'Complete revised answer body' --expires-every '2 weeks'
-```
-
-`--print-revision` prints the committed `Revision: HASH` on stdout, including no-ops;
-dry runs never return a committed revision. There is no rewrite --expect option. If the leaf changed since the read, rewrite
-exits 4 without writing; reread and merge. A matching hash confirms unchanged
-contents, rather than measuring read recency. Keep the original in context and
-preserve still-valid knowledge. Supply only the answer body; kt retains the
-existing optional metadata and status unless a flag changes it, and advances the
-revision time. Contents may include literal newlines. Put evidence
-in the answer; --dry-run previews the diff. Quote shell arguments correctly;
-operating-system argument size limits apply.
-
-By default, shell rewrites and identical no-ops produce no stdout or stderr; exit 0
-signals success. Neither body is echoed. Dry-run still shows the diff and failures
-report diagnostics.
-Agent guidance carries the accuracy and preservation requirement; the turn-end
-maintenance hook only reminds agents of it. Mandatory proof checks remain intact.
-
-After manually reviewing the complete answer from a full read, record that review
-with `kt renew ADDRESS HASH` (tool `kt_renew`). This sets `checked_at`, clears any brown, then
-re-runs that leaf's own proofs and leaves it green, or brown if one fails. Proof runs never
-advance manual check time or raise a status.
-
-Empty orientation leaves remain empty.
-
-Rewrite preserves hardlinks, keeps the leaf's status and check time, and leaves
-timeless `Proof:` markers unchanged. It does not execute proofs or clear sticky falsification.
-Git is optional history, not a requirement. See
-`how/to/rewrite/a/knowledge/leaf.md` for the canonical procedure.
+The public corpus is adapted from a working global knowledgetree, excluding host
+paths, personal facts, private state, and local experiment history. Planning,
+specification, update, and clarification guidance distills useful ideas from the
+MIT-licensed [Superpowers](https://github.com/obra/superpowers) 6.3.0 methodology.
+It does not impose its skill-era process or mandatory approval gates.
