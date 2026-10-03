@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-10-01T07:50:31+10:00"
+revised_at: "2026-10-04T03:35:26+11:00"
 ---
 
 Run `python3 -B tests/test-proofs.py`. It checks that every executable predicate
@@ -21,7 +21,7 @@ deadline making the test stale.
 The test also covers the `verifiable: true` exception: complete passing proofs
 clear sticky falsification and write green while leaving the answer bytes
 unchanged; a zero-proof declaration, invalid Boolean value, skipped proof, or
-failing proof becomes brown.
+failing proof becomes brown. A proof that outlives `--timeout` (30 s per proof by default) leaves its leaf yellow and the summary `INCOMPLETE`, while a genuine failure beside it still makes the leaf brown; `tests/test-proofs.py` covers both.
 
 Run `python3 -B tests/test-metadata.py` for the flat schema, manual
 whole-leaf `checked_at` timestamp, rejected unsupported fields and date-only
