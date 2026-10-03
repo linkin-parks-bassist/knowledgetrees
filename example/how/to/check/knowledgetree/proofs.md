@@ -47,9 +47,14 @@ Normal evaluation writes `status: green|yellow|brown` in front matter. `kt_renew
 (`kt renew`) records `checked_at` after manual review and re-runs the leaf's own proofs; `revised_at` records the last content edit. Evaluation only lowers a status; a `verifiable: true` leaf whose proofs all pass is the one automatic way up.
 The verifier runs only scripts explicitly introduced by
 `Proof:`, checks that tree payload files are Markdown leaves, and treats discovery,
-structure, timeout, or proof failures as failure. A semantic filter matching no
+structure, or proof failures as failure. A semantic filter matching no
 leaves succeeds as an empty check. Proofs run from the directory containing
-`.knowledge`, with a ten-second default timeout per proof.
+`.knowledge`, with a 30-second default timeout for each individual proof (`--timeout`).
+A proof that outlives it has neither passed nor failed: its leaf becomes yellow
+(unverified) rather than brown, unless another of its proofs fails, and the summary
+counts it as timed out and reports `INCOMPLETE`. Split a slow proof into several
+smaller ones rather than raising the limit, so that a hanging proof stays
+distinguishable from a long one.
 
 Write the exact timeless marker `Proof:`. It stores neither an outcome nor a
 timestamp and is never rewritten after migration. For compatibility, a writing

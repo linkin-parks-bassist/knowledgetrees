@@ -1758,6 +1758,8 @@ def clipped(value):
 
 
 def run_proof(command, script, directory, timeout):
+    """(passed, detail, stdout, stderr, timed_out). A proof that outlives its timeout has
+    neither passed nor failed: it leaves its leaf unverified rather than falsified."""
     argv = [command, "-c", script]
     if command == "bash":
         argv = ["bash", "-euo", "pipefail", "-c", script]
@@ -1774,10 +1776,10 @@ def run_proof(command, script, directory, timeout):
             check=False,
         )
     except subprocess.TimeoutExpired as error:
-        return False, f"timed out after {timeout:g}s", error.stdout or "", error.stderr or ""
+        return False, f"timed out after {timeout:g}s", error.stdout or "", error.stderr or "", True
     except OSError as error:
-        return False, f"could not execute proof: {error}", "", ""
-    return result.returncode == 0, f"exit {result.returncode}", result.stdout, result.stderr
+        return False, f"could not execute proof: {error}", "", "", False
+    return result.returncode == 0, f"exit {result.returncode}", result.stdout, result.stderr, False
 
 
 def positive_timeout(value):
@@ -1854,8 +1856,9 @@ def proof_parser_for_cli():
     parser.add_argument(
         "--timeout",
         type=positive_timeout,
-        default=10.0,
-        help="maximum seconds for each proof (default: 10)",
+        default=30.0,
+        help="maximum seconds for each individual proof; one that runs longer leaves its leaf "
+             "yellow (unverified), not brown (default: 30)",
     )
     parser.add_argument(
         "--no-stamp",
@@ -1871,7 +1874,7 @@ def proof_parser_for_cli():
 
 
 def print_proof_summary(states, proof_stats):
-    proof_count, proof_passed, proof_failed = proof_stats
+    proof_count, proof_passed, proof_failed, proof_timed_out = proof_stats
     leaf_count = sum(states.values())
     total_width = max(len(str(leaf_count)), len(str(proof_count)))
     pass_width = max(len(str(states["green"])), len(str(proof_passed)))
@@ -1885,7 +1888,8 @@ def print_proof_summary(states, proof_stats):
         f"Proofs: {proof_count:>{total_width}} total · "
         f"{proof_passed:>{pass_width}} valid · "
         f"{proof_failed:>{third_width}} failed · "
-        f"{'FAIL' if states['brown'] or proof_failed else 'SUCCESS'}"
+        + (f"{proof_timed_out} timed out · " if proof_timed_out else "")
+        + f"{'FAIL' if states['brown'] or proof_failed else 'INCOMPLETE' if proof_timed_out else 'SUCCESS'}"
     )
 
 
@@ -1927,6 +1931,7 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
     proof_count = 0
     proof_passed = 0
     proof_failed = 0
+    proof_timed_out = 0
     for relative in selected_other:
         failed += 1
         failed_paths.add(relative)
@@ -1950,6 +1955,7 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
         if verifiable and not proofs:
             errors.append((1, "verifiable leaf requires at least one proof"))
         results = []
+        leaf_unverified = False
         stamp_failed = False
         leaf_falsified = bool(errors)
         state, lifecycle_error = lifecycle_state(original, now)
@@ -1967,8 +1973,14 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
                 print(f"  ERROR line={line} {message}")
         for marker, line, command, script in proofs:
             proof_count += 1
-            passed, detail, stdout, stderr = run_proof(
+            passed, detail, stdout, stderr, timed_out = run_proof(
                 command, script, proof_directory, args.timeout)
+            if timed_out:
+                proof_timed_out += 1
+                leaf_unverified = True
+                if args.verbose:
+                    print(f"  TIMEOUT line={line} language={command} {detail}; leaf left unverified")
+                continue
             results.append((marker, passed))
             if passed:
                 proof_passed += 1
@@ -1997,6 +2009,8 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
             state = "green"
         elif leaf_falsified or any(not passed for _, passed in results) or state == "brown":
             state = "brown"
+        elif leaf_unverified:
+            state = worse(state, "yellow")
         elif not raise_ok:
             state = worse(state, metadata.get("status", "green"))
         if not args.no_stamp:
@@ -2021,7 +2035,7 @@ def verify_proofs(arguments=None, emit=True, only=None, raise_ok=False):
             f"failures={failed}")
     addressed = [(state, f"{root_identity(root)}:{relative}")
                  for state, relative in non_green]
-    proof_stats = (proof_count, proof_passed, proof_failed)
+    proof_stats = (proof_count, proof_passed, proof_failed, proof_timed_out)
     if emit:
         print_proof_summary(states, proof_stats)
         for state, address in sorted(addressed, key=lambda item: item[1]):
@@ -2063,7 +2077,7 @@ def prove(arguments):
         if not allowed:
             raise AccessRequired("kt: no accessible proof roots")
         totals = {state: 0 for state in LEAF_STATES}
-        proof_totals = [0, 0, 0]
+        proof_totals = [0, 0, 0, 0]
         non_green = []
         for label, root in allowed:
             if any(child != root and child.is_relative_to(root) and root_access(child, child_label) != "allow"

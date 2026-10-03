@@ -167,3 +167,21 @@ with tempfile.TemporaryDirectory(prefix="leaf-state-test-") as temporary:
     assert "brown local:brown.md" in result.stderr
 
 print("proof marker and lifecycle integration checks passed")
+
+
+# A proof that outlives its per-proof timeout leaves its leaf unverified (yellow), not falsified;
+# a genuine failure beside it still makes the leaf brown.
+with tempfile.TemporaryDirectory(prefix="proof-timeout-test-") as temporary:
+    root = Path(temporary) / ".knowledge"
+    root.mkdir()
+    slow = root / "slow.md"
+    slow.write_text("---\nstatus: green\n---\n\nA slow assertion.\n\nProof:\n\n```bash\nsleep 5\n```\n\n"
+                    "A quick assertion.\n\nProof:\n\n```bash\ntrue\n```\n")
+    result = run(root, "--timeout", "0.5")
+    assert "status: yellow" in slow.read_text(), slow.read_text()
+    assert "1 timed out" in result.stdout and "INCOMPLETE" in result.stdout, result.stdout
+    both = root / "both.md"
+    both.write_text("---\nstatus: green\n---\n\nA slow assertion.\n\nProof:\n\n```bash\nsleep 5\n```\n\n"
+                    "A false assertion.\n\nProof:\n\n```bash\nfalse\n```\n")
+    run(root, "--timeout", "0.5", expected=1)
+    assert "status: brown" in both.read_text()
