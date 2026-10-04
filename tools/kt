@@ -1304,8 +1304,8 @@ def rewrite_growth_guard(snapshot, prior_body, replacement):
         f"kt: The leaf is long ({old_words} -> {new_words} words); rewrite refused "
         f"(reconsideration {count} of {budget}). Remove any stale, irrelevant, or 'log-shaped' "
         "content and make sure the complete answer contains only the frontier of knowledge "
-        "at the time of writing. Preserve still-valid knowledge; move independently useful "
-        "detail to its owning leaf where appropriate. A short answer (at most 500 words) "
+        "at the time of writing. Preserve still-valid knowledge. Consider splitting independently useful "
+        "content into separate leaves at their owning paths; keep cohesive knowledge together. A short answer (at most 500 words) "
         "or an answer shorter than the current body is accepted immediately. Otherwise, "
         "reconsider the whole answer before retrying; growth is accepted after these bounded rejections.")
 

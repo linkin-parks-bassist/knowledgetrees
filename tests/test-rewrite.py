@@ -148,6 +148,8 @@ true
         before = long_leaf.read_bytes()
         bounced = grow(digest, 501, expected=5)
         assert "1 of 1" in bounced.stderr and "at most 500 words" in bounced.stderr
+        assert "Consider splitting independently useful content into separate leaves" in bounced.stderr
+        assert "keep cohesive knowledge together" in bounced.stderr
         assert long_leaf.read_bytes() == before
         grow(digest, 501)
         digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()

@@ -157,7 +157,8 @@ candidates; they are not reads and supply no rewrite hash.
 Growing an answer beyond 500 body words triggers one rejected write asking for
 whole-leaf reconsideration, two when the larger current/proposed body exceeds
 1,000 words, and three above 2,000. Remove stale, irrelevant, or log-shaped content while preserving valid
-knowledge. A short or shorter answer passes immediately; remaining growth can pass
+knowledge. Consider splitting independently useful content into separate leaves;
+keep cohesive knowledge together. A short or shorter answer passes immediately; remaining growth can pass
 after the bounded rejections. Rejections leave the leaf and revision untouched
 (CLI exit 5; MCP tool error). Counters persist across calls outside the tree and
 reset when its committed revision changes. Dry runs, unchanged no-ops, and
