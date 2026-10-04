@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-10-04T23:55:09+11:00"
+revised_at: "2026-10-05T00:09:33+11:00"
 ---
 
 The implementation has one semantic spine: the self-contained standard-library `tools/kt` CLI owns root discovery, access policy, leaf representation, lifecycle, revision locking, structural audit, and proof evaluation. Harness adapters translate their protocols into that spine; they do not reimplement knowledge semantics.
@@ -15,7 +15,7 @@ The implementation has one semantic spine: the self-contained standard-library `
 
 The CLI has one creation route, `kt add`; the archival `capture` alias is absent. `kt rewrite` accepts the complete body plus explicit expiry/verifiability changes. The old body is input to reconsider, not a template to extend.
 
-Growth enforcement lives in `rewrite_growth_guard`, called under the existing leaf lock after revision/input validation and before an actual body write. It applies two rejections above 1,000 words and three above 2,000, accepts short or shorter replacements immediately, and allows remaining legitimate growth after bounded reconsideration. Its private SQLite counters live outside knowledge payloads and are keyed by device/inode plus committed revision; hardlinks share counts. Dry runs and metadata-only/no-op writes do not consume attempts. Audit remains independently read-only; a bounce is neither a lifecycle downgrade nor a diagnosis of poisoning.
+Growth enforcement lives in `rewrite_growth_guard`, called under the existing leaf lock after revision/input validation and before an actual body write. It applies one rejection above 500 words, two above 1,000 and three above 2,000, accepts short or shorter replacements immediately, and allows remaining legitimate growth after bounded reconsideration. Its private SQLite counters live outside knowledge payloads and are keyed by device/inode plus committed revision; hardlinks share counts. Dry runs and metadata-only/no-op writes do not consume attempts. Audit remains independently read-only; a bounce is neither a lifecycle downgrade nor a diagnosis of poisoning.
 
 ## MCP adapter
 

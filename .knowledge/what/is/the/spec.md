@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-10-04T23:55:10+11:00"
+revised_at: "2026-10-05T00:09:33+11:00"
 ---
 
 The repository ships a public, self-contained knowledge-tree system: `tools/kt`, `tools/kt-mcp`, harness hooks/adapters, an installer, regression tests, a private operational `.knowledge/` tree, and a distributable `example/` tree. The example orientation stays empty for adopters. Public content contains no private host, customer, or owner-identifying material.
@@ -11,7 +11,7 @@ A tree is the frontier of relevant knowledge for its scope: current and only cur
 
 Nonempty leaves use validated flat Markdown front matter. Automated fields are lifecycle status and `revised_at`; optional expiry, `checked_at`, and reviewed `verifiable` metadata follow the documented lifecycle rules. Complete-body rewrites require the SHA-256 revision from a whole read and preserve omitted metadata unless an explicit lifecycle change is requested. Stale revisions fail under the write lock. A successful rewrite returns its committed revision for another rewrite, renewal, or undo without a redundant read.
 
-Growing an answer beyond 1,000 words triggers bounded reconsideration: two rejected writes, or three when the larger of the current and proposed bodies exceeds 2,000 words. During a bounce cycle, a changed answer that is still long and not shorter than the committed body uses the remaining rejections; after the budget is exhausted it can be accepted. An answer of at most 1,000 words or shorter than the committed body passes immediately. Counts use whitespace-separated answer-body words, excluding generated metadata. A rejection leaves the leaf and revision unchanged and asks you to remove stale, irrelevant, or log-shaped content while preserving still-valid knowledge. Reconsider the whole answer before retrying; identical retries cannot demonstrate review. Length is a pressure signal, not a diagnosis or a reason to delete useful knowledge.
+Growth beyond 500 words requires one rejection, beyond 1,000 two, and beyond 2,000 three; severity uses the larger current/proposed body. During a bounce cycle, a changed answer that is still long and not shorter than the committed body uses the remaining rejections; after the budget is exhausted it can be accepted. An answer of at most 500 words or shorter than the committed body passes immediately. Counts use whitespace-separated answer-body words, excluding generated metadata. A rejection leaves the leaf and revision unchanged and asks you to remove stale, irrelevant, or log-shaped content while preserving still-valid knowledge. Reconsider the whole answer before retrying; identical retries cannot demonstrate review. Length is a pressure signal, not a diagnosis or a reason to delete useful knowledge.
 
 The CLI exits 5 for a length bounce; MCP returns a tool error and records no undo entry. Counts persist across calls and process restarts in `rewrite-bounces.sqlite3` under `$XDG_STATE_HOME/knowledgetrees` (default `~/.local/state/knowledgetrees`), outside tree payloads; `KT_REWRITE_STATE_DIR` overrides its directory. Counts are keyed by device/inode and committed revision, so hardlinks share a cycle and changed revisions start fresh. Accepted body rewrites clear their cycle. Dry runs, stale or invalid requests, unchanged no-ops, and metadata-only changes consume no bounces.
 

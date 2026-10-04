@@ -141,6 +141,18 @@ true
         def grow(token, count, expected=0, address="project:long.md", **options):
             return run("rewrite", address, token, words(count), expected=expected, **options)
 
+        # The 500-word boundary is independent of the 1,000-word audit threshold.
+        digest = seed(499)
+        grow(digest, 500)
+        digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()
+        before = long_leaf.read_bytes()
+        bounced = grow(digest, 501, expected=5)
+        assert "1 of 1" in bounced.stderr and "at most 500 words" in bounced.stderr
+        assert long_leaf.read_bytes() == before
+        grow(digest, 501)
+        digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()
+        grow(digest, 502, expected=5)
+        grow(digest, 500)
         digest = seed(1000)
         before = long_leaf.read_bytes()
         for _ in range(2):

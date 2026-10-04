@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-10-04T23:55:10+11:00"
+revised_at: "2026-10-05T00:09:35+11:00"
 name: "knowledgetrees-maintenance"
 description: "Use for proof checks, root setup, stale knowledge, and task completion; bring affected trees to the current frontier and keep the plan to remaining steps."
 ---
@@ -167,7 +167,7 @@ from manual `checked_at`. Elapsed expiry makes them yellow until independently r
 Agents should add expiry metadata when a factual answer is liable to change. Do not
 add expiry merely because content cannot be mechanically or independently verified.
 
-Growing an answer beyond 1,000 words triggers bounded reconsideration: two rejected writes, or three when the larger of the current and proposed bodies exceeds 2,000 words. During a bounce cycle, a changed answer that is still long and not shorter than the committed body uses the remaining rejections; after the budget is exhausted it can be accepted. An answer of at most 1,000 words or shorter than the committed body passes immediately. Counts use whitespace-separated answer-body words, excluding generated metadata. A rejection leaves the leaf and revision unchanged and asks you to remove stale, irrelevant, or log-shaped content while preserving still-valid knowledge. Reconsider the whole answer before retrying; identical retries cannot demonstrate review. Length is a pressure signal, not a diagnosis or a reason to delete useful knowledge.
+Growth beyond 500 words requires one rejection, beyond 1,000 two, and beyond 2,000 three; severity uses the larger current/proposed body. During a bounce cycle, a changed answer that is still long and not shorter than the committed body uses the remaining rejections; after the budget is exhausted it can be accepted. An answer of at most 500 words or shorter than the committed body passes immediately. Counts use whitespace-separated answer-body words, excluding generated metadata. A rejection leaves the leaf and revision unchanged and asks you to remove stale, irrelevant, or log-shaped content while preserving still-valid knowledge. Reconsider the whole answer before retrying; identical retries cannot demonstrate review. Length is a pressure signal, not a diagnosis or a reason to delete useful knowledge.
 
 Dry runs and metadata-only or unchanged writes do not consume bounce attempts. See `how/to/rewrite/a/knowledge/leaf.md` for counter persistence and CLI/MCP error semantics.
 

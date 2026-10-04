@@ -96,7 +96,7 @@ TOOLS = [
          {"address": ADDRESS}, ["address"], read_only=True),
     tool("kt_rewrite", "Rewrite a leaf",
          "Recompute the complete current answer; remove stale/log-shaped content, preserve valid knowledge. Git owns history. "
-         "Use a whole-read or committed Revision hash. Growth beyond 1,000 words bounces twice (three above 2,000); "
+         "Use a whole-read or committed Revision hash. Growth beyond 500 words bounces once (two above 1,000, three above 2,000); "
          "reconsider before retrying. Short or shorter answers pass immediately. Omitted lifecycle options persist. "
          "Returns diff and committed revision; dry runs consume no bounces.",
          {"address": ADDRESS,

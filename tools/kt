@@ -1275,7 +1275,7 @@ def rewrite_growth_guard(snapshot, prior_body, replacement):
     directory = Path(os.environ.get("KT_REWRITE_STATE_DIR", str(
         Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "knowledgetrees")))
     database = directory / "rewrite-bounces.sqlite3"
-    if not database.exists() and (new_words <= AUDIT_WORD_LIMIT or new_words <= old_words):
+    if not database.exists() and (new_words <= 500 or new_words <= old_words):
         return
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     descriptor = os.open(database, os.O_CREAT | os.O_WRONLY, 0o600)
@@ -1286,12 +1286,13 @@ def rewrite_growth_guard(snapshot, prior_body, replacement):
         connection.execute("CREATE TABLE IF NOT EXISTS bounces (leaf TEXT PRIMARY KEY, revision TEXT, count INTEGER, budget INTEGER)")
         row = connection.execute("SELECT revision, count, budget FROM bounces WHERE leaf = ?", (key,)).fetchone()
         count, budget = (row[1], row[2]) if row and row[0] == snapshot.digest else (0, 0)
-        if new_words <= AUDIT_WORD_LIMIT or new_words < old_words:
+        if new_words <= 500 or new_words < old_words:
             connection.execute("DELETE FROM bounces WHERE leaf = ?", (key,))
             return
         if not count and new_words <= old_words:
             return
-        budget = max(budget, 3 if max(old_words, new_words) > 2000 else 2)
+        severity = max(old_words, new_words)
+        budget = max(budget, 3 if severity > 2000 else 2 if severity > 1000 else 1)
         if count >= budget:
             connection.execute("DELETE FROM bounces WHERE leaf = ?", (key,))
             return
@@ -1304,7 +1305,7 @@ def rewrite_growth_guard(snapshot, prior_body, replacement):
         f"(reconsideration {count} of {budget}). Remove any stale, irrelevant, or 'log-shaped' "
         "content and make sure the complete answer contains only the frontier of knowledge "
         "at the time of writing. Preserve still-valid knowledge; move independently useful "
-        "detail to its owning leaf where appropriate. A short answer (at most 1,000 words) "
+        "detail to its owning leaf where appropriate. A short answer (at most 500 words) "
         "or an answer shorter than the current body is accepted immediately. Otherwise, "
         "reconsider the whole answer before retrying; growth is accepted after these bounded rejections.")
 
@@ -2289,8 +2290,8 @@ def command_parser():
     vocabulary.set_defaults(handler=dictionary)
     vocabulary.add_argument("roots", nargs="*", help="optional root labels or configured root paths; default: all accessible roots")
     replacing = commands.add_parser("rewrite", help="rewrite a leaf body using its read revision",
-        description="Rewrite the complete answer. Growth beyond 1,000 words is refused twice "
-        "(three times above 2,000 words), asking for whole-leaf reconsideration; refusal exits 5 "
+        description="Rewrite the complete answer. Growth beyond 500 words is refused once, "
+        "twice above 1,000 and three times above 2,000 words, asking for whole-leaf reconsideration; refusal exits 5 "
         "without changing the leaf. Short or shorter answers pass immediately. Dry runs do not consume attempts.")
     replacing.set_defaults(handler=rewrite_leaf)
     replacing.add_argument("path", help="existing leaf address")

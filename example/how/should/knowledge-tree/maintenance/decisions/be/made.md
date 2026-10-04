@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-10-04T23:55:38+11:00"
+revised_at: "2026-10-05T00:09:34+11:00"
 ---
 
 Agents are required to use and maintain applicable knowledge trees: orient through
@@ -17,8 +17,8 @@ cohesion, and file count do not supply automatic answers; examples must not beco
 general prohibitions.
 
 Length also cannot diagnose stale knowledge or dictate deletion. The explicit
-rewrite guard nevertheless applies bounded friction to growth beyond 1,000 words:
-two rejections, or three above 2,000 words, asking for whole-leaf reconsideration.
+rewrite guard nevertheless applies bounded friction to growth beyond 500 words:
+one rejection, two above 1,000, or three above 2,000 words, asking for whole-leaf reconsideration.
 Short or shorter answers pass immediately; legitimate growth can pass after the
 bounded rejections. Preserve valid knowledge and choose its owning leaf by meaning.
 See `how/to/rewrite/a/knowledge/leaf.md` for the precise counting and retry contract.
