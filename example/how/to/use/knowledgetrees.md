@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T16:05:10+10:00"
+revised_at: "2026-10-04T23:55:10+11:00"
 name: "knowledgetrees"
 description: "Initialize once; use knowledge trees as the sole maintained knowledge source for their scope."
 ---
@@ -26,6 +26,8 @@ The startup hook injects proof-free `kt info --no-prove` output at startup and l
 ## Tools first, shell as fallback
 
 When you have the `kt_*` tools (the knowledgetrees MCP server), use them instead of the `kt` shell command, and never read `.knowledge` files with `cat`, `grep`, or `find`. A leaf is always read whole: there are no partial reads, ranges, paging, or truncation in MCP or kt. Search excerpts select a candidate and are not reads. Whole reads return the answer plus a final `Revision:` SHA-256 line, with no other metadata. `kt_rewrite` advances an existing answer: supply that hash and the complete current answer; stale hashes fail. `kt_add` establishes a missing answer. Use `kt_audit` to surface structurally suspect bodies for judgment. Keep leaves short enough to rewrite whole. Use the shell only when the tools are unavailable.
+
+Growth beyond 1,000 answer-body words bounces twice (three times when the larger current/proposed body exceeds 2,000). Reconsider the complete answer and remove stale, irrelevant, or log-shaped content while preserving valid knowledge. Short or shorter answers pass immediately; remaining growth can pass after the bounded rejections. Rejections preserve the leaf and revision, persist across calls, and do not change lifecycle status. Dry runs, unchanged no-ops, and metadata-only changes consume no attempts. See `how/to/rewrite/a/knowledge/leaf.md` for the precise contract.
 
 No notice means green. A yellow notice means the leaf is unverified: check its claims against current evidence, then call `kt_renew ADDRESS`, your statement that you verified the whole leaf and it is accurate (it requires a whole-leaf read or successful rewrite this session), or repair it with `kt_rewrite`.
 

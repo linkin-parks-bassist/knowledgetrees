@@ -51,7 +51,8 @@ true
         alias = base / "SKILL.md"
         os.link(path, alias)
         inode = path.stat().st_ino
-        env = {**os.environ, "KT_GLOBAL_ROOT": str(base / "global"), "KT_CONFIG": str(base / "registry.json")}
+        env = {**os.environ, "KT_GLOBAL_ROOT": str(base / "global"), "KT_CONFIG": str(base / "registry.json"),
+               "KT_REWRITE_STATE_DIR": str(base / "state")}
 
         def run(*args, expected=0, content=None):
             result = subprocess.run([sys.executable, str(SCRIPT), *args], cwd=base, env=env,
@@ -127,6 +128,76 @@ true
         for invalid in ("", "---\nunclosed"):
             run("rewrite", "project:how/to/test.md", token, invalid, expected=2)
         run("rewrite", "project:missing.md", token, "answer", expected=2)
+        # Growth friction persists across CLI processes, but never changes a rejected leaf.
+        long_leaf = root / "long.md"
+        other_leaf = root / "other.md"
+        def words(count, word="knowledge"):
+            return " ".join([word] * count) + "\n"
+
+        def seed(count):
+            long_leaf.write_text(words(count))
+            return hashlib.sha256(long_leaf.read_bytes()).hexdigest()
+
+        def grow(token, count, expected=0, address="project:long.md", **options):
+            return run("rewrite", address, token, words(count), expected=expected, **options)
+
+        digest = seed(1000)
+        before = long_leaf.read_bytes()
+        for _ in range(2):
+            run("rewrite", "project:long.md", digest, words(1001), "--dry-run")
+        bounced = grow(digest, 1001, expected=5)
+        assert "1 of 2" in bounced.stderr and "frontier of knowledge" in bounced.stderr
+        assert long_leaf.read_bytes() == before
+        # Stale requests and unchanged no-ops do not consume the second rejection.
+        grow("0" * 64, 1002, expected=4)
+        grow(digest, 1000)
+        assert long_leaf.read_bytes() == before
+        # A hardlink alias shares the counter; another leaf does not.
+        os.link(long_leaf, root / "long-alias.md")
+        other_leaf.write_text(words(1000))
+        other_digest = hashlib.sha256(other_leaf.read_bytes()).hexdigest()
+        grow(other_digest, 1001, expected=5, address="project:other.md")
+        bounced = grow(digest, 1002, expected=5, address="project:long-alias.md")
+        assert "2 of 2" in bounced.stderr and long_leaf.read_bytes() == before
+        grow(digest, 1002)
+        assert len(body(long_leaf.read_text()).split()) == 1002
+        digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()
+        assert "1 of 2" in grow(digest, 1003, expected=5).stderr
+        # A shorter body, still long, is accepted immediately and resets the cycle.
+        grow(digest, 1001)
+        digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()
+        assert "1 of 2" in grow(digest, 1002, expected=5).stderr
+        grow(digest, 999)
+        # Changed but equal-length answers pass unless a bounce cycle is active.
+        digest = seed(1500)
+        run("rewrite", "project:long.md", digest, words(1500, "current"))
+        digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()
+        grow(digest, 1501, expected=5)
+        assert "2 of 2" in grow(digest, 1500, expected=5).stderr
+        grow(digest, 1500)
+        # Very long proposals require three rejections; changing committed revision resets.
+        digest = seed(2000)
+        for attempt in range(1, 4):
+            assert f"{attempt} of 3" in grow(digest, 2001, expected=5).stderr
+        grow(digest, 2001)
+        digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()
+        grow(digest, 2002, expected=5)
+        long_leaf.write_text(words(2001, "external"))
+        digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()
+        assert "1 of 3" in grow(digest, 2002, expected=5).stderr
+        # Metadata-only changes bypass the guard and start a fresh revision.
+        run("rewrite", "project:long.md", digest, words(2001, "external"), "--expires-every", "1d")
+        digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()
+        assert "1 of 3" in grow(digest, 2002, expected=5).stderr
+        grow(digest, 1000)
+        # Concurrent callers serialize their counters under the leaf lock.
+        digest = seed(1000)
+        callers = [subprocess.Popen([sys.executable, str(SCRIPT), "rewrite", "project:long.md",
+                                     digest, words(1001)], cwd=base, env=env, text=True,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE) for _ in range(3)]
+        results = [(caller.communicate(), caller.returncode) for caller in callers]
+        assert sorted(code for _, code in results) == [0, 5, 5], results
+        assert len(body(long_leaf.read_text()).split()) == 1001
         # Symlink aliases cannot be used for mutation; denied roots stay denied.
         (root / "alias.md").symlink_to(bare)
         run("rewrite", "project:alias.md", fresh, "body", expected=2)

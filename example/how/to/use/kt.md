@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T16:05:11+10:00"
+revised_at: "2026-10-04T23:55:10+11:00"
 ---
 
 This is the shell reference for `kt`. When you have the `kt_*` tools, use them instead. Whole-leaf MCP reads return the complete answer, an optional non-green notice, and the revision hash required by `kt_rewrite`; no other metadata is shown. Neither MCP nor kt supports partial leaf reads. Ranked excerpts select candidates and are not reads. The shell is the fallback when tools are unavailable.
@@ -84,6 +84,7 @@ Accuracy and preservation remain explicit agent obligations; a turn-end hook onl
   produce no stdout or stderr by default (exit 0), without echoing either body. No-ops are
   also silent by default; `--print-revision` returns their committed hash on stdout. Dry-run shows the diff and failures report diagnostics. Accuracy and
   preservation remain agent obligations.
+  Growth beyond 1,000 body words exits 5 twice (three times when the larger current/proposed body exceeds 2,000). Rejections preserve the answer and hash; reconsider stale/log-shaped content before retrying. A short or shorter answer passes immediately; otherwise the next changed answer may pass after the bounded rejections. Counters persist outside the tree and reset on a committed revision change. Dry runs, unchanged no-ops, and metadata-only changes consume no bounces. See `how/to/rewrite/a/knowledge/leaf.md` for storage and counting details.
 - Renew: `kt renew ADDRESS HASH` (tool `kt_renew`) records `checked_at` for the complete
   answer read at HASH, clears any brown, then re-runs that leaf's own proofs and leaves it green; exit 1 means a proof failed and it is brown. It is the only manual way to raise a status.
 - Help: `kt COMMAND --help` describes options for that command. Options do not

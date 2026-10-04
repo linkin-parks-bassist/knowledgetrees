@@ -95,10 +95,10 @@ TOOLS = [
          "entitles you to kt_renew it.",
          {"address": ADDRESS}, ["address"], read_only=True),
     tool("kt_rewrite", "Rewrite a leaf",
-         "Advance an answer to the current knowledge frontier. Recompute the complete direct answer; the old body is material "
-         "to reconsider, not a template to extend. Never append chronology, research progress, or superseded mechanisms; Git "
-         "owns history. Cite the Revision hash from kt_read, exact kt_lookup, or a successful rewrite. Omitted lifecycle options "
-         "are preserved. Returns the answer diff and committed revision; dry runs preview without writing.",
+         "Recompute the complete current answer; remove stale/log-shaped content, preserve valid knowledge. Git owns history. "
+         "Use a whole-read or committed Revision hash. Growth beyond 1,000 words bounces twice (three above 2,000); "
+         "reconsider before retrying. Short or shorter answers pass immediately. Omitted lifecycle options persist. "
+         "Returns diff and committed revision; dry runs consume no bounces.",
          {"address": ADDRESS,
           "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Revision hash from a whole-leaf read or successful rewrite"},
           "answer": {"type": "string", "description": "Complete current Markdown answer body (no front matter or chronology)"},

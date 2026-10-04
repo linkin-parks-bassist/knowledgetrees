@@ -154,6 +154,16 @@ front matter and timestamps. Only yellow or brown leaves carry a leading notice.
 There are no partial reads, ranges, paging, or truncation. Search excerpts select
 candidates; they are not reads and supply no rewrite hash.
 
+Growing an answer beyond 1,000 body words triggers two rejected writes asking for
+whole-leaf reconsideration, or three when the larger current/proposed body exceeds
+2,000 words. Remove stale, irrelevant, or log-shaped content while preserving valid
+knowledge. A short or shorter answer passes immediately; remaining growth can pass
+after the bounded rejections. Rejections leave the leaf and revision untouched
+(CLI exit 5; MCP tool error). Counters persist across calls outside the tree and
+reset when its committed revision changes. Dry runs, unchanged no-ops, and
+metadata-only changes consume no attempts. Length is a pressure signal, not a
+diagnosis of stale knowledge.
+
 `kt_rewrite` replaces the complete answer using the SHA-256 revision from a whole
 read or successful rewrite. It can also set or clear expiry and verifiability
 metadata. The old answer is material to reconsider, not a template to extend.

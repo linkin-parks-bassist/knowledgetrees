@@ -35,7 +35,7 @@ def main():
         project = root / "project"
         (project / ".knowledge").mkdir(parents=True)
         env = {**os.environ, "KT_GLOBAL_ROOT": str(global_root), "KT_CONFIG": str(root / "config.json"),
-               "KT_MCP_CLI": str(KT)}
+               "KT_MCP_CLI": str(KT), "KT_REWRITE_STATE_DIR": str(root / "rewrite-state")}
         subprocess.run([sys.executable, str(KT), "add", "what is the fixture", "Alpha line.\nBeta line.\nBeta line.\n"],
                        cwd=project, env=env, check=True, capture_output=True)
         address = "local:what/is/the/fixture.md"
@@ -61,6 +61,24 @@ def main():
         assert initialized["result"]["protocolVersion"] == "2025-03-26"
         assert "tools" in initialized["result"]["capabilities"]
         assert rpc("notifications/initialized", notify=True) is None
+        # CLI-owned growth friction surfaces as MCP errors without adding undo history.
+        growth_leaf = project / ".knowledge/growth.md"
+        growth_leaf.write_text(" ".join(["current"] * 1000) + "\n")
+        growth_revision = hashlib.sha256(growth_leaf.read_bytes()).hexdigest()
+        growth_answer = " ".join(["current"] * 1001) + "\n"
+        for attempt in (1, 2):
+            error, text = tool("kt_rewrite", address="local:growth.md", revision=growth_revision,
+                               answer=growth_answer)
+            assert error and f"{attempt} of 2" in text and "log-shaped" in text
+            assert hashlib.sha256(growth_leaf.read_bytes()).hexdigest() == growth_revision
+        error, text = tool("kt_undo", address="local:growth.md")
+        assert error and "nothing to undo" in text
+        error, text = tool("kt_rewrite", address="local:growth.md", revision=growth_revision,
+                           answer=growth_answer)
+        assert not error and "Revision:" in text
+        error, text = tool("kt_undo", address="local:growth.md")
+        assert not error and len(growth_leaf.read_text().split("---\n\n", 1)[1].split()) == 1000
+        growth_leaf.unlink()
         assert rpc("ping")["result"] == {}
         names = {t["name"] for t in rpc("tools/list")["result"]["tools"]}
         assert names == {"kt_info", "kt_lookup", "kt_find", "kt_grep", "kt_read", "kt_rewrite", "kt_undo",

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-27T16:05:11+10:00"
+revised_at: "2026-10-04T23:55:10+11:00"
 name: "knowledgetrees-maintenance"
 description: "Use for proof checks, root setup, stale knowledge, and task completion; bring affected trees to the current frontier and keep the plan to remaining steps."
 ---
@@ -167,6 +167,10 @@ from manual `checked_at`. Elapsed expiry makes them yellow until independently r
 Agents should add expiry metadata when a factual answer is liable to change. Do not
 add expiry merely because content cannot be mechanically or independently verified.
 
+Growing an answer beyond 1,000 words triggers bounded reconsideration: two rejected writes, or three when the larger of the current and proposed bodies exceeds 2,000 words. During a bounce cycle, a changed answer that is still long and not shorter than the committed body uses the remaining rejections; after the budget is exhausted it can be accepted. An answer of at most 1,000 words or shorter than the committed body passes immediately. Counts use whitespace-separated answer-body words, excluding generated metadata. A rejection leaves the leaf and revision unchanged and asks you to remove stale, irrelevant, or log-shaped content while preserving still-valid knowledge. Reconsider the whole answer before retrying; identical retries cannot demonstrate review. Length is a pressure signal, not a diagnosis or a reason to delete useful knowledge.
+
+Dry runs and metadata-only or unchanged writes do not consume bounce attempts. See `how/to/rewrite/a/knowledge/leaf.md` for counter persistence and CLI/MCP error semantics.
+
 Have the original contents in context before editing a leaf. Full reads are always
 complete and return the revision hash; partial reads do not exist. Use `kt_rewrite`
 to advance the owner with that hash, or in the shell use kt rewrite ADDRESS HASH BODY. Supply the complete current answer only; re-derive it from evidence instead of extending the old body. Keep leaves short enough to rewrite whole. Use `--expires-at`, `--expires-every`, or `--verifiable` to set
@@ -185,7 +189,7 @@ Ingest redundant documents section by section under
 after verified answer coverage and authorization. Broad enumeration is a last-resort
 retrieval diagnostic, or a bounded authorized migration audit, not routine orientation.
 
-Before finishing, complete the current-truth consistency gate for affected behavior and guidance. Account for every item in the affected-owner inventory and retain the negative-search terms used to look for superseded claims until those searches return no unexplained hits. Check that the central procedure and focused procedure owners were updated whenever their workflow changed, reusable discoveries reached their owners, relevant predicates passed, every encountered `kt` miss was classified, and absent answers were added or truthfully left unresolved. Also check that scope and provenance are truthful, roots are canonical, payloads are leaves, installed copies match their sources, and a representative sentence-derived route works. A test pass, green proof count, recent timestamp, zero byte drift, or structural audit result cannot by itself establish semantic freshness. Do not turn gardening judgments, atomicity, cohesion, audit signals, or leaf length into automatic rewrite rules.
+Before finishing, complete the current-truth consistency gate for affected behavior and guidance. Account for every item in the affected-owner inventory and retain the negative-search terms used to look for superseded claims until those searches return no unexplained hits. Check that the central procedure and focused procedure owners were updated whenever their workflow changed, reusable discoveries reached their owners, relevant predicates passed, every encountered `kt` miss was classified, and absent answers were added or truthfully left unresolved. Also check that scope and provenance are truthful, roots are canonical, payloads are leaves, installed copies match their sources, and a representative sentence-derived route works. A test pass, green proof count, recent timestamp, zero byte drift, or structural audit result cannot by itself establish semantic freshness. Do not turn gardening judgments, atomicity, cohesion, or audit signals into automatic content rewrites. The explicit bounded growth guard requires reconsideration; it neither rewrites content automatically nor diagnoses stale knowledge.
 
 ## Remove, move, and coalesce leaves
 
