@@ -40,9 +40,11 @@ INSTRUCTIONS = (
     "to extend; Git owns chronology. Cite the Revision hash from a whole-leaf read or successful rewrite; stale hashes fail. "
     "Use kt_audit to surface structurally suspect leaves for human judgment. A miss is not proof of absence. If a root needs approval, call "
     "kt_access_request: it asks through the harness. Release access you no longer need with "
-    "kt_access_revoke. If client elicitation did not complete, ask the user in conversation; after explicit "
-    "authorization for the exact root and scope, finish the pending request with kt_access_confirm. Never "
-    "work around a refusal."
+    "kt_access_revoke. A direct, unambiguous user instruction to see, read, or access a named root, including "
+    "an instruction to grant yourself access, is explicit authorization once kt resolves that root. Unless the "
+    "user requests broader access, use the least sufficient scope (normally project). If client elicitation did "
+    "not complete and authorization is absent or genuinely ambiguous, ask the user; otherwise finish the pending "
+    "request with kt_access_confirm. Never work around a refusal."
 )
 
 
@@ -219,8 +221,10 @@ TOOLS = [
          ["root", "reason"]),
     tool("kt_access_confirm", "Complete authorized root access",
          "Complete a pending access request only after the user explicitly authorizes that exact root and scope in "
-         "conversation. This is the MCP fallback when client elicitation was unavailable, cancelled, declined without "
-         "a visible prompt, or errored. Never call it based on the agent's own decision.",
+         "conversation. A direct, unambiguous instruction to access the resolved root is explicit authorization; "
+         "without a broader request, use the least sufficient scope (normally project). This is the MCP fallback "
+         "when client elicitation was unavailable, cancelled, declined without a visible prompt, or errored. Never "
+         "call it based on the agent's own decision.",
          {"request_id": {"type": "string", "description": "One-time ID returned by kt_access_request"},
           "scope": {"type": "string", "enum": ["session", "project", "project_and_subdirectories", "all"],
                     "description": "The exact scope the user authorized"}},
@@ -857,8 +861,10 @@ def access_choices(namespace, preferred=None):
 
 def access_fallback(root, project, client_result, choices):
     request_id = pending_access("grant", root, project)
-    text = (f"{client_result} No access changed. Ask the user to authorize this exact root and one exact scope "
-            f"({', '.join(choices)}). After they explicitly authorize it in conversation, call kt_access_confirm.\n"
+    text = (f"{client_result} No access changed. If the user already gave a direct, unambiguous instruction to "
+            f"access this resolved root, that is explicit authorization: call kt_access_confirm with the least "
+            f"sufficient scope (normally project) unless they requested broader access. Otherwise ask the user to "
+            f"authorize this exact root and one exact scope ({', '.join(choices)}).\n"
             f"request_id: {request_id}\nRoot awaiting approval: {root}\n"
             "Do not call kt_access_confirm without that user authorization.")
     return text, {"changed": False, "pending": {"request_id": request_id, "root": str(root),

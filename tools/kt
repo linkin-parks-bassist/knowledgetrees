@@ -368,7 +368,9 @@ def resolve_access_root(config, value):
 def apply_access_decision(config, root, label, available, decision, scope, project, subdirectories=False, session=None):
     """Persist an already-confirmed decision. Confirmation belongs to the caller: the
     CLI requires an interactive terminal confirmation, which an agent may answer only
-    when the user explicitly authorized that exact root and scope; the MCP server
+    when the user explicitly authorized that exact root and scope. A direct,
+    unambiguous instruction to access the resolved root authorizes the least
+    sufficient scope unless the user requests broader access. The MCP server
     requires an accepted harness elicitation. Nothing here prompts."""
     if scope == "session":
         with sqlite3.connect(access_database()) as connection:

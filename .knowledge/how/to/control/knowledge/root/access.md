@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-30T11:13:32+10:00"
+revised_at: "2026-09-30T16:05:00+10:00"
 ---
 
 Knowledge-root access is enforced by the CLI semantic spine and inherited by MCP and hooks. Discovery uses only the exact current-directory tree, the global root, and explicitly registered roots; parent trees are not lookup roots. The presentation-only `kt info` ancestor walk may show accessible orientations without granting discovery access.
@@ -28,13 +28,13 @@ kt access global allow --scope all
 kt access /path/to/root force-private
 ```
 
-Only the user may authorize an access decision. An agent may answer a terminal confirmation only after explicit authorization for that exact root and scope.
+Only the user may authorize an access decision. A direct, unambiguous instruction to see, read, or access a named root, including “grant yourself access,” is explicit authorization once kt resolves that registered label or path. Unless the user requests broader access, use the least sufficient scope, normally project scope for a project task. An agent may then answer the matching terminal confirmation; it asks again only when the root or intended scope is genuinely ambiguous.
 
 ## MCP flow
 
 `kt_access_status` reports effective access and its source in readable and structured form. `kt_access_request` accepts an optional preferred scope, resolves policy through the CLI, and asks through harness elicitation. Session is offered only when the harness provides a stable session identity. An accepted choice is applied through the same CLI access functions.
 
-Cancellation, an unrendered prompt, invalid response, client error, or lack of elicitation capability grants nothing. The result may include a structured one-time pending request ID. After explicit conversational authorization for the exact root and scope, `kt_access_confirm` may consume that ID; unknown, reused, mismatched, denied, and force-private requests fail.
+Cancellation, an unrendered prompt, invalid response, client error, or lack of elicitation capability grants nothing. The result may include a structured one-time pending request ID. If the conversation already contains a direct, unambiguous instruction to access the resolved root, that instruction supplies the explicit authorization needed for `kt_access_confirm`; use the least sufficient scope unless the user requested a broader one. Otherwise ask for the exact root and scope. Unknown, reused, mismatched, denied, and force-private requests fail.
 
 `kt_access_revoke` directly relinquishes the current session grant or exact-project grant. A wider revocation uses elicitation or its own exact one-time continuation after explicit authorization. Reducing authority never requires agents to use the terminal merely because the grant was session-scoped.
 

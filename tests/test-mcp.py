@@ -111,6 +111,9 @@ def main():
         assert "priority-one incident" in initialized["result"]["instructions"]
         assert "startup with no user task" in initialized["result"]["instructions"]
         assert "explicitly permits ignoring that specific status" in initialized["result"]["instructions"]
+        assert "grant yourself access" in initialized["result"]["instructions"]
+        assert "normally project" in initialized["result"]["instructions"]
+        assert "direct, unambiguous instruction" in listed["kt_access_confirm"]["description"]
         assert not [n for n, t in listed.items() if len(json.dumps(t)) > 1800], "tool schemas must stay compact"
         assert rpc("nope")["error"]["code"] == -32601
         server.stdin.write("{broken\n")
@@ -410,6 +413,7 @@ def main():
         # Without a client that can prompt, a request returns a one-time MCP continuation and grants nothing.
         error, text = tool("kt_access_request", root=str(vaults["vault"]), reason="need the vault")
         assert not error and "kt_access_confirm" in text and "cannot show approval prompts" in text
+        assert "direct, unambiguous instruction" in text and "normally project" in text
         pending_id = re.search(r"request_id: (kt-access-[A-Za-z0-9_-]+)", text).group(1)
         assert json.loads((root / "config.json").read_text())["projects"] == {}, "request alone never grants"
         error, text = tool("kt_access_confirm", request_id="unknown", scope="project")

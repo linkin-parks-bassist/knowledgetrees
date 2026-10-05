@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-24T08:06:08+10:00"
+revised_at: "2026-09-30T16:03:25+10:00"
 ---
 
 Root discovery uses only the exact current-directory tree, the known global
@@ -49,13 +49,20 @@ unless bypass is enabled. ask, deny, and reset replace or revoke decisions at
 --scope project, --scope session, or --scope all. Force-private is always a
 root-wide policy; revoke it with `kt access ROOT reset --scope all` or replace it
 with a different root-wide policy. Project/session grants cannot revoke privacy.
-An agent may answer the CLI confirmation only after the user explicitly authorizes the exact root and scope in conversation. That is acting on the user's decision, not inventing one. Inspect the displayed root and scope before answering. If authorization is absent or ambiguous, ask the user to confirm it. Prefer a project-scoped grant for a project need; do not substitute the persistent global bypass.
+Only the user may authorize access. A direct, unambiguous instruction to see,
+read, or access a named root, including “grant yourself access,” is explicit
+authorization once kt resolves that registered label or path. Unless the user
+requests broader access, use the least sufficient scope, normally project scope
+for a project task. An agent may then answer the matching CLI confirmation; this
+carries out the user's decision rather than inventing one. Ask only when the root
+or intended scope is genuinely ambiguous. Inspect the displayed resolved root and
+scope before answering, and never substitute the persistent global bypass.
 
 Seeing and revoking grants: `kt grants [ROOT]` lists each root's effective access and its source (local tree, project grant and where it was made, allowed everywhere, session grant, permissions bypass, denied, or none) and marks roots whose tree is gone. `kt access ROOT revoke [--scope project|all]` narrows access already granted: project scope makes the root require approval again for this directory (overriding an everywhere-allow for this project only), and `all` does so everywhere and drops every project grant for it, or removes the registration of a missing root. Like other changes it needs interactive confirmation, either from the user or from an agent carrying out explicit authorization for that exact change. The local tree, a permissions bypass, and session grants cannot be revoked this way.
 
 Stale approvals: grants are keyed by path, so on every run `kt` drops project grants whose project directory or root no longer exists, registered roots allowed everywhere whose tree is gone, and auto-named `root-<hash>` ask registrations whose tree is gone, printing a one-line notice on stderr; a tree recreated at that path then needs a fresh approval. Deny and force-private entries and user-named ask registrations are kept because they protect or name a tree that may only be unmounted. A tree deleted and recreated between two `kt` runs is not detected.
 
-Asking through the harness: an agent calls `kt_access_request(root, reason, preferred_scope)` with the least scope that satisfies the task. The user still chooses. When the harness supplies `KT_SESSION_ID`, `CODEX_THREAD_ID`, or `OPENCODE_SESSION_ID`, temporary session access is offered alongside project, project-with-subdirectories, and everywhere. Only an accepted response saves a grant. Decline, cancellation, invalid replies, client errors, and clients without elicitation change nothing and return a structured one-time pending request. After explicit authorization for that exact root and scope in conversation, `kt_access_confirm` completes it. `kt_access_status` returns readable text plus structured root/source data. `kt_access_revoke` removes session access directly, narrows this project directly, and asks before wider changes; failed confirmation returns a matching structured continuation. Direct policy administration and the persistent permissions bypass remain terminal-only.
+Asking through the harness: an agent calls `kt_access_request(root, reason, preferred_scope)` with the least scope that satisfies the task. The user still chooses. When the harness supplies `KT_SESSION_ID`, `CODEX_THREAD_ID`, or `OPENCODE_SESSION_ID`, temporary session access is offered alongside project, project-with-subdirectories, and everywhere. Only an accepted response saves a grant. Decline, cancellation, invalid replies, client errors, and clients without elicitation change nothing and return a structured one-time pending request. If the conversation already contains a direct, unambiguous instruction to access the resolved root, that instruction supplies the explicit authorization needed for `kt_access_confirm`; choose the least sufficient scope unless the user requested a broader one. Otherwise ask for the exact root and scope. `kt_access_status` returns readable text plus structured root/source data. `kt_access_revoke` removes session access directly, narrows this project directly, and asks before wider changes; failed confirmation returns a matching structured continuation. Direct policy administration and the persistent permissions bypass remain terminal-only.
 
 ## Persistent bypass
 
