@@ -1,11 +1,9 @@
 ---
 status: green
-revised_at: "2026-10-05T00:09:49+11:00"
+revised_at: "2026-10-05T14:06:47+11:00"
 ---
 
-This is the shell reference for `kt`. When you have the `kt_*` tools, use them instead. Whole-leaf MCP reads return the complete answer, an optional non-green notice, and the revision hash required by `kt_rewrite`; no other metadata is shown. Neither MCP nor kt supports partial leaf reads. Ranked excerpts select candidates and are not reads. The shell is the fallback when tools are unavailable.
-
-Successful `kt_rewrite` calls return the answer diff followed by `Revision: HASH`, including unchanged no-ops. Reuse that committed hash for the next rewrite without reading back the answer already in context. Dry runs return only a preview and no new revision. The CLI supplies the committed hash under the write lock via `--print-revision`; MCP remembers the supplied whole answer for renewal and undo without a post-write read. If another writer changes the leaf, the next rewrite rejects the stale hash; reread and merge then. Renewal still requires verification of the whole answer, but no redundant read after a successful rewrite.
+This is the shell reference for `kt`. When you have the `kt_*` tools, use them instead. Whole-leaf MCP reads return the complete answer, an optional non-green notice, and the revision hash required by `kt_rewrite`; no other metadata is shown. Neither MCP nor kt supports partial leaf reads. Ranked excerpts select candidates and are not reads. The shell is the fallback when tools are unavailable. Revision reuse after a successful rewrite is described in `how/to/rewrite/a/knowledge/leaf.md`.
 
 ## Success output policy
 
@@ -80,11 +78,11 @@ Accuracy and preservation remain explicit agent obligations; a turn-end hook onl
   Use `--expires-at`, `--expires-every`, `--no-expiry`, `--verifiable`, or
   `--no-verifiable` to change optional metadata. Omitted options preserve it, and the leaf keeps its status and `checked_at`.
   HASH is a required positional revision supplied automatically on stderr by full
-  leaf reads. No --expect option. --dry-run previews the diff. Successful writes
+  leaf reads. --dry-run previews the diff. Successful writes
   produce no stdout or stderr by default (exit 0), without echoing either body. No-ops are
   also silent by default; `--print-revision` returns their committed hash on stdout. Dry-run shows the diff and failures report diagnostics. Accuracy and
   preservation remain agent obligations.
-  Growth beyond 500 body words exits 5 once; beyond 1,000 twice; beyond 2,000 three times. Rejections preserve the answer and hash; reconsider stale/log-shaped content before retrying. A short or shorter answer passes immediately; otherwise the next changed answer may pass after the bounded rejections. Counters persist outside the tree and reset on a committed revision change. Dry runs, unchanged no-ops, and metadata-only changes consume no bounces. See `how/to/rewrite/a/knowledge/leaf.md` for storage and counting details.
+  Growth beyond 500 body words exits 5 once; beyond 1,000 twice; beyond 2,000 three times. Rejections preserve the answer and hash; reconsider stale/log-shaped content before retrying. A short or shorter answer passes immediately; otherwise the next changed answer may pass after the bounded rejections. Counters persist outside the tree and reset on a committed revision change. Dry runs, unchanged no-ops, and metadata-only changes consume no bounces. `--force` skips these rejections for scripts copying generated leaves from a source of truth; it is CLI-only. See `how/to/rewrite/a/knowledge/leaf.md` for storage and counting details.
 - Renew: `kt renew ADDRESS HASH` (tool `kt_renew`) records `checked_at` for the complete
   answer read at HASH, clears any brown, then re-runs that leaf's own proofs and leaves it green; exit 1 means a proof failed and it is brown. It is the only manual way to raise a status.
 - Help: `kt COMMAND --help` describes options for that command. Options do not

@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-10-05T00:14:25+11:00"
+revised_at: "2026-10-05T14:04:50+11:00"
 ---
 
 `kt_rewrite` is the only editing method. First read the complete leaf with `kt_read` or an exact
@@ -17,7 +17,7 @@ Successful `kt_rewrite` calls return the answer diff followed by `Revision: HASH
 
 Growth beyond 500 words requires one rejection, beyond 1,000 two, and beyond 2,000 three; severity uses the larger current/proposed body. During a cycle, long replacements that do not shrink consume the remaining rejections; after exhaustion they can pass. Answers of at most 500 words or shorter than the committed body pass immediately. Count whitespace-separated answer-body words, excluding generated metadata. Rejections preserve the leaf and revision. Remove stale, irrelevant, or log-shaped content while preserving valid knowledge. Consider splitting independently useful content into separate leaves; keep cohesive knowledge together. Reconsider the whole answer before retrying; identical retries cannot demonstrate review. Length is a pressure signal, not a diagnosis.
 
-The CLI exits 5 for a length bounce; MCP returns a tool error and records no undo entry. Counts persist across calls and process restarts in `rewrite-bounces.sqlite3` under `$XDG_STATE_HOME/knowledgetrees` (default `~/.local/state/knowledgetrees`), outside tree payloads; `KT_REWRITE_STATE_DIR` overrides its directory. Counts are keyed by device/inode and committed revision, so hardlinks share a cycle and changed revisions start fresh. Accepted body rewrites clear their cycle. Dry runs, stale or invalid requests, unchanged no-ops, and metadata-only changes consume no bounces.
+The CLI exits 5 for a length bounce; MCP returns a tool error and records no undo entry. Counts persist across calls and process restarts in `rewrite-bounces.sqlite3` under `$XDG_STATE_HOME/knowledgetrees` (default `~/.local/state/knowledgetrees`), outside tree payloads; `KT_REWRITE_STATE_DIR` overrides its directory. Counts are keyed by device/inode and committed revision, so hardlinks share a cycle and changed revisions start fresh. Accepted body rewrites clear their cycle. Dry runs, stale or invalid requests, unchanged no-ops, and metadata-only changes consume no bounces. A script that copies a generated leaf from a source of truth may pass `kt rewrite --force` to skip this reconsideration; revision and lock checks still apply. The flag is CLI-only: MCP never offers it, and passes answers after `--` so an answer cannot become an option.
 
 In the shell, use the canonical editing command:
 
@@ -25,8 +25,7 @@ In the shell, use the canonical editing command:
 kt rewrite ROOT:PATH HASH "Complete revised answer body"
 ```
 
-HASH is a mandatory positional SHA-256 revision from a whole read or successful rewrite. There is no
-rewrite --expect option. A matching hash establishes that the leaf still has the
+HASH is a mandatory positional SHA-256 revision from a whole read or successful rewrite. A matching hash establishes that the leaf still has the
 read contents; it does not prove how recently it was read or that the agent reviewed
 it. Keep those contents in context and preserve still-valid knowledge when editing.
 Contents are the complete answer body, including multiline Markdown. Do not
@@ -37,8 +36,8 @@ complete proof coverage, and `--no-verifiable` to clear the flag. `kt_renew`
 (`kt renew`) alone records manual `checked_at`. `--dry-run` previews the result. Quote shell
 arguments correctly; operating-system argument size limits apply.
 
-By default, shell rewrites and identical no-ops produce no stdout or stderr. With `--print-revision`, they print the committed `Revision: HASH` on stdout; dry runs never print a committed hash. Exit 0
-signals success. Neither old nor new contents are echoed. --dry-run still shows
+By default, shell rewrites and identical no-ops produce no stdout or stderr. With `--print-revision`, they print the committed `Revision: HASH` on stdout. Exit 0
+signals success. --dry-run still shows
 the diff, and failures report diagnostics with a nonzero exit status. Preserve
 still-valid knowledge and check relevant proofs before reliance. Agent guidance
 carries the accuracy/preservation requirement. A bounced rewrite requires reconsideration and another tool call; rewrites do not inject a separate
@@ -65,4 +64,4 @@ review is recorded with `kt_renew`, or complete eligible proofs pass on a
 Evidence: the rewrite integration test uses a standalone non-Git tree and verifies conflict
 refusal, dry-run/no-op behavior, in-place hardlinks, status and check-time preservation, timeless
 proof-marker preservation, sticky falsification, body-only text, input validation,
-symlink refusal, denied-root behavior, growth severity, persisted counters, hardlink aliases, shrinking replacements, revision resets, and bounce-free previews/no-ops/metadata changes. Existing lookup and access tests pass.
+symlink refusal, denied-root behavior, growth severity, persisted counters, hardlink aliases, shrinking replacements, revision resets, forced copies, and bounce-free previews/no-ops/metadata changes. The MCP test shows an answer beginning `--force` is still guarded.
