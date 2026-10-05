@@ -204,6 +204,13 @@ true
         digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()
         assert "1 of 3" in grow(digest, 2002, expected=5).stderr
         grow(digest, 1000)
+        # --force copies a generated answer past the guard in one call and leaves later edits guarded.
+        digest = seed(2000)
+        run("rewrite", "project:long.md", digest, words(2500), "--force")
+        assert len(body(long_leaf.read_text()).split()) == 2500
+        digest = hashlib.sha256(long_leaf.read_bytes()).hexdigest()
+        assert "1 of 3" in grow(digest, 2501, expected=5).stderr
+        grow(digest, 1000)
         # Concurrent callers serialize their counters under the leaf lock.
         digest = seed(1000)
         callers = [subprocess.Popen([sys.executable, str(SCRIPT), "rewrite", "project:long.md",

@@ -1353,7 +1353,7 @@ def rewrite_leaf(args):
         # Recheck after preparing output to detect ordinary non-locking intervening edits.
         check_leaf_snapshot(path, snapshot, stream,
                             message="kt: leaf changed during rewrite; reread and merge")
-        if replacement.strip("\r\n") != prior_body.strip("\r\n"):
+        if replacement.strip("\r\n") != prior_body.strip("\r\n") and not getattr(args, "force", False):
             rewrite_growth_guard(snapshot, prior_body, replacement)
             check_leaf_snapshot(path, snapshot, stream,
                                 message="kt: leaf changed during rewrite; reread and merge")
@@ -2292,13 +2292,16 @@ def command_parser():
     replacing = commands.add_parser("rewrite", help="rewrite a leaf body using its read revision",
         description="Rewrite the complete answer. Growth beyond 500 words is refused once, "
         "twice above 1,000 and three times above 2,000 words, asking for whole-leaf reconsideration; refusal exits 5 "
-        "without changing the leaf. Short or shorter answers pass immediately. Dry runs do not consume attempts.")
+        "without changing the leaf. Short or shorter answers pass immediately. Dry runs do not consume attempts. "
+        "--force skips that reconsideration for scripts that copy a leaf from a source of truth; it is not offered to agents through MCP.")
     replacing.set_defaults(handler=rewrite_leaf)
     replacing.add_argument("path", help="existing leaf address")
     replacing.add_argument("hash", help="required SHA-256 revision supplied by the leaf read")
     replacing.add_argument("contents", help="complete answer body; use -- before positional arguments beginning with -")
     replacing.add_argument("--dry-run", action="store_true", help="show the resulting diff without writing")
     replacing.add_argument("--print-revision", action="store_true", help="return the committed Revision hash, including no-ops; omitted for dry runs")
+    replacing.add_argument("--force", action="store_true",
+                           help="skip growth reconsideration, for generated copies of a source of truth (CLI only; revision and lock still apply)")
     lifecycle_options(replacing, clear=True)
     checking = commands.add_parser("renew", help="confirm the complete leaf is accurate: records checked_at and re-evaluates its status")
     checking.set_defaults(handler=renew_leaf)

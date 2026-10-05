@@ -386,7 +386,7 @@ def root_scope_flags(arguments):
 def rewrite(address, revision, body, dry_run=False, lifecycle=()):
     """Replace the answer using the caller's revision and return the locked commit receipt."""
     completed = run_kt("rewrite", "--print-revision", *(["--dry-run"] if dry_run else []),
-                       *lifecycle, address, revision, body)
+                       *lifecycle, "--", address, revision, body)
     if completed.returncode:
         raise ToolError((completed.stderr or completed.stdout).strip() or f"kt rewrite failed ({completed.returncode})")
     return completed

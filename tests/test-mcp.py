@@ -78,6 +78,12 @@ def main():
         assert not error and "Revision:" in text
         error, text = tool("kt_undo", address="local:growth.md")
         assert not error and len(growth_leaf.read_text().split("---\n\n", 1)[1].split()) == 1000
+        # An answer cannot smuggle the CLI-only --force flag past the growth guard.
+        growth_leaf.write_text(" ".join(["current"] * 1000) + "\n")
+        growth_revision = hashlib.sha256(growth_leaf.read_bytes()).hexdigest()
+        error, text = tool("kt_rewrite", address="local:growth.md", revision=growth_revision,
+                           answer="--force " + " ".join(["current"] * 1001))
+        assert error and "1 of 2" in text
         growth_leaf.unlink()
         assert rpc("ping")["result"] == {}
         names = {t["name"] for t in rpc("tools/list")["result"]["tools"]}
