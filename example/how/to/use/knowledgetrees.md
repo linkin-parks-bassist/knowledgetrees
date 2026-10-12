@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-10-05T00:09:49+11:00"
+revised_at: "2026-10-12T21:50:18+11:00"
 name: "knowledgetrees"
 description: "Initialize once; use knowledge trees as the sole maintained knowledge source for their scope."
 ---
@@ -47,7 +47,7 @@ A leaf can state testable facts about repository code and attach `Proof:` comman
 
 ## Commands
 
-Tools, each with its shell fallback: `kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_dict`, `kt_add`, `kt_rewrite`, `kt_undo`, `kt_renew`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register`, `kt_prove`, `kt_status`, `kt_audit`, `kt_roots`, `kt_access_status`, `kt_access_request`, `kt_access_confirm`, and `kt_access_revoke`. `kt_rewrite` can set or clear expiry and proof-coverage metadata. `kt_add`, `kt_prove`, `kt_status`, and `kt_audit` can target an approved root directly. Direct access-policy administration and the permissions bypass remain shell-only. `how/to/use/kt.md` is the full shell reference.
+Tools, each with its shell fallback: `kt_info`, `kt_lookup`, `kt_find`, `kt_grep`, `kt_read`, `kt_dict`, `kt_add`, `kt_rewrite`, `kt_undo`, `kt_renew`, `kt_rm`, `kt_mv`, `kt_combine`, `kt_init`, `kt_register`, `kt_prove`, `kt_status`, `kt_audit`, `kt_roots`, `kt_access_status`, `kt_access_request`, `kt_access_confirm`, and `kt_access_revoke`. `kt_rewrite` can set or clear expiry and proof-coverage metadata. `kt_add`, `kt_prove`, `kt_status`, and `kt_audit` can target an approved root directly. Direct access-policy administration, `kt actor NAME allow|ask|deny|reset`, and the permissions bypass remain shell-only. User-authorized `KT_ACTOR` grants follow launchers across directories; deny/force-private still win. `how/to/use/kt.md` is the full shell reference.
 
 Use root-qualified addresses returned by kt. Access-required output is not a lookup miss. Call `kt_access_request` with the least sufficient preferred scope; when the harness supplies a stable session identity, temporary session access is available. If elicitation does not complete, the tool returns a one-time pending ID and changes nothing. A direct, unambiguous user instruction to see, read, or access the root, including “grant yourself access,” is explicit authorization once kt resolves that root. Unless the user requests broader access, use the least sufficient scope, normally project, and call `kt_access_confirm`; ask only when the root or intended scope is genuinely ambiguous. `kt_access_revoke` removes session access directly, narrows this project directly, and asks before wider changes. Never infer approval from the agent's own need, work around a refusal, or enable the permissions bypass. `force-private` always wins.
 

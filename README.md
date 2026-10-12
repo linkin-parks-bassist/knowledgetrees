@@ -293,6 +293,14 @@ skill. Restart clients to refresh discovery after an upgrade.
 
 ## Root privacy and access
 
+Trusted bot launchers can supply `KT_ACTOR=bot-name`. A user-authorized
+`kt actor bot-name allow` grants that actor access across working directories,
+including newly registered roots. It grants nothing to other clients in the same
+folder. Inspect with `kt actor bot-name`; revoke with `kt actor bot-name reset`.
+Identity alone or an MCP client name grants nothing. Actor policy is stored in
+`actors` in the private root registry; ordinary root denial and force-private still
+win. This is a trusted-launcher policy, not an OS sandbox against the same Unix user.
+
 Lookup and mutation discover the exact current-directory `.knowledge/`, the
 global root, and explicitly registered roots. Parent trees are not implicitly
 lookup roots. Trees can live at repository or subsystem scope; register broader

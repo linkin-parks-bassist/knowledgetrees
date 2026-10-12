@@ -127,7 +127,7 @@ with tempfile.TemporaryDirectory() as directory:
     run(project, "renew", "local:what/is/stale.md", revision)
     assert "checked_at:" in stale.read_text() and "status: green" in stale.read_text()
     assert run(project, "--lean", "open", "local:what/is/stale.md").stdout == "A fact.\n"
-    assert "yellow=0" in run(project, "status").stdout
+    assert "yellow=0" in run(project, "status", "--local").stdout
 
     broken = tree / "broken.md"
     broken.write_text("Claim.\n\nProof:\n\n```bash\nfalse\n```\n")

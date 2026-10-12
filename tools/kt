@@ -50,9 +50,12 @@ def access_config_path():
 
 
 def access_config():
+    actor = os.environ.get("KT_ACTOR")
+    if actor is not None and not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", actor):
+        raise ValueError("invalid knowledge actor identity")
     path = access_config_path()
     if not path.exists():
-        return {"roots": {}, "projects": {}, "dangerously_skip_permissions": False}
+        return {"roots": {}, "projects": {}, "actors": {}, "dangerously_skip_permissions": False}
     value = json.loads(path.read_text())
     if not isinstance(value, dict) or not isinstance(value.get("roots", {}), dict) or not isinstance(value.get("projects", {}), dict):
         raise ValueError("invalid kt access configuration")
@@ -68,6 +71,12 @@ def access_config():
     for project, grants in value.get("projects", {}).items():
         if not Path(project).is_absolute() or not isinstance(grants, dict) or any(not (v in ACCESS_VALUES - {"force-private"} if isinstance(v, str) else isinstance(v, dict) and v.get("access") in ACCESS_VALUES - {"force-private"} and isinstance(v.get("subdirectories", False), bool)) for v in grants.values()):
             raise ValueError("invalid project access grants")
+    actors = value.get("actors", {})
+    if (not isinstance(actors, dict) or any(
+            not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", name)
+            or policy not in ("allow", "ask", "deny") for name, policy in actors.items())):
+        raise ValueError("invalid actor access grants")
+    value.setdefault("actors", {})
     value.setdefault("roots", {})
     value.setdefault("projects", {})
     return value
@@ -189,6 +198,9 @@ def resolve_root_access(root, label=None, cwd=None, config=None):
         return "allow", "permissions bypass", None
     if any(policy == "deny" and root.is_relative_to(path) for path, policy in policies):
         return "deny", "denied by root policy", None
+    actor = os.environ.get("KT_ACTOR")
+    if root != local and actor in config.get("actors", {}):
+        return config["actors"][actor], f"actor grant ({actor})", None
     matching = [policy for path, policy in policies if path == root]
     if root == local:
         policy, source = "allow", "local tree"
@@ -420,6 +432,8 @@ def apply_revocation(config, root, label, available, scope, cwd, save=True):
         raise ValueError("the permissions bypass is on; only `kt permissions --reset` in the user's terminal turns it off")
     if source == "session grant":
         raise ValueError("this is a session grant; it expires on its own, or reset it with the same session id: kt access ROOT reset --scope session")
+    if source.startswith("actor grant ("):
+        raise ValueError("this is actor authority; reset it with kt actor NAME reset in the user's terminal")
     matching = [name for name, spec in config["roots"].items() if configured_root(name, spec) == root]
     if scope == "all":
         for grants in config["projects"].values():
@@ -467,6 +481,27 @@ def grants_command(args):
         detail = source + (f" (granted for {project})" if project and project != str(cwd) else "")
         detail += "; TREE MISSING (kt access ROOT revoke --scope all removes its registration)" if missing_path(root) else ""
         print(f"{label}\t{policy}\t{detail}\t{root if policy == 'allow' else '(restricted)'}")
+    return 0
+
+
+def actor_command(args):
+    """Terminal-owned actor authority, independent of project and session grants."""
+    if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", args.name):
+        raise ValueError("invalid knowledge actor identity")
+    config = access_config()
+    if args.decision is None:
+        print(f"{args.name}\t{config['actors'].get(args.name, 'no grant')}")
+        return 0
+    if not sys.stdin.isatty():
+        raise AccessRequired("actor access changes require explicit user authorization in a terminal")
+    print(f"Actor {args.name!r}: {args.decision} for every knowledge root, independent of working directory. Root deny and force-private remain enforced.")
+    if input(f"Save {args.decision!r} actor decision? [y/N] ").strip().lower() != "y":
+        return 1
+    if args.decision == "reset":
+        config["actors"].pop(args.name, None)
+    else:
+        config["actors"][args.name] = args.decision
+    save_access_config(config)
     return 0
 
 
@@ -2252,7 +2287,7 @@ def roots_command(args):
             else:
                 print("orientation=" + textwrap.shorten(" ".join(body.split()), width=240, placeholder=" …"))
         if not PRETTY:
-            print("commands: info | init | find | grep | QUESTION | open | dict | add | rewrite | renew | status | audit | rm | mv | combine | prove | roots | grants | register | access | permissions; --help; --pretty")
+            print("commands: info | init | find | grep | QUESTION | open | dict | add | rewrite | renew | status | audit | rm | mv | combine | prove | roots | grants | register | access | actor | permissions; --help; --pretty")
             return 0
         print("\nkt find leaves                     ranked keyword lookup")
         print("kt where is vivado                 exact answer or nearby matches")
@@ -2369,6 +2404,10 @@ def command_parser():
     granting = commands.add_parser("grants", help="list each root's effective access and why, including roots whose tree is gone")
     granting.set_defaults(handler=grants_command)
     granting.add_argument("root", nargs="?", help="optional root label or absolute path")
+    actor = commands.add_parser("actor", help="inspect or authorize a named actor across working directories; root deny/force-private remain enforced")
+    actor.set_defaults(handler=actor_command)
+    actor.add_argument("name", help="trusted launcher identity supplied through KT_ACTOR")
+    actor.add_argument("decision", nargs="?", choices=["allow", "ask", "deny", "reset"])
     permissions = commands.add_parser("permissions", help="inspect or persist user permission bypass")
     permissions.set_defaults(handler=permissions_command)
     settings = permissions.add_mutually_exclusive_group()

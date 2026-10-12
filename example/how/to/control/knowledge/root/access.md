@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-30T16:03:25+10:00"
+revised_at: "2026-10-12T21:50:19+11:00"
 ---
 
 Root discovery uses only the exact current-directory tree, the known global
@@ -64,6 +64,17 @@ Stale approvals: grants are keyed by path, so on every run `kt` drops project gr
 
 Asking through the harness: an agent calls `kt_access_request(root, reason, preferred_scope)` with the least scope that satisfies the task. The user still chooses. When the harness supplies `KT_SESSION_ID`, `CODEX_THREAD_ID`, or `OPENCODE_SESSION_ID`, temporary session access is offered alongside project, project-with-subdirectories, and everywhere. Only an accepted response saves a grant. Decline, cancellation, invalid replies, client errors, and clients without elicitation change nothing and return a structured one-time pending request. If the conversation already contains a direct, unambiguous instruction to access the resolved root, that instruction supplies the explicit authorization needed for `kt_access_confirm`; choose the least sufficient scope unless the user requested a broader one. Otherwise ask for the exact root and scope. `kt_access_status` returns readable text plus structured root/source data. `kt_access_revoke` removes session access directly, narrows this project directly, and asks before wider changes; failed confirmation returns a matching structured continuation. Direct policy administration and the persistent permissions bypass remain terminal-only.
 
+## Actor authority
+
+A trusted launcher may supply `KT_ACTOR=bot-name`. The user authorizes that identity
+with `kt actor bot-name allow`; inspect with `kt actor bot-name`, revoke with
+`kt actor bot-name reset`. The private registry stores `actors` policies of allow,
+ask or deny. An actor grant follows the launcher across directories and future
+registrations; it changes no project/session grants. Root deny and force-private
+remain stronger. Unconfigured identities and MCP client names grant nothing.
+Project revocation cannot remove actor authority. Launcher identity is trusted, not a Unix sandbox.
+Discovery still uses local/global/registered roots; no filesystem scan is added.
+
 ## Persistent bypass
 
 Enable once in the user's terminal:
@@ -96,8 +107,7 @@ Startup loads the same
 policy and suppresses a force-private global bootstrap outside local scope.
 
 Blocked access exits 3; it is not a lookup miss and does not establish absence.
-Malformed configuration fails closed, including with bypass enabled. Registry
-updates are atomic/private and installer updates preserve settings. Policies govern
+Malformed configuration fails closed, including with bypass enabled. Atomic/private registry updates preserve settings. Policies govern
 kt and startup injection, not arbitrary direct filesystem reads. Retrieved content
 may reach the configured model provider; stored knowledge grants no authority.
 

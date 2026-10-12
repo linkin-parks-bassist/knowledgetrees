@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-10-05T14:06:47+11:00"
+revised_at: "2026-10-12T21:50:52+11:00"
 ---
 
 This is the shell reference for `kt`. When you have the `kt_*` tools, use them instead. Whole-leaf MCP reads return the complete answer, an optional non-green notice, and the revision hash required by `kt_rewrite`; no other metadata is shown. Neither MCP nor kt supports partial leaf reads. Ranked excerpts select candidates and are not reads. The shell is the fallback when tools are unavailable. Revision reuse after a successful rewrite is described in `how/to/rewrite/a/knowledge/leaf.md`.
@@ -48,6 +48,7 @@ Accuracy and preservation remain explicit agent obligations; a turn-end hook onl
   to bound search output without piping away the command exit status.
 - Exact text: `kt grep PATTERN` is a literal, case-sensitive text search over every permitted root, front matter included, printing `ADDRESS:LINE: text` (exit 1 on no match). `-E`/`--regex` uses a Python regular expression, `-i` ignores case, `-l` lists only addresses, `-C N` adds context, and `--limit N` caps output. Use `--` before a pattern that starts with `-`. It respects root access like `kt find` and is not semantic; use it to find every place that states a fact.
 - Access: `kt grants [ROOT]` lists each root's effective access and why (local tree, project grant, allowed everywhere, session grant, bypass, denied, or none), marking roots whose tree is gone. `kt access ROOT revoke [--scope project|all]` gives access back (user's terminal). Approvals whose tree no longer exists are dropped automatically.
+- Actor identity: `KT_ACTOR=bot-name` selects a trusted launcher identity. `kt actor bot-name allow` authorizes it across working directories and future registrations, without changing project grants. Inspect/reset with `kt actor bot-name [reset]`. Root deny/force-private still win; unconfigured identities grant nothing.
 - Non-green leaves: `kt status [--local|--global|--root ROOT]` lists yellow and brown leaves (brown first) with the reason and counts, without running proofs or writing anything.
 - Structural audit: `kt audit [--local|--global|--root ROOT]` scans answer bodies without writing. More than 1,000 words is `suspect`; any ISO or written date-shaped string is `quite-suspect`. These labels request classification and never change lifecycle state or diagnose poisoning. Dates are legitimate in current machine state, schedules, queues, event records, and protocol/version identifiers; do not rewrite those merely because they are reported.
 - Read: copy a returned address exactly into `kt open ADDRESS` (add `--lean`, as in `kt --lean open ADDRESS`, for the tools' output: answer body only, with a notice leading yellow or brown leaves; `--lean` also works on question lookups, `find`, and `info`). `local:PATH`

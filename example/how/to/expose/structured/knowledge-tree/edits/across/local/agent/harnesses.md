@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-10-05T00:09:34+11:00"
+revised_at: "2026-10-12T21:49:35+11:00"
 ---
 
 `tools/kt-mcp` is a standard-library Python stdio MCP server, installed to `~/.knowledge/.tools/kt-mcp`, that exposes the kt workflow as 23 low-friction tools, meant to be used instead of the `kt` shell command. The CLI owns knowledge, lifecycle, revision, and access semantics; MCP is the typed harness adapter. Operations delegate to the sibling `kt` with stdin closed. Access elicitation is the narrow adapter-owned exception because it is a server-to-client protocol exchange.
@@ -15,9 +15,11 @@ Successful `kt_rewrite` calls return the answer diff followed by `Revision: HASH
 
 **Annotations and results.** Every tool carries MCP annotations (`readOnlyHint` on retrieval/audit tools; `destructiveHint` on replacement and removal; `openWorldHint` false). A miss or brown result is data marked `(exit 1)`; only exit 2 or higher is a tool error. Initialization instructions state the frontier contract at the mutation boundary. User prompts are `frontier_review`, `garden`, `verify_leaf`, and `revoke_access`; gardening combines lifecycle status with structural audit and never treats an audit signal as a diagnosis.
 
-**Still terminal-only:** direct `access` policy changes and the global `permissions` bypass. Access approval and revocation use the guarded MCP tools; whole-leaf review is `kt_renew`.
+**Still terminal-only:** direct `access`/`actor` policy changes and the global `permissions` bypass. Access approval and revocation use the guarded MCP tools; whole-leaf review is `kt_renew`.
 
 **Access approval by elicitation.** `kt_access_request` accepts a root, honest reason, and optional least-sufficient preferred scope. The user still chooses. When the harness supplies `KT_SESSION_ID`, `CODEX_THREAD_ID`, or `OPENCODE_SESSION_ID`, temporary session access is offered alongside project, project-with-descendants, and everywhere scopes. Only an accepted elicitation persists a grant through the CLI's `apply_access_decision`; the model never answers the prompt. Deny and force-private never prompt. Unrendered decline, cancel, invalid response, client error, or absent elicitation returns a bound one-time continuation and changes nothing. A direct, unambiguous conversational instruction to see, read, or access the resolved root, including “grant yourself access,” supplies explicit authorization for `kt_access_confirm`; absent a broader request, the agent uses the least sufficient scope, normally project. It asks again only when the root or intended scope is genuinely ambiguous and never substitutes its own need for user authorization.
+
+**Trusted actors.** `KT_ACTOR` is inherited from the launcher by MCP and its CLI subprocesses. Actor grants follow the launcher across directories; clientInfo grants nothing. Models cannot administer actors. Root denial and forced privacy remain enforced.
 
 **Revocation and stale approvals.** `kt_access_status` says why each root is readable. `kt_access_revoke` removes a session grant directly, narrows this project directly, and asks before a wider or global change; failed elicitation has the same bound conversational continuation. Local-tree access and the permissions bypass remain terminal-owned. Path-keyed stale approvals are pruned so recreated trees need fresh authorization.
 

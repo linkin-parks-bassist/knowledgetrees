@@ -1,13 +1,13 @@
 ---
 status: green
-revised_at: "2026-10-05T00:09:33+11:00"
+revised_at: "2026-10-12T21:48:53+11:00"
 ---
 
 The implementation has one semantic spine: the self-contained standard-library `tools/kt` CLI owns root discovery, access policy, leaf representation, lifecycle, revision locking, structural audit, and proof evaluation. Harness adapters translate their protocols into that spine; they do not reimplement knowledge semantics.
 
 ## CLI layers
 
-- Root/access functions represent registered roots, effective policies, project/session grants, and forced privacy. `RootAccessView` loads one coherent view per invocation and every traversal uses it.
+- Root/access functions represent registered roots, effective policies, actor/project/session grants, and forced privacy. `RootAccessView` loads one coherent view per invocation and every traversal uses it.
 - `LookupContext` lazily reads permitted leaves once. Question lookup, ranked search, exact grep, dictionary, status, and audit are read-side projections over that view.
 - Leaf functions parse flat metadata and answer bodies, compute revision snapshots, lifecycle state, structural audit signals, and proof records.
 - Mutation functions operate on complete current answers. `add_leaf` establishes a missing owner; `rewrite_leaf` advances an existing owner under a whole-read SHA-256 revision and preserves inode identity. Remove, move, combine, renew, and initialization share the same root and snapshot contracts.

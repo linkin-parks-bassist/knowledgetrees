@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-09-30T16:05:00+10:00"
+revised_at: "2026-10-12T21:49:35+11:00"
 ---
 
 Knowledge-root access is enforced by the CLI semantic spine and inherited by MCP and hooks. Discovery uses only the exact current-directory tree, the global root, and explicitly registered roots; parent trees are not lookup roots. The presentation-only `kt info` ancestor walk may show accessible orientations without granting discovery access.
@@ -29,6 +29,17 @@ kt access /path/to/root force-private
 ```
 
 Only the user may authorize an access decision. A direct, unambiguous instruction to see, read, or access a named root, including “grant yourself access,” is explicit authorization once kt resolves that registered label or path. Unless the user requests broader access, use the least sufficient scope, normally project scope for a project task. An agent may then answer the matching terminal confirmation; it asks again only when the root or intended scope is genuinely ambiguous.
+
+## Actor authority
+
+A trusted launcher may supply `KT_ACTOR=bot-name`. The user authorizes that identity
+with `kt actor bot-name allow`; inspect with `kt actor bot-name`, revoke with
+`kt actor bot-name reset`. The private registry stores `actors` policies of allow,
+ask or deny. An actor grant follows the launcher across directories and future
+registrations; it changes no project/session grants. Root deny and force-private
+remain stronger. Unconfigured identities and MCP client names grant nothing.
+Project revocation cannot remove actor authority. Launcher identity is trusted, not a Unix sandbox.
+Discovery still uses local/global/registered roots; no filesystem scan is added.
 
 ## MCP flow
 

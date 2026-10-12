@@ -1,6 +1,6 @@
 ---
 status: green
-revised_at: "2026-10-05T00:14:25+11:00"
+revised_at: "2026-10-12T21:49:36+11:00"
 ---
 
 The repository ships a public, self-contained knowledge-tree system: `tools/kt`, `tools/kt-mcp`, harness hooks/adapters, an installer, regression tests, a private operational `.knowledge/` tree, and a distributable `example/` tree. The example orientation stays empty for adopters. Public content contains no private host, customer, or owner-identifying material.
@@ -29,7 +29,7 @@ Every mutation honors canonical root identity, access policy, revision locking, 
 
 The MCP server is a thin typed adapter over the CLI and exposes 23 tools, including `kt_audit`. It does not reimplement leaf semantics. Whole reads and exact lookups return the complete answer plus revision. Useful read and access flows also return structured content. `kt_rewrite` has CLI lifecycle parity for setting or clearing expiry and verifiability; search exposes coverage control; proof exposes timeout and verbosity.
 
-Access defaults to least authority. Registered wider roots default to ask; deny and force-private are enforced, and force-private always wins. MCP request accepts a preferred scope and offers session scope only when a stable harness session identity exists. Project and session access can be directly relinquished; wider revocation requires user confirmation. Failed elicitation changes nothing and may yield an exact one-time continuation ID. Agents never invent approval: a direct, unambiguous user instruction to access a named root is explicit authorization once kt resolves it, and absent a broader request authorizes the least sufficient scope, normally project. Persistent bypass and direct policy administration remain terminal-only.
+Access defaults to least authority. Registered wider roots default to ask; deny and force-private remain enforced. Trusted launchers may carry user-authorized `KT_ACTOR` authority across working directories and future registrations, without granting other clients access through their folder. MCP client names alone grant nothing. MCP request accepts a preferred scope and offers session scope only when a stable harness session identity exists. Project and session access can be directly relinquished; wider revocation requires user confirmation. Failed elicitation changes nothing and may yield an exact one-time continuation ID. Agents never invent approval: a direct, unambiguous user instruction to access a named root is explicit authorization once kt resolves it, and absent a broader request authorizes the least sufficient scope, normally project. Persistent bypass and direct policy administration remain terminal-only.
 
 ## Maintenance and integration
 
