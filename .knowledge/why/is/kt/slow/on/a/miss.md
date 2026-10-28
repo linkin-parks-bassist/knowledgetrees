@@ -1,8 +1,21 @@
 ---
 status: green
-revised_at: "2026-09-13T13:51:54+10:00"
+revised_at: "2026-10-28T22:53:30+11:00"
 ---
 
-A miss widens through semantic ancestors and scans eligible leaves. In this checkout, the same deliberately absent query improved from about 3.02 seconds to 0.58 seconds under cProfile after replacing repeated root discovery and policy loading with an invocation-local RootAccessView and lazy LookupContext. A normal unprofiled run was about 0.18 seconds. These are measurements for this machine and corpus, not general latency guarantees. No persistent cache or model is required; every invocation reloads current policies and content. A future native rewrite is an owner-suggested possibility, not an agreed implementation: measure warm/cold filesystem runs and separate interpreter startup, traversal, parsing, and ranking before selecting it.
+A miss widens through semantic ancestors and scans eligible leaves. On Python 3.12, `Path.is_relative_to` constructs ancestor objects; calling it for every visited path against every registered root dominated retrieval. `RootAccessView` now precomputes root-component tuples deepest first. Each candidate is still resolved canonically before matching, preserving symlink resolution and nested-root boundaries. Configured policy paths are canonicalized once per access view instead of once per root. `roots()` uses that same view rather than repeatedly loading configuration. No persistent content or permission cache is used.
 
-The existing profile does not establish a disk-I/O/allocation time split. CPython pymalloc pools small objects of up to 512 bytes in arenas, so object allocation does not imply an OS allocation syscall per object (Python 3.12 C API memory documentation: https://docs.python.org/3.12/c-api/memory.html). A native design with query-lifetime arenas and compact records could reduce allocation and object overhead; its benefit for kt remains unmeasured.
+An isolated warm benchmark with 512 leaves and 26 roots, using three interleaved measured runs per version, produced these median subprocess wall times before and after optimization:
+
+| Operation | Before | After | Speedup |
+| --- | ---: | ---: | ---: |
+| Widening miss | 1,959.77 ms | 211.96 ms | 9.25× |
+| Ranked search | 789.90 ms | 114.01 ms | 6.93× |
+| Grep | 773.46 ms | 110.30 ms | 7.01× |
+| Status | 770.91 ms | 99.23 ms | 7.77× |
+| Dictionary | 88.66 ms | 77.40 ms | 1.15× |
+| Exact read | 64.41 ms | 52.96 ms | 1.22× |
+
+All compared stdout, stderr, and exit statuses matched. These are machine/corpus-specific measurements, not latency guarantees or cold-disk results. Run `tests/benchmark-kt.py`; the procedure is `how/to/benchmark/kt.md`. A profile on a larger accessible corpus identified the ownership bottleneck, reducing an otherwise unchanged miss from 39.510 to 1.173 profiled seconds with the component-prefix change alone. Profile timings include substantial instrumentation overhead.
+
+Further work should measure canonical path resolution, traversal, and interpreter startup before selecting a native rewrite or persistent cache. Neither is required by the current design.

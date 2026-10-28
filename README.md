@@ -431,6 +431,13 @@ done
 node tests/test-opencode-hooks.mjs
 ```
 
+Measure CLI latency on isolated synthetic trees with
+`python3 tests/benchmark-kt.py --baseline /path/to/old-kt --repeats 5`.
+It checks identical output and exit status while reporting median subprocess wall
+times for lookup, search, grep, dictionary, and status. Omit `--baseline` to time
+only the current CLI; use `--leaves` and `--roots` to scale the corpus. Timings
+have no pass threshold and are separate from the regression suites.
+
 The suites cover retrieval, access and privacy, grants and bypass, rewrite and
 other leaf mutations, metadata and lifecycle, proof evaluation, structural audit,
 MCP schemas/results/elicitation, hooks, and isolated-home installation. Installer

@@ -1,19 +1,19 @@
 ---
 status: green
-revised_at: "2026-10-12T21:48:53+11:00"
+revised_at: "2026-10-28T22:53:30+11:00"
 ---
 
 The implementation has one semantic spine: the self-contained standard-library `tools/kt` CLI owns root discovery, access policy, leaf representation, lifecycle, revision locking, structural audit, and proof evaluation. Harness adapters translate their protocols into that spine; they do not reimplement knowledge semantics.
 
 ## CLI layers
 
-- Root/access functions represent registered roots, effective policies, actor/project/session grants, and forced privacy. `RootAccessView` loads one coherent view per invocation and every traversal uses it.
+- Root/access functions represent registered roots, effective policies, actor/project/session grants, and forced privacy. `RootAccessView` canonicalizes configured policies once per invocation. Traversal and `roots()` share this view; ownership compares canonical path-component prefixes, deepest root first.
 - `LookupContext` lazily reads permitted leaves once. Question lookup, ranked search, exact grep, dictionary, status, and audit are read-side projections over that view.
 - Leaf functions parse flat metadata and answer bodies, compute revision snapshots, lifecycle state, structural audit signals, and proof records.
 - Mutation functions operate on complete current answers. `add_leaf` establishes a missing owner; `rewrite_leaf` advances an existing owner under a whole-read SHA-256 revision and preserves inode identity. Remove, move, combine, renew, and initialization share the same root and snapshot contracts.
 - Proof execution is exposed only through `kt prove`. Lifecycle status and structural suspicion are distinct: green/yellow/brown describes verification state; `kt audit` reports bodies over 1,000 words as `suspect` and date-shaped bodies as `quite-suspect` without writing or diagnosing them.
 
-The CLI has one creation route, `kt add`; the archival `capture` alias is absent. `kt rewrite` accepts the complete body plus explicit expiry/verifiability changes. The old body is input to reconsider, not a template to extend.
+`kt add` alone creates leaves; `capture` is absent. `kt rewrite` recomputes the complete body with explicit expiry/verifiability controls.
 
 Growth enforcement lives in `rewrite_growth_guard`, called under the existing leaf lock after revision/input validation and before an actual body write. It applies one rejection above 500 words, two above 1,000 and three above 2,000, accepts short or shorter replacements immediately, and allows remaining legitimate growth after bounded reconsideration. Its private SQLite counters live outside knowledge payloads and are keyed by device/inode plus committed revision; hardlinks share counts. Dry runs and metadata-only/no-op writes do not consume attempts. Audit remains independently read-only; a bounce is neither a lifecycle downgrade nor a diagnosis of poisoning.
 

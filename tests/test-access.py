@@ -14,10 +14,43 @@ from unittest.mock import patch
 SCRIPT = Path(__file__).resolve().parents[1] / "tools/kt"
 
 
+def check_owner_matching(api, base):
+    """Compare optimized ownership with the original canonical-path contract."""
+    parent = base / "owners"
+    private = parent / "private"
+    allowed = private / "allowed"
+    sibling = base / "owners-suffix"
+    for directory in (allowed, sibling):
+        directory.mkdir(parents=True)
+    roots = (("parent", parent), ("private", private), ("allowed", allowed))
+    policies = {parent: "allow", private: "deny", allowed: "allow"}
+    link = parent / "link"
+    link.symlink_to(private, target_is_directory=True)
+    view = api["RootAccessView"](roots, policies)
+    candidates = [parent, private, allowed, sibling, base,
+                  parent / "private-suffix/leaf.md", private / "leaf.md",
+                  allowed / "leaf.md", link / "leaf.md", parent / "../owners-suffix"]
+    for candidate in candidates:
+        canonical = candidate.resolve()
+        owner = max((root for _, root in roots if canonical.is_relative_to(root)),
+                    key=lambda root: len(root.parts), default=None)
+        expected = owner is not None and policies[owner] == "allow"
+        assert view.allows(candidate) == expected, candidate
+    # A query-local view must still resolve links on each check: no stale grant
+    # may survive retargeting a previously allowed path into a denied subtree.
+    link.unlink()
+    link.symlink_to(allowed, target_is_directory=True)
+    assert view.allows(link / "leaf.md")
+    link.unlink()
+    link.symlink_to(private, target_is_directory=True)
+    assert not view.allows(link / "leaf.md")
+
+
 def main():
     api = runpy.run_path(str(SCRIPT))
     with tempfile.TemporaryDirectory(prefix="kt privacy ") as temporary:
         base = Path(temporary)
+        check_owner_matching(api, base)
         project = base / "project-a"
         other = base / "project-b"
         global_root = base / "global"

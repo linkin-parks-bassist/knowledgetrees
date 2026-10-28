@@ -181,15 +181,16 @@ def root_access(root, label=None, cwd=None, config=None):
     return resolve_root_access(root, label, cwd, config)[0]
 
 
-def resolve_root_access(root, label=None, cwd=None, config=None):
+def resolve_root_access(root, label=None, cwd=None, config=None, *, configured_policies=None):
     """Return (policy, source, project): the effective policy, why it applies, and the key of the
     project grant that supplied it (None otherwise)."""
     config = access_config() if config is None else config
     cwd = Path(cwd or Path.cwd()).resolve()
     root = Path(root).resolve()
     local = local_root(cwd)
-    policies = [(configured_root(name, spec, cwd), spec.get("access", "ask"))
-                for name, spec in config["roots"].items()]
+    policies = configured_policies if configured_policies is not None else [
+        (configured_root(name, spec, cwd), spec.get("access", "ask"))
+        for name, spec in config["roots"].items()]
     # Forced privacy is checked before bypass or grants and inherited by subtrees.
     if root != local and any(policy == "force-private" and root.is_relative_to(path)
                              for path, policy in policies):
@@ -299,15 +300,7 @@ def require_root(root, label=None):
 
 
 def roots():
-    result = []
-    for label, root in discovered_roots():
-        try:
-            require_root(root, label)
-        except AccessRequired:
-            pass
-        else:
-            result.append((label, root))
-    return result
+    return RootAccessView.load().allowed_roots()
 
 
 def owning_root(path):
@@ -685,21 +678,35 @@ class RootAccessView:
     roots: tuple
     policies: dict
 
+    def __post_init__(self):
+        # Match canonical path components, deepest owner first. Path.is_relative_to
+        # constructs every ancestor on Python 3.12; doing that for every root and
+        # every visited entry dominates traversal on deep, multi-root catalogs.
+        object.__setattr__(self, "_owners", tuple(sorted(
+            ((root.parts, self.policies[root]) for _, root in self.roots),
+            key=lambda item: len(item[0]), reverse=True)))
+
     @classmethod
     def load(cls):
         config = access_config()
         catalog = tuple(discovered_roots(config))
-        policies = {root: root_access(root, label, config=config) for label, root in catalog}
+        # Canonicalize the configuration once, rather than once per catalog root.
+        configured = tuple((configured_root(name, spec), spec.get("access", "ask"))
+                           for name, spec in config["roots"].items())
+        policies = {root: resolve_root_access(root, label, config=config,
+                                             configured_policies=configured)[0]
+                    for label, root in catalog}
         return cls(catalog, policies)
 
     def allowed_roots(self):
         return [(label, root) for label, root in self.roots if self.policies[root] == "allow"]
 
     def allows(self, path):
-        canonical = Path(path).resolve()
-        owner = max((root for _, root in self.roots if canonical.is_relative_to(root)),
-                    key=lambda root: len(root.parts), default=None)
-        return owner is not None and self.policies[owner] == "allow"
+        parts = Path(path).resolve().parts
+        for prefix, policy in self._owners:
+            if parts[:len(prefix)] == prefix:
+                return policy == "allow"
+        return False
 
 
 class LookupContext:
